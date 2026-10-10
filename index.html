@@ -23,7 +23,7 @@
   #msg { color: #b91c1c; margin: 8px 0; min-height: 1em; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
   .table-wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; min-width: 1250px; background: #fff; }
+  table { border-collapse: collapse; width: 100%; min-width: 1050px; background: #fff; }
   th, td { border: 1px solid #d9dde3; padding: 4px; vertical-align: top; font-size: 13px; }
   th { background: #eef0f3; text-align: left; }
   td textarea, td input[type=text], td select { width: 100%; }
@@ -33,7 +33,18 @@
   tr.prio-2 { background: #fff7ed; } tr.prio-2 td:first-child { border-left: 6px solid #f59e0b; }
   tr.prio-3 { background: #eff6ff; } tr.prio-3 td:first-child { border-left: 6px solid #3b82f6; }
   tr.prio-4 { background: #f3f4f6; } tr.prio-4 td:first-child { border-left: 6px solid #9ca3af; }
-  tr.group-header td { background: #1f2937; color: #fff; font-weight: 600; }
+  /* Section headers: one strong colour per priority, with a thick line above */
+  tr.group-header td { color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
+                       padding: 8px 10px; border-top: 4px solid #1c1f24; }
+  tr.group-1 td { background: #b91c1c; }
+  tr.group-2 td { background: #b45309; }
+  tr.group-3 td { background: #1d4ed8; }
+  tr.group-4 td { background: #4b5563; }
+  /* One colour per status, so the four statuses are easy to tell apart */
+  select.status-proposed { background: #fef9c3; }
+  select.status-agreed { background: #ddd6fe; }
+  select.status-done { background: #bbf7d0; }
+  select.status-dropped { background: #e5e7eb; color: #6b7280; }
   details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
             border-radius: 8px; padding: 8px 12px; }
   .small { font-size: 12px; color: #4b5563; }
@@ -79,8 +90,8 @@
     <div class="toolbar">
       <label>Sortér:
         <select id="sortSelect">
-          <option value="original">Som de dukker op (oprettet)</option>
           <option value="priority">Prioritet M &gt; S &gt; C &gt; W</option>
+          <option value="original">Som de dukker op (oprettet)</option>
           <option value="category">FURPS+ kategori</option>
           <option value="status">Status</option>
         </select>
@@ -105,7 +116,7 @@
     </div>
 
     <details>
-      <summary><strong>Legend: FURPS+ and MoSCoW</strong></summary>
+      <summary><strong>Legend: FURPS+, MoSCoW and Status</strong></summary>
       <p><strong>FURPS+ (requirement type)</strong></p>
       <ul>
         <li><strong>F</strong> Functionality: features, capabilities, behaviour.</li>
@@ -122,6 +133,13 @@
         <li><strong>Could</strong> Desirable if time and resources permit.</li>
         <li><strong>Won't</strong> Explicitly excluded from this release (keep the rationale in Notes).</li>
       </ul>
+      <p><strong>Status</strong></p>
+      <ul>
+        <li><strong>Proposed</strong> Captured, but not yet confirmed.</li>
+        <li><strong>Agreed</strong> Confirmed by the group or the customer.</li>
+        <li><strong>Done</strong> Implemented in the solution.</li>
+        <li><strong>Dropped</strong> No longer relevant (write why in Notes).</li>
+      </ul>
       <p class="small">Security and other cross-cutting concerns may be classified under F or +.
          Choose one convention and apply it consistently.</p>
     </details>
@@ -136,7 +154,8 @@
       </ul>
       <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende. Kravene får nye ID'er,
          og et gammelt ID fra filen skrives i Notes. Importér ikke samme fil to gange, ellers får du dubletter.
-         Tip: en CSV-eksport fra et tomt projekt er en færdig skabelon.</p>
+         Ældre eksportfiler virker også: Source Location lægges ind i Source, Acceptance Criteria i Notes,
+         og de gamle statusser oversættes. Tip: en CSV-eksport fra et tomt projekt er en færdig skabelon.</p>
     </details>
 
     <details>
@@ -150,14 +169,12 @@
         <thead>
           <tr>
             <th style="width:70px">Requirement ID</th>
-            <th style="width:260px">Requirement Description</th>
+            <th style="width:300px">Requirement Description</th>
             <th style="width:60px">FURPS+</th>
             <th style="width:90px">MoSCoW</th>
-            <th style="width:170px">Source / Evidence</th>
-            <th style="width:120px">Source Location</th>
-            <th style="width:220px">Acceptance Criteria</th>
-            <th style="width:120px">Status</th>
-            <th style="width:180px">Additional Notes</th>
+            <th style="width:240px">Source (quote, document, page)</th>
+            <th style="width:110px">Status</th>
+            <th style="width:200px">Additional Notes</th>
             <th style="width:100px">Last edited by</th>
             <th style="width:40px"></th>
           </tr>
@@ -184,10 +201,10 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
 // Paste YOUR config from the Firebase console here.
 // This config is public by design; the Firestore rules protect the data.
 const firebaseConfig = {
-  apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4",
-  authDomain: "reqmatrix-fc50a.firebaseapp.com",
-  projectId: "reqmatrix-fc50a",
-  appId: "1:480693503390:web:d8c32525e3370b301a428f"
+apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4", 
+authDomain: "reqmatrix-fc50a.firebaseapp.com", 
+projectId: "reqmatrix-fc50a", 
+appId: "1:480693503390:web:d8c32525e3370b301a428f"
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -197,7 +214,7 @@ const db = getFirestore(app);
 // The allowed values live in arrays so the dropdowns and the sorting use the same list.
 const FURPS = ["F", "U", "R", "P", "S", "+"];
 const MOSCOW = ["Must", "Should", "Could", "Won't"];
-const STATUS = ["Proposed", "Under Review", "Approved", "Implemented", "Verified", "Rejected"];
+const STATUS = ["Proposed", "Agreed", "Done", "Dropped"];
 
 // Import limits. If big imports fail with permission or quota errors, lower the chunk size.
 const MAX_IMPORT_ROWS = 500;
@@ -206,7 +223,7 @@ const IMPORT_CHUNK_SIZE = 100;
 let currentUser = null;
 let currentPid = null;       // id (= secret code) of the open project
 let isOwner = false;
-let sortMode = "original";
+let sortMode = "priority";   // the table starts sorted Must > Should > Could > Won't
 let filterMoscow = "all";
 let allReqs = [];            // requirements from Firestore, as plain objects
 let allMembers = [];         // members of the open project
@@ -447,8 +464,6 @@ function emptyRecord() {
     furps: "F",
     moscow: "Should",
     source: "",
-    sourceLocation: "",
-    acceptance: "",
     status: "Proposed",
     notes: ""
   };
@@ -472,8 +487,6 @@ async function writeRequirements(records) {
         furps: r.furps,
         moscow: r.moscow,
         source: r.source,
-        sourceLocation: r.sourceLocation,
-        acceptance: r.acceptance,
         status: r.status,
         notes: r.notes,
         updatedBy: userLabel(),
@@ -496,16 +509,21 @@ async function onCellChange(event) {
   const el = event.target;
   const field = el.dataset.field;
   if (!field) { return; }
+  const id = el.dataset.id;
+  const newValue = el.value;
+
+  // For dropdowns we leave the field first, so the table can redraw (and re-sort) right away.
+  if (el.tagName === "SELECT") { el.blur(); }
+
   const changes = {};
-  changes[field] = el.value;
+  changes[field] = newValue;
   changes.updatedBy = userLabel();
   changes.updatedAt = serverTimestamp();
   try {
-    await updateDoc(doc(db, "projects", currentPid, "requirements", el.dataset.id), changes);
+    await updateDoc(doc(db, "projects", currentPid, "requirements", id), changes);
   } catch (err) {
     showMessage("Kunne ikke gemme: " + err.code);
   }
-  if (el.tagName === "SELECT") { el.blur(); }   // lets a postponed redraw (new sort order) happen
 }
 
 async function onTableClick(event) {
@@ -524,7 +542,11 @@ function onReqsSnapshot(snapshot) {
   allReqs = [];
   for (let i = 0; i < snapshot.docs.length; i++) {
     const d = snapshot.docs[i];
-    allReqs.push(Object.assign({ id: d.id }, d.data()));
+    const req = Object.assign({ id: d.id }, d.data());
+    // Older requirements may still have the old status names, so we translate them for display.
+    const cleaned = cleanStatus(req.status || "");
+    req.status = (cleaned !== "") ? cleaned : "Proposed";
+    allReqs.push(req);
   }
   safeRender();
 }
@@ -569,9 +591,12 @@ function renderTable() {
 
   // Filter first, then sort a copy so the original list stays untouched.
   const visible = [];
+  const counts = {};   // how many visible requirements each priority has
   for (let i = 0; i < allReqs.length; i++) {
-    if (filterMoscow === "all" || allReqs[i].moscow === filterMoscow) {
-      visible.push(allReqs[i]);
+    const r = allReqs[i];
+    if (filterMoscow === "all" || r.moscow === filterMoscow) {
+      visible.push(r);
+      counts[r.moscow] = (counts[r.moscow] || 0) + 1;
     }
   }
   visible.sort(compareReqs);
@@ -582,18 +607,18 @@ function renderTable() {
     // In priority mode, add a heading row for each MoSCoW section.
     if (sortMode === "priority" && rankOf(r.moscow) !== lastRank) {
       lastRank = rankOf(r.moscow);
-      tbody.appendChild(buildGroupHeader(r.moscow));
+      tbody.appendChild(buildGroupHeader(r.moscow, counts[r.moscow]));
     }
     tbody.appendChild(buildRow(r));
   }
 }
 
-function buildGroupHeader(moscow) {
+function buildGroupHeader(moscow, count) {
   const tr = document.createElement("tr");
-  tr.className = "group-header";
+  tr.className = "group-header group-" + rankOf(moscow);
   const td = document.createElement("td");
-  td.colSpan = 11;
-  td.textContent = moscow.toUpperCase();
+  td.colSpan = 9;
+  td.textContent = moscow.toUpperCase() + " (" + count + ")";
   tr.appendChild(td);
   return tr;
 }
@@ -610,9 +635,12 @@ function buildRow(r) {
   tr.appendChild(wrapCell(makeSelect("furps", FURPS, r)));
   tr.appendChild(wrapCell(makeSelect("moscow", MOSCOW, r)));
   tr.appendChild(wrapCell(makeTextarea("source", r)));
-  tr.appendChild(wrapCell(makeInput("sourceLocation", r)));
-  tr.appendChild(wrapCell(makeTextarea("acceptance", r)));
-  tr.appendChild(wrapCell(makeSelect("status", STATUS, r)));
+
+  // The status dropdown gets its own colour class (status-proposed, status-agreed, ...).
+  const statusSelect = makeSelect("status", STATUS, r);
+  statusSelect.className = "status-" + r.status.toLowerCase();
+  tr.appendChild(wrapCell(statusSelect));
+
   tr.appendChild(wrapCell(makeTextarea("notes", r)));
 
   const whoCell = document.createElement("td");
@@ -638,15 +666,6 @@ function wrapCell(element) {
 // We set .value (not innerHTML), so typed text can never be run as HTML.
 function makeTextarea(field, r) {
   const el = document.createElement("textarea");
-  el.value = r[field] || "";
-  el.dataset.field = field;
-  el.dataset.id = r.id;
-  return el;
-}
-
-function makeInput(field, r) {
-  const el = document.createElement("input");
-  el.type = "text";
   el.value = r[field] || "";
   el.dataset.field = field;
   el.dataset.id = r.id;
@@ -700,11 +719,10 @@ function csvCell(value) {
 }
 
 function exportCsv() {
-  const fields = ["description", "furps", "moscow", "source", "sourceLocation",
-                  "acceptance", "status", "notes", "updatedBy"];
+  const fields = ["description", "furps", "moscow", "source", "status", "notes", "updatedBy"];
   // Semicolon + BOM so Excel with Danish settings opens it correctly (æøå too).
-  let csv = "\uFEFF" + "Requirement ID;Requirement Description;FURPS+;MoSCoW;Source / Evidence;" +
-            "Source Location;Acceptance Criteria;Status;Additional Notes;Last edited by\r\n";
+  let csv = "\uFEFF" + "Requirement ID;Requirement Description;FURPS+;MoSCoW;Source;" +
+            "Status;Additional Notes;Last edited by\r\n";
   const rows = sortedBySeq();
   for (let i = 0; i < rows.length; i++) {
     const cells = [csvCell(reqLabel(rows[i].seq))];
@@ -723,8 +741,8 @@ function exportJson() {
     const r = rows[i];
     output.push({
       id: reqLabel(r.seq), description: r.description, furps: r.furps,
-      moscow: r.moscow, source: r.source, sourceLocation: r.sourceLocation,
-      acceptance: r.acceptance, status: r.status, notes: r.notes, updatedBy: r.updatedBy
+      moscow: r.moscow, source: r.source, status: r.status,
+      notes: r.notes, updatedBy: r.updatedBy
     });
   }
   downloadFile("requirements.json", JSON.stringify(output, null, 2), "application/json");
@@ -757,9 +775,8 @@ function exportMarkdown() {
     if (group.length === 0) { continue; }   // skip empty sections
 
     md += "## " + MOSCOW[p] + " (" + group.length + ")\n\n";
-    md += "| Requirement ID | Requirement Description | FURPS+ | Source / Evidence | " +
-          "Source Location | Acceptance Criteria | Status | Additional Notes |\n";
-    md += "| --- | --- | --- | --- | --- | --- | --- | --- |\n";
+    md += "| Requirement ID | Requirement Description | FURPS+ | Source | Status | Additional Notes |\n";
+    md += "| --- | --- | --- | --- | --- | --- |\n";
 
     for (let i = 0; i < group.length; i++) {
       const r = group[i];
@@ -768,8 +785,6 @@ function exportMarkdown() {
         mdCell(r.description),
         mdCell(r.furps),
         mdCell(r.source),
-        mdCell(r.sourceLocation),
-        mdCell(r.acceptance),
         mdCell(r.status),
         mdCell(r.notes)
       ];
@@ -803,7 +818,9 @@ function normalizeKey(text) {
 
 function fieldFromHeader(header) {
   // Maps a column name (CSV header or JSON key) to one of our field names. "" = ignore the column.
-  switch (normalizeKey(header)) {
+  // sourceLocation and acceptance only exist in older exports; buildImportRecords folds them in.
+  const key = normalizeKey(header);
+  switch (key) {
     case "requirementid":
     case "reqid":
     case "id":
@@ -824,10 +841,6 @@ function fieldFromHeader(header) {
     case "priority":
     case "prioritet":
       return "moscow";
-    case "sourceevidence":
-    case "source":
-    case "kilde":
-      return "source";
     case "sourcelocation":
     case "kildeplacering":
       return "sourceLocation";
@@ -843,6 +856,8 @@ function fieldFromHeader(header) {
     case "evt":
       return "notes";
     default:
+      // "Source", "Source / Evidence", "Source (quote, document, page)" and "Kilde" are all the source column.
+      if (key.indexOf("source") === 0 || key === "kilde") { return "source"; }
       return "";
   }
 }
@@ -1003,11 +1018,14 @@ function cleanMoscow(value) {
 }
 
 function cleanStatus(value) {
-  const wanted = value.trim().toLowerCase();
-  for (let i = 0; i < STATUS.length; i++) {
-    if (STATUS[i].toLowerCase() === wanted) { return STATUS[i]; }
+  // Also translates the old status names, so old data and old export files still work.
+  switch (value.trim().toLowerCase()) {
+    case "proposed": case "under review": case "draft": return "Proposed";
+    case "agreed": case "approved": return "Agreed";
+    case "done": case "implemented": case "verified": return "Done";
+    case "dropped": case "rejected": return "Dropped";
+    default: return "";
   }
-  return "";
 }
 
 function buildImportRecords(objects) {
@@ -1039,15 +1057,27 @@ function buildImportRecords(objects) {
     if (status !== "") { rec.status = status; }
     else if (statusRaw.trim() !== "") { unrecognised++; }
 
-    rec.source = o.source || "";
-    rec.sourceLocation = o.sourceLocation || "";
-    rec.acceptance = o.acceptance || "";
-    rec.notes = o.notes || "";
+    // Older files have a separate Source Location column. We fold it into Source.
+    let source = (o.source || "").trim();
+    const location = (o.sourceLocation || "").trim();
+    if (location !== "") {
+      source = (source !== "") ? (source + " (" + location + ")") : location;
+    }
+    rec.source = source;
+
+    // Older files have an Acceptance Criteria column. We keep it as text in Notes.
+    let notes = (o.notes || "").trim();
+    const acceptance = (o.acceptance || "").trim();
+    if (acceptance !== "") {
+      notes = (notes + " [Acceptance: " + acceptance + "]").trim();
+    }
 
     // The old ID is not reused (IDs must stay unique), but we keep it for traceability.
     if (o.importedId && o.importedId.trim() !== "") {
-      rec.notes = (rec.notes + " [Imported ID: " + o.importedId.trim() + "]").trim();
+      notes = (notes + " [Imported ID: " + o.importedId.trim() + "]").trim();
     }
+    rec.notes = notes;
+
     records.push(rec);
   }
   return { records: records, skipped: skipped, unrecognised: unrecognised };
@@ -1137,6 +1167,10 @@ async function importRecords(records) {
 }
 
 // ---------- 10. Wire up the buttons ----------
+// Browsers can remember an old dropdown choice after a reload, so we set them from our own state.
+$("sortSelect").value = sortMode;
+$("filterSelect").value = filterMoscow;
+
 $("btnGoogle").addEventListener("click", function () { loginWith("google"); });
 $("btnGithub").addEventListener("click", function () { loginWith("github"); });
 $("btnLogout").addEventListener("click", function () { signOut(auth); });
