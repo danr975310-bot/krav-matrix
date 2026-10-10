@@ -11,6 +11,10 @@
   header { display: flex; justify-content: space-between; align-items: center;
            padding: 10px 16px; background: #1f2937; color: #fff; }
   #userInfo button { margin-left: 8px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  /* Small global "last saved" ticker next to the user info. */
+  #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
+               transition: opacity 0.2s ease; }
   main { padding: 8px 16px 16px; }
   .hidden { display: none; }
   .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
@@ -35,6 +39,8 @@
   tr.prio-2 { background: #fff7ed; } tr.prio-2 td:first-child { border-left: 6px solid #f59e0b; }
   tr.prio-3 { background: #eff6ff; } tr.prio-3 td:first-child { border-left: 6px solid #3b82f6; }
   tr.prio-4 { background: #f3f4f6; } tr.prio-4 td:first-child { border-left: 6px solid #9ca3af; }
+  tr.row-resolved { opacity: 0.5; transition: opacity 0.12s ease; }
+  tr.row-resolved:hover { opacity: 1; }
   tr.group-header td { color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
                        padding: 8px 10px; border-top: 4px solid #1c1f24; }
   tr.group-1 td { background: #b91c1c; }
@@ -55,6 +61,12 @@
   td.age-urgent { color: #b91c1c; font-weight: 700; }
   td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
+  /* Debounced autosave: the just-edited field flashes a soft green glow when
+     the write reaches Firestore. No layout shift, no extra DOM. */
+  textarea.just-saved, select.just-saved {
+    box-shadow: 0 0 0 2px #86efac;
+    transition: box-shadow 0.2s ease;
+  }
   th.hidden-col, td.hidden-col { display: none; }
   .colprefs { position: relative; }
   .colprefs-panel {
@@ -111,10 +123,13 @@
 
 <header>
   <strong>Kravmatrix · FURPS+ × MoSCoW</strong>
-  <div id="userInfo" class="hidden">
-    <span id="userName"></span>
-    <button id="btnLink" class="hidden"></button>
-    <button id="btnLogout">Log ud</button>
+  <div class="header-right">
+    <span id="lastSaved" class="hidden"></span>
+    <div id="userInfo" class="hidden">
+      <span id="userName"></span>
+      <button id="btnLink" class="hidden"></button>
+      <button id="btnLogout">Log ud</button>
+    </div>
   </div>
 </header>
 
@@ -277,6 +292,18 @@
         <li>Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
         <li>Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.</li>
       </ul>
+      <p class="small">Færdige, parkerede og droppede rækker vises dæmpet, så de ikke
+         konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.</p>
+
+      <h3>Lagring</h3>
+      <ul>
+        <li>Ændringer gemmes automatisk — der er ingen gem-knap.</li>
+        <li>Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast.
+            Forlader du feltet, gemmes med det samme.</li>
+        <li>Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.</li>
+        <li>Et grønt blink på feltet og en lille "Gemt"-kvittering øverst bekræfter
+            at ændringen er nået frem.</li>
+      </ul>
       <p class="small">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
          Vælg én konvention, og brug den konsekvent.</p>
     </section>
@@ -337,6 +364,10 @@ const IMPORT_CHUNK_SIZE = 100;
 const STALE_WARN_DAYS = 14;
 const STALE_URGENT_DAYS = 28;
 
+// How long a text field waits after the last keystroke before it is saved.
+// Dropdowns ignore this and save immediately.
+const AUTOSAVE_DELAY_MS = 800;
+
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
                  "status", "notes", "updatedBy", "age"];
 
@@ -353,6 +384,9 @@ let unsubProject = null;
 let unsubReqs = null;
 let unsubMembers = null;
 let visibleColumns = loadColumns();
+
+// Pending debounced saves, keyed by "reqId|field". Value is the setTimeout id.
+const saveTimers = new Map();
 
 function $(id) { return document.getElementById(id); }
 
@@ -507,8 +541,90 @@ function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
 }
 
-// Lists the projects the current user has already opened. Reads from
-// users/{uid}/projects — a simple collection, no collection-group index needed.
+// ---------- Autosave ----------
+// Called on every keystroke. Restarts the timer so only the last pause counts.
+function scheduleSave(el, field, id) {
+  const key = id + "|" + field;
+  if (saveTimers.has(key)) { clearTimeout(saveTimers.get(key)); }
+  const timer = setTimeout(function () {
+    saveTimers.delete(key);
+    saveCell(el, field, id);
+  }, AUTOSAVE_DELAY_MS);
+  saveTimers.set(key, timer);
+}
+
+// Called when a field loses focus or the page is hidden. Fires any pending save now.
+function flushSave(key) {
+  if (!saveTimers.has(key)) { return; }
+  clearTimeout(saveTimers.get(key));
+  saveTimers.delete(key);
+  const parts = key.split("|");
+  const id = parts[0];
+  const field = parts[1];
+  const el = document.querySelector('[data-id="' + id + '"][data-field="' + field + '"]');
+  if (el) { saveCell(el, field, id); }
+}
+
+function flushAllPendingSaves() {
+  const keys = Array.from(saveTimers.keys());
+  for (let i = 0; i < keys.length; i++) { flushSave(keys[i]); }
+}
+
+async function saveCell(el, field, id) {
+  const changes = {};
+  changes[field] = el.value;
+  changes.updatedBy = userLabel();
+  changes.updatedAt = serverTimestamp();
+  try {
+    await updateDoc(doc(db, "projects", currentPid, "requirements", id), changes);
+    flashSaved(el);
+  } catch (err) {
+    showMessage("Kunne ikke gemme: " + err.code);
+  }
+}
+
+function flashSaved(el) {
+  el.classList.add("just-saved");
+  setTimeout(function () { el.classList.remove("just-saved"); }, 700);
+  updateLastSaved();
+}
+
+function updateLastSaved() {
+  const el = $("lastSaved");
+  if (!el) { return; }
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2, "0");
+  const mm = String(now.getMinutes()).padStart(2, "0");
+  const ss = String(now.getSeconds()).padStart(2, "0");
+  el.textContent = "✓ Gemt " + hh + ":" + mm + ":" + ss;
+  el.classList.remove("hidden");
+}
+
+// One listener for the whole table. Dropdowns save immediately; text fields wait.
+function onCellInput(event) {
+  const el = event.target;
+  const field = el.dataset.field;
+  if (!field) { return; }
+  const id = el.dataset.id;
+
+  if (el.tagName === "SELECT") {
+    // A dropdown selection is a deliberate act — no need to wait.
+    el.blur();
+    saveCell(el, field, id);
+    return;
+  }
+  scheduleSave(el, field, id);
+}
+
+function onCellFocusOut(event) {
+  const el = event.target;
+  const field = el.dataset.field;
+  if (field && el.tagName !== "SELECT") {
+    flushSave(el.dataset.id + "|" + field);
+  }
+  if (renderPending) { setTimeout(safeRender, 0); }
+}
+
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -644,6 +760,8 @@ function onAuthChanged(user) {
   if (!user) {
     stopListeners();
     currentPid = null;
+    saveTimers.clear();
+    $("lastSaved").classList.add("hidden");
     $("userInfo").classList.add("hidden");
     updateLinkButton();
     showScreen("login");
@@ -700,6 +818,7 @@ async function joinFromInput() {
 
 async function openProject(pid) {
   stopListeners();
+  saveTimers.clear();
   showMessage("");
 
   let snap;
@@ -717,7 +836,6 @@ async function openProject(pid) {
     return;
   }
 
-  // Register as a member. Non-fatal if it fails — the project still opens.
   try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
                  { name: userLabel(), uid: currentUser.uid }, { merge: true });
@@ -728,13 +846,11 @@ async function openProject(pid) {
     return;
   }
 
-  // Also record this project in the user's own list, so "Dine projekter" works.
   try {
     await setDoc(doc(db, "users", currentUser.uid, "projects", pid),
                  { pid: pid, name: snap.data().name || pid, joinedAt: serverTimestamp() },
                  { merge: true });
   } catch (err) {
-    // Non-fatal: the project is openable via the code, it just won't appear in the list.
     console.warn("openProject: setDoc user project list failed:", err);
   }
 
@@ -749,6 +865,7 @@ async function openProject(pid) {
 }
 
 function leaveProject() {
+  flushAllPendingSaves();
   stopListeners();
   currentPid = null;
   localStorage.removeItem("lastProject");
@@ -834,24 +951,6 @@ async function addRequirement() {
   catch (err) { showMessage("Kunne ikke tilføje kravet: " + err.code); }
 }
 
-async function onCellChange(event) {
-  const el = event.target;
-  const field = el.dataset.field;
-  if (!field) { return; }
-  const id = el.dataset.id;
-  const newValue = el.value;
-  if (el.tagName === "SELECT") { el.blur(); }
-  const changes = {};
-  changes[field] = newValue;
-  changes.updatedBy = userLabel();
-  changes.updatedAt = serverTimestamp();
-  try {
-    await updateDoc(doc(db, "projects", currentPid, "requirements", id), changes);
-  } catch (err) {
-    showMessage("Kunne ikke gemme: " + err.code);
-  }
-}
-
 async function onTableClick(event) {
   const el = event.target;
   if (el.dataset.action !== "delete") { return; }
@@ -878,10 +977,6 @@ function onReqsSnapshot(snapshot) {
 function safeRender() {
   if ($("tbody").contains(document.activeElement)) { renderPending = true; }
   else { renderPending = false; renderTable(); }
-}
-
-function onTableFocusOut() {
-  if (renderPending) { setTimeout(safeRender, 0); }
 }
 
 function compareReqs(a, b) {
@@ -950,6 +1045,9 @@ function buildGroupHeader(moscow, count) {
 function buildRow(r) {
   const tr = document.createElement("tr");
   tr.className = "prio-" + rankOf(r.moscow);
+  if (r.status === "Done" || r.status === "Parked" || r.status === "Dropped") {
+    tr.classList.add("row-resolved");
+  }
 
   const idCell = document.createElement("td");
   idCell.textContent = reqLabel(r.seq);
@@ -1673,9 +1771,16 @@ $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
 $("memberList").addEventListener("click", onMemberListClick);
 $("myProjectsList").addEventListener("click", onMyProjectsClick);
-$("tbody").addEventListener("change", onCellChange);
+// Autosave: `input` fires on every keystroke; `focusout` flushes any pending save.
+$("tbody").addEventListener("input", onCellInput);
+$("tbody").addEventListener("focusout", onCellFocusOut);
 $("tbody").addEventListener("click", onTableClick);
-$("tbody").addEventListener("focusout", onTableFocusOut);
+
+// Flush pending saves when the tab is hidden or the page unloads, so nothing is lost.
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "hidden") { flushAllPendingSaves(); }
+});
+window.addEventListener("beforeunload", function () { flushAllPendingSaves(); });
 
 $("btnCols").addEventListener("click", function (e) {
   e.stopPropagation();
