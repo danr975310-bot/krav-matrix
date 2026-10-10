@@ -11,7 +11,6 @@
   header { display: flex; justify-content: space-between; align-items: center;
            padding: 10px 16px; background: #1f2937; color: #fff; }
   #userInfo button { margin-left: 8px; }
-  /* Tightened: no permanent empty bar above the matrix. */
   main { padding: 8px 16px 16px; }
   .hidden { display: none; }
   .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
@@ -23,7 +22,6 @@
   input[type=text], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
   #msg { color: #b91c1c; margin: 8px 0; }
-  /* Empty message area takes no space at all. */
   #msg:empty { display: none; }
   #projectName { margin: 0 0 12px; font-size: 22px; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
@@ -33,20 +31,16 @@
   th { background: #eef0f3; text-align: left; }
   td textarea, td input[type=text], td select { width: 100%; }
   td textarea { min-height: 48px; resize: vertical; }
-  /* One colour per MoSCoW rank: left border + light row tint */
   tr.prio-1 { background: #fef2f2; } tr.prio-1 td:first-child { border-left: 6px solid #dc2626; }
   tr.prio-2 { background: #fff7ed; } tr.prio-2 td:first-child { border-left: 6px solid #f59e0b; }
   tr.prio-3 { background: #eff6ff; } tr.prio-3 td:first-child { border-left: 6px solid #3b82f6; }
   tr.prio-4 { background: #f3f4f6; } tr.prio-4 td:first-child { border-left: 6px solid #9ca3af; }
-  /* Section headers: one strong colour per priority, with a thick line above */
   tr.group-header td { color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
                        padding: 8px 10px; border-top: 4px solid #1c1f24; }
   tr.group-1 td { background: #b91c1c; }
   tr.group-2 td { background: #b45309; }
   tr.group-3 td { background: #1d4ed8; }
   tr.group-4 td { background: #4b5563; }
-  /* One colour per status, so the statuses are easy to tell apart.
-     "Parked" (PYT) gets an orange tint, clearly different from Proposed and Dropped. */
   select.status-proposed { background: #fef9c3; }
   select.status-agreed { background: #ddd6fe; }
   select.status-done { background: #bbf7d0; }
@@ -55,14 +49,12 @@
   details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
             border-radius: 8px; padding: 8px 12px; }
   .small { font-size: 12px; color: #4b5563; }
-  /* "Alder" column — days since a not-yet-resolved requirement was last touched. */
   td.age { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   td.age-fresh  { color: #9ca3af; }
   td.age-warn   { color: #b45309; font-weight: 600; }
   td.age-urgent { color: #b91c1c; font-weight: 700; }
   td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
-  /* Column visibility */
   th.hidden-col, td.hidden-col { display: none; }
   .colprefs { position: relative; }
   .colprefs-panel {
@@ -74,7 +66,6 @@
   }
   .colprefs-panel label { display: block; font-size: 13px; padding: 3px 0; cursor: pointer; }
   .colprefs-panel .small { margin: 6px 0 0; }
-  /* Side panel */
   .side-panel {
     position: fixed; top: 0; right: 0;
     height: 100vh; width: 440px; max-width: 92vw;
@@ -126,7 +117,6 @@
 <main>
   <div id="msg"></div>
 
-  <!-- Screen 1: login -->
   <div id="screenLogin" class="card hidden">
     <h2>Log ind</h2>
     <p>Log ind for at se og redigere jeres krav.</p>
@@ -136,7 +126,6 @@
        den anden metode (knappen øverst til højre), så begge virker.</p>
   </div>
 
-  <!-- Screen 2: create or join a project -->
   <div id="screenChooser" class="card hidden">
     <h2>Opret nyt projekt</h2>
     <input type="text" id="newProjectName" placeholder="Projektnavn, fx Reolmarked">
@@ -147,7 +136,6 @@
     <button id="btnJoin">Deltag</button>
   </div>
 
-  <!-- Screen 3: the matrix -->
   <div id="screenApp" class="hidden">
     <h2 id="projectName"></h2>
 
@@ -169,11 +157,11 @@
           <option value="Won't">Won't</option>
         </select>
       </label>
-      <!-- NEW: show only parked (PYT) requirements. Toggle button. -->
       <button id="btnPyt" title="Vis kun parkerede (PYT) krav — idéer der venter på review">PYT</button>
       <button id="btnAdd" class="primary">+ Nyt krav</button>
       <button id="btnImport">Importér</button>
-      <input type="file" id="importFile" accept=".json,.csv,.txt" class="hidden">
+      <!-- NEW: .md is now accepted -->
+      <input type="file" id="importFile" accept=".json,.csv,.txt,.md,text/markdown,text/plain" class="hidden">
       <button id="btnCsv">Eksportér CSV</button>
       <button id="btnJson">Eksportér JSON</button>
       <button id="btnMd">Eksportér Markdown</button>
@@ -222,7 +210,6 @@
   </div>
 </main>
 
-<!-- Side panel: all reference content lives here, off the main canvas. -->
 <div id="sidePanel" class="side-panel" aria-hidden="true">
   <div class="side-panel-header">
     <strong>Information</strong>
@@ -257,7 +244,6 @@
         <li><strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).</li>
       </ul>
 
-      <!-- NEW: PYT-forklaring -->
       <h3>PYT — Park Your Treasures</h3>
       <p>Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget
          i denne omgang — eller kun hvis der bliver tid. Sæt status til
@@ -278,8 +264,7 @@
         <li>Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres:
             gul efter 14 dage, rød efter 28 dage.</li>
         <li>Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
-        <li>Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt —
-            så I kan tage stilling, før det forsvinder af sig selv.</li>
+        <li>Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.</li>
       </ul>
       <p class="small">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
          Vælg én konvention, og brug den konsekvent.</p>
@@ -292,6 +277,10 @@
             (danske eller engelske). Semikolon, komma og tab virker.
             Gem som "CSV UTF-8" i Excel, så æøå bevares.</li>
         <li><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
+        <li><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps
+            egen Markdown-eksport og med håndskrevne tabeller, hvor kolonnerne har
+            genkendelige navne (Krav-ID, Kravbeskrivelse, FURPS+, MoSCoW, Status, Noter).
+            Hvis filen ikke har tabeller, behandles den som en .txt (én linje = ét krav).</li>
         <li><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
       <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende. Kravene får nye ID'er,
@@ -310,9 +299,6 @@
 <div id="panelBackdrop" class="panel-backdrop hidden"></div>
 
 <script type="module">
-// SRP: This script's single responsibility is to connect the page to Firebase
-// (login, linking logins, projects, requirements, import/export) and to draw the requirements table.
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
          GoogleAuthProvider, GithubAuthProvider }
@@ -335,13 +321,10 @@ const db = getFirestore(app);
 // ---------- 2. Constants and state ----------
 const FURPS = ["F", "U", "R", "P", "S", "+"];
 const MOSCOW = ["Must", "Should", "Could", "Won't"];
-// "Parked" is PYT: an idea that is not decided now but should be remembered.
-// It sits between "Done" and "Dropped" because it is not resolved and not rejected.
 const STATUS = ["Proposed", "Agreed", "Done", "Parked", "Dropped"];
 
 const MAX_IMPORT_ROWS = 500;
 const IMPORT_CHUNK_SIZE = 100;
-
 const STALE_WARN_DAYS = 14;
 const STALE_URGENT_DAYS = 28;
 
@@ -353,7 +336,7 @@ let currentPid = null;
 let isOwner = false;
 let sortMode = "priority";
 let filterMoscow = "all";
-let onlyPyt = false;         // NEW: when true, only "Parked" requirements are shown
+let onlyPyt = false;
 let allReqs = [];
 let allMembers = [];
 let renderPending = false;
@@ -408,12 +391,6 @@ function daysSince(ts) {
   return Math.floor((Date.now() - date.getTime()) / 86400000);
 }
 
-// Staleness level for the "Alder" column.
-//  -1 = resolved (Done or Dropped) -> show "–" and do not count
-//   0 = fresh
-//   1 = warning (yellow) after STALE_WARN_DAYS
-//   2 = urgent (red) after STALE_URGENT_DAYS
-//   3 = parked (PYT) -> show days in neutral italic, no warning colour
 function staleness(req) {
   if (req.status === "Done" || req.status === "Dropped") { return -1; }
   if (req.status === "Parked") { return 3; }
@@ -424,7 +401,6 @@ function staleness(req) {
   return 0;
 }
 
-// ---------- Per-user column preferences (localStorage) ----------
 function defaultColumns() {
   const o = {};
   for (let i = 0; i < COLUMNS.length; i++) { o[COLUMNS[i]] = true; }
@@ -460,7 +436,7 @@ function loadColumns() {
 
 function saveColumns() {
   try { localStorage.setItem("visibleColumns", JSON.stringify(visibleColumns)); }
-  catch (err) { /* private mode etc. — ignore */ }
+  catch (err) { /* ignore */ }
 }
 
 function maybeHidden(el, col) {
@@ -483,7 +459,6 @@ function applyColumnPrefs() {
   renderTable();
 }
 
-// ---------- Side panel ----------
 function openPanel() {
   $("sidePanel").classList.add("open");
   $("sidePanel").setAttribute("aria-hidden", "false");
@@ -507,9 +482,7 @@ function statusLabel(value) {
   }
 }
 
-function plainLabel(value) {
-  return value;
-}
+function plainLabel(value) { return value; }
 
 function stopListeners() {
   if (unsubProject) { unsubProject(); unsubProject = null; }
@@ -523,7 +496,7 @@ function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
 }
 
-// ---------- 4. Login and linking logins ----------
+// ---------- 4. Login ----------
 async function loginWith(providerName) {
   let provider;
   switch (providerName) {
@@ -564,10 +537,7 @@ function hasProvider(providerId) {
 
 function updateLinkButton() {
   const btn = $("btnLink");
-  if (!currentUser) {
-    btn.classList.add("hidden");
-    return;
-  }
+  if (!currentUser) { btn.classList.add("hidden"); return; }
   if (!hasProvider("google.com")) {
     btn.textContent = "Tilknyt Google";
     btn.dataset.provider = "google";
@@ -752,16 +722,9 @@ async function onMemberListClick(event) {
   }
 }
 
-// ---------- 6. Requirements: write to Firestore ----------
+// ---------- 6. Write requirements ----------
 function emptyRecord() {
-  return {
-    description: "",
-    furps: "F",
-    moscow: "Should",
-    source: "",
-    status: "Proposed",
-    notes: ""
-  };
+  return { description: "", furps: "F", moscow: "Should", source: "", status: "Proposed", notes: "" };
 }
 
 async function writeRequirements(records) {
@@ -789,11 +752,8 @@ async function writeRequirements(records) {
 }
 
 async function addRequirement() {
-  try {
-    await writeRequirements([emptyRecord()]);
-  } catch (err) {
-    showMessage("Kunne ikke tilføje kravet: " + err.code);
-  }
+  try { await writeRequirements([emptyRecord()]); }
+  catch (err) { showMessage("Kunne ikke tilføje kravet: " + err.code); }
 }
 
 async function onCellChange(event) {
@@ -802,9 +762,7 @@ async function onCellChange(event) {
   if (!field) { return; }
   const id = el.dataset.id;
   const newValue = el.value;
-
   if (el.tagName === "SELECT") { el.blur(); }
-
   const changes = {};
   changes[field] = newValue;
   changes.updatedBy = userLabel();
@@ -827,7 +785,7 @@ async function onTableClick(event) {
   }
 }
 
-// ---------- 7. Requirements: read and draw ----------
+// ---------- 7. Read and draw ----------
 function onReqsSnapshot(snapshot) {
   allReqs = [];
   for (let i = 0; i < snapshot.docs.length; i++) {
@@ -841,12 +799,8 @@ function onReqsSnapshot(snapshot) {
 }
 
 function safeRender() {
-  if ($("tbody").contains(document.activeElement)) {
-    renderPending = true;
-  } else {
-    renderPending = false;
-    renderTable();
-  }
+  if ($("tbody").contains(document.activeElement)) { renderPending = true; }
+  else { renderPending = false; renderTable(); }
 }
 
 function onTableFocusOut() {
@@ -856,18 +810,10 @@ function onTableFocusOut() {
 function compareReqs(a, b) {
   let result = 0;
   switch (sortMode) {
-    case "priority":
-      result = rankOf(a.moscow) - rankOf(b.moscow);
-      break;
-    case "category":
-      result = FURPS.indexOf(a.furps) - FURPS.indexOf(b.furps);
-      break;
-    case "status":
-      result = STATUS.indexOf(a.status) - STATUS.indexOf(b.status);
-      break;
-    default:
-      result = 0;
-      break;
+    case "priority": result = rankOf(a.moscow) - rankOf(b.moscow); break;
+    case "category": result = FURPS.indexOf(a.furps) - FURPS.indexOf(b.furps); break;
+    case "status": result = STATUS.indexOf(a.status) - STATUS.indexOf(b.status); break;
+    default: result = 0; break;
   }
   if (result !== 0) { return result; }
   return a.seq - b.seq;
@@ -881,7 +827,6 @@ function renderTable() {
   const counts = {};
   for (let i = 0; i < allReqs.length; i++) {
     const r = allReqs[i];
-    // NEW: PYT filter — when active, only "Parked" requirements are shown.
     if (onlyPyt && r.status !== "Parked") { continue; }
     if (filterMoscow === "all" || r.moscow === filterMoscow) {
       visible.push(r);
@@ -890,7 +835,6 @@ function renderTable() {
   }
   visible.sort(compareReqs);
 
-  // Empty state — helpful when the PYT filter returns nothing.
   if (visible.length === 0) {
     const tr = document.createElement("tr");
     const td = document.createElement("td");
@@ -940,7 +884,6 @@ function buildRow(r) {
   tr.appendChild(maybeHidden(wrapCell(makeSelect("moscow", MOSCOW, r, plainLabel)), "moscow"));
   tr.appendChild(maybeHidden(wrapCell(makeTextarea("source", r)), "source"));
 
-  // Status dropdown — colour class matches the stored value ("status-parked" etc.).
   const statusSelect = makeSelect("status", STATUS, r, statusLabel);
   statusSelect.className = "status-" + r.status.toLowerCase();
   tr.appendChild(maybeHidden(wrapCell(statusSelect), "status"));
@@ -953,7 +896,6 @@ function buildRow(r) {
   maybeHidden(whoCell, "updatedBy");
   tr.appendChild(whoCell);
 
-  // "Alder" cell — four levels: resolved, parked, fresh/warn/urgent.
   const ageCell = document.createElement("td");
   ageCell.className = "age";
   const level = staleness(r);
@@ -971,13 +913,9 @@ function buildRow(r) {
     if (level === 3) {
       ageCell.classList.add("age-parked");
       ageCell.title = "Parkeret (PYT) i " + days + " dage — venter på review";
-    } else if (level === 2) {
-      ageCell.classList.add("age-urgent");
-    } else if (level === 1) {
-      ageCell.classList.add("age-warn");
-    } else {
-      ageCell.classList.add("age-fresh");
-    }
+    } else if (level === 2) { ageCell.classList.add("age-urgent"); }
+    else if (level === 1) { ageCell.classList.add("age-warn"); }
+    else { ageCell.classList.add("age-fresh"); }
     if (level !== 3) {
       const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
       ageCell.title = "Sidst rettet: " + d.toISOString().slice(0, 10);
@@ -1027,7 +965,6 @@ function makeSelect(field, options, r, labelFor) {
 function onSortChange() { sortMode = $("sortSelect").value; renderTable(); }
 function onFilterChange() { filterMoscow = $("filterSelect").value; renderTable(); }
 
-// NEW: toggle PYT-only view. Button becomes blue ("primary") when active.
 function onPytToggle() {
   onlyPyt = !onlyPyt;
   $("btnPyt").classList.toggle("primary", onlyPyt);
@@ -1098,37 +1035,160 @@ function mdCell(value) {
   return text.trim();
 }
 
+// NEW: full Markdown export with summary, split sections, and adaptive columns.
 function exportMarkdown() {
   const rows = sortedBySeq();
   const today = new Date().toISOString().slice(0, 10);
+  const projName = $("projectName").textContent;
 
-  let md = "# " + $("projectName").textContent + " - Kravmatrix\n\n";
+  // Detect which optional columns are actually used, so we don't emit empty columns.
+  let anySource = false, anyNotes = false, anyUpdatedBy = false;
+  for (let i = 0; i < rows.length; i++) {
+    if ((rows[i].source || "").trim() !== "") { anySource = true; }
+    if ((rows[i].notes || "").trim() !== "") { anyNotes = true; }
+    if ((rows[i].updatedBy || "").trim() !== "") { anyUpdatedBy = true; }
+  }
+
+  let md = "# " + projName + " — Kravmatrix\n\n";
   md += "Eksporteret: " + today + "\n\n";
-  md += "FURPS+ angiver kravets type. MoSCoW angiver prioriteten, " +
-        "så der er ét afsnit pr. prioritet.\n\n";
+  md += "FURPS+ angiver kravets type, MoSCoW angiver prioriteten. " +
+        "Aktive krav er grupperet efter prioritet. Parkerede (PYT), \"Won't\" " +
+        "og droppede vises i særskilte afsnit, fordi de ikke længere er aktive.\n\n";
 
-  for (let p = 0; p < MOSCOW.length; p++) {
-    const group = [];
+  // ---- Summary counts ----
+  const moscowOrder = ["Must", "Should", "Could", "Won't"];
+  const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
+  let grandTotal = 0;
+  md += "## Oversigt\n\n";
+  md += "| Prioritet | Krav i alt | Færdige | Aftalte | Foreslåede | Parkerede | Droppede |\n";
+  md += "| --- | --- | --- | --- | --- | --- | --- |\n";
+  for (let p = 0; p < moscowOrder.length; p++) {
+    let n = 0, done = 0, agreed = 0, proposed = 0, parked = 0, dropped = 0;
     for (let i = 0; i < rows.length; i++) {
-      if (rows[i].moscow === MOSCOW[p]) { group.push(rows[i]); }
+      if (rows[i].moscow !== moscowOrder[p]) { continue; }
+      n++;
+      switch (rows[i].status) {
+        case "Done": done++; break;
+        case "Agreed": agreed++; break;
+        case "Proposed": proposed++; break;
+        case "Parked": parked++; break;
+        case "Dropped": dropped++; break;
+      }
     }
-    if (group.length === 0) { continue; }
+    grandTotal += n;
+    totals.done += done; totals.agreed += agreed; totals.proposed += proposed;
+    totals.parked += parked; totals.dropped += dropped;
+    md += "| " + moscowOrder[p] + " | " + n + " | " + done + " | " + agreed +
+          " | " + proposed + " | " + parked + " | " + dropped + " |\n";
+  }
+  md += "| **I alt** | **" + grandTotal + "** | **" + totals.done + "** | **" +
+        totals.agreed + "** | **" + totals.proposed + "** | **" + totals.parked +
+        "** | **" + totals.dropped + "** |\n\n";
 
-    md += "## " + MOSCOW[p] + " (" + group.length + ")\n\n";
-    md += "| Krav-ID | Kravbeskrivelse | FURPS+ | Kilde | Status | Noter |\n";
-    md += "| --- | --- | --- | --- | --- | --- |\n";
+  // ---- Shared table builder for active sections (adaptive columns) ----
+  function buildActiveTable(group) {
+    let head = "| Krav-ID | Kravbeskrivelse | FURPS+ |";
+    if (anySource) { head += " Kilde |"; }
+    head += " Status |";
+    if (anyNotes) { head += " Noter |"; }
+    if (anyUpdatedBy) { head += " Sidst rettet af |"; }
+    head += "\n| --- | --- | --- |";
+    if (anySource) { head += " --- |"; }
+    head += " --- |";
+    if (anyNotes) { head += " --- |"; }
+    if (anyUpdatedBy) { head += " --- |"; }
+    head += "\n";
 
+    let body = "";
     for (let i = 0; i < group.length; i++) {
       const r = group[i];
-      const cells = [
-        mdCell(reqLabel(r.seq)),
-        mdCell(r.description),
-        mdCell(r.furps),
-        mdCell(r.source),
-        mdCell(statusLabel(r.status)),
-        mdCell(r.notes)
-      ];
-      md += "| " + cells.join(" | ") + " |\n";
+      body += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) +
+              " | " + mdCell(r.furps) + " |";
+      if (anySource) { body += " " + mdCell(r.source) + " |"; }
+      body += " " + mdCell(statusLabel(r.status)) + " |";
+      if (anyNotes) { body += " " + mdCell(r.notes) + " |"; }
+      if (anyUpdatedBy) { body += " " + mdCell(r.updatedBy) + " |"; }
+      body += "\n";
+    }
+    return head + body;
+  }
+
+  // ---- Active sections ----
+  const activePriorities = ["Must", "Should", "Could"];
+  for (let p = 0; p < activePriorities.length; p++) {
+    const group = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (r.moscow === activePriorities[p] && r.status !== "Parked" && r.status !== "Dropped") {
+        group.push(r);
+      }
+    }
+    if (group.length === 0) { continue; }
+    md += "## " + activePriorities[p] + " (" + group.length + ")\n\n";
+    md += buildActiveTable(group);
+    md += "\n";
+  }
+
+  // ---- PYT ----
+  const parked = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].status === "Parked") { parked.push(rows[i]); }
+  }
+  if (parked.length > 0) {
+    md += "## PYT — Parkerede (" + parked.length + ")\n\n";
+    md += "Idéer der er bevidst parkeret. Tag dem frem ved sprint-review, og beslut " +
+          "om de skal opgraderes eller droppes.\n\n";
+    let h = "| Krav-ID | Kravbeskrivelse | Oprindelig prioritet | FURPS+ |";
+    if (anyNotes) { h += " Noter |"; }
+    h += "\n| --- | --- | --- | --- |";
+    if (anyNotes) { h += " --- |"; }
+    h += "\n";
+    md += h;
+    for (let i = 0; i < parked.length; i++) {
+      const r = parked[i];
+      md += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) + " | " +
+            mdCell(r.moscow) + " | " + mdCell(r.furps) + " |";
+      if (anyNotes) { md += " " + mdCell(r.notes) + " |"; }
+      md += "\n";
+    }
+    md += "\n";
+  }
+
+  // ---- Won't ----
+  const wonts = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.moscow === "Won't" && r.status !== "Parked" && r.status !== "Dropped") {
+      wonts.push(r);
+    }
+  }
+  if (wonts.length > 0) {
+    md += "## Won't — bevidst fravalgt (" + wonts.length + ")\n\n";
+    md += "Krav der er bevidst valgt fra i denne version. Begrundelsen står under \"Begrundelse\".\n\n";
+    md += "| Krav-ID | Kravbeskrivelse | FURPS+ | Begrundelse |\n";
+    md += "| --- | --- | --- | --- |\n";
+    for (let i = 0; i < wonts.length; i++) {
+      const r = wonts[i];
+      md += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) + " | " +
+            mdCell(r.furps) + " | " + mdCell(r.notes) + " |\n";
+    }
+    md += "\n";
+  }
+
+  // ---- Droppede ----
+  const dropped = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].status === "Dropped") { dropped.push(rows[i]); }
+  }
+  if (dropped.length > 0) {
+    md += "## Droppede (" + dropped.length + ")\n\n";
+    md += "Krav der ikke længere er relevante. Begrundelsen står under \"Begrundelse\".\n\n";
+    md += "| Krav-ID | Kravbeskrivelse | Oprindelig prioritet | FURPS+ | Begrundelse |\n";
+    md += "| --- | --- | --- | --- | --- |\n";
+    for (let i = 0; i < dropped.length; i++) {
+      const r = dropped[i];
+      md += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) + " | " +
+            mdCell(r.moscow) + " | " + mdCell(r.furps) + " | " + mdCell(r.notes) + " |\n";
     }
     md += "\n";
   }
@@ -1147,7 +1207,7 @@ async function copyShareLink() {
   }
 }
 
-// ---------- 9. Import (JSON, CSV, TXT) ----------
+// ---------- 9. Import (JSON, CSV, TXT, MD) ----------
 function normalizeKey(text) {
   return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
@@ -1175,6 +1235,8 @@ function fieldFromHeader(header) {
     case "moscowpriority":
     case "priority":
     case "prioritet":
+    // NEW: "Oprindelig prioritet" appears in the PYT and Droppede tables.
+    case "oprindeligprioritet":
       return "moscow";
     case "sourcelocation":
     case "kildeplacering":
@@ -1190,6 +1252,8 @@ function fieldFromHeader(header) {
     case "note":
     case "noter":
     case "evt":
+    // NEW: "Begrundelse" appears in the Won't and Droppede tables.
+    case "begrundelse":
       return "notes";
     default:
       if (key.indexOf("source") === 0 || key.indexOf("kilde") === 0) { return "source"; }
@@ -1228,51 +1292,29 @@ function parseCsv(text, delimiter) {
       if (ch === '"') {
         if (text[i + 1] === '"') { cell += '"'; i++; }
         else { inQuotes = false; }
-      } else {
-        cell += ch;
-      }
+      } else { cell += ch; }
     } else {
       switch (ch) {
-        case '"':
-          inQuotes = true;
-          break;
-        case delimiter:
-          row.push(cell);
-          cell = "";
-          break;
-        case "\n":
-          row.push(cell);
-          table.push(row);
-          row = [];
-          cell = "";
-          break;
-        case "\r":
-          break;
-        default:
-          cell += ch;
-          break;
+        case '"': inQuotes = true; break;
+        case delimiter: row.push(cell); cell = ""; break;
+        case "\n": row.push(cell); table.push(row); row = []; cell = ""; break;
+        case "\r": break;
+        default: cell += ch; break;
       }
     }
   }
-  if (cell !== "" || row.length > 0) {
-    row.push(cell);
-    table.push(row);
-  }
+  if (cell !== "" || row.length > 0) { row.push(cell); table.push(row); }
   return table;
 }
 
 function csvToObjects(text) {
   const table = parseCsv(text, detectDelimiter(text));
   if (table.length < 2) { throw new Error("CSV-filen har ingen datarækker."); }
-
   const fields = [];
-  for (let c = 0; c < table[0].length; c++) {
-    fields.push(fieldFromHeader(table[0][c]));
-  }
+  for (let c = 0; c < table[0].length; c++) { fields.push(fieldFromHeader(table[0][c])); }
   if (fields.indexOf("description") < 0) {
     throw new Error("Fandt ingen kolonne med kravbeskrivelse (Kravbeskrivelse).");
   }
-
   const objects = [];
   for (let r = 1; r < table.length; r++) {
     const obj = {};
@@ -1293,7 +1335,6 @@ function csvToObjects(text) {
 function jsonToObjects(text) {
   const data = JSON.parse(text);
   if (!Array.isArray(data)) { throw new Error("JSON-filen skal være en liste af krav."); }
-
   const objects = [];
   for (let i = 0; i < data.length; i++) {
     const item = data[i];
@@ -1322,6 +1363,83 @@ function textToObjects(text) {
   return objects;
 }
 
+// NEW: parse a Markdown file that contains one or more tables.
+// - The section heading (## Must, ## PYT, ## Won't, etc.) sets defaults for moscow/status.
+// - The "Oversigt" summary table is skipped entirely.
+// - If no table rows are found, falls back to textToObjects so bullets still work.
+function markdownToObjects(text) {
+  const lines = text.split(/\r?\n/);
+  const objects = [];
+  let currentSection = null;
+  let headerCols = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    // Section heading?
+    const headingMatch = line.match(/^##\s+(.+?)\s*$/);
+    if (headingMatch) {
+      const name = headingMatch[1].trim();
+      if (name === "Oversigt") { currentSection = "Oversigt"; }
+      else if (name.indexOf("Must") === 0) { currentSection = "Must"; }
+      else if (name.indexOf("Should") === 0) { currentSection = "Should"; }
+      else if (name.indexOf("Could") === 0) { currentSection = "Could"; }
+      else if (name.indexOf("Won't") === 0 || name.indexOf("Won") === 0) { currentSection = "Won't"; }
+      else if (name.indexOf("PYT") === 0) { currentSection = "PYT"; }
+      else if (name.indexOf("Droppede") === 0 || name.indexOf("Dropped") === 0) { currentSection = "Droppede"; }
+      else { currentSection = null; }
+      headerCols = null;
+      continue;
+    }
+
+    if (currentSection === null || currentSection === "Oversigt") { continue; }
+
+    // Table row?
+    if (line.length < 2 || line[0] !== "|") { continue; }
+    const inner = line.slice(1, line.length - 1);
+    const cells = inner.split("|");
+    for (let c = 0; c < cells.length; c++) { cells[c] = cells[c].trim(); }
+
+    // Separator row (| --- | --- |)? Skip and keep headerCols.
+    if (cells.length > 0 && cells[0].replace(/-/g, "").trim() === "") { continue; }
+
+    // First content row = header.
+    if (headerCols === null) {
+      headerCols = [];
+      for (let c = 0; c < cells.length; c++) { headerCols.push(fieldFromHeader(cells[c])); }
+      continue;
+    }
+
+    // Data row.
+    if (cells.length < 2) { continue; }
+    const obj = {};
+    for (let c = 0; c < headerCols.length && c < cells.length; c++) {
+      const field = headerCols[c];
+      if (field === "") { continue; }
+      let value = cells[c].replace(/<br\s*\/?>/gi, "\n").replace(/\\\|/g, "|");
+      obj[field] = value;
+    }
+    // Section defaults fill in what the table does not carry.
+    if (!obj.moscow && (currentSection === "Must" || currentSection === "Should"
+                        || currentSection === "Could" || currentSection === "Won't")) {
+      obj.moscow = currentSection;
+    }
+    if (!obj.status) {
+      if (currentSection === "PYT") { obj.status = "Parked"; }
+      else if (currentSection === "Droppede") { obj.status = "Dropped"; }
+    }
+    // Ignore rows that have no description (e.g. stray cells).
+    if (!obj.description || String(obj.description).trim() === "") { continue; }
+    objects.push(obj);
+  }
+
+  // Fallback: no tables found? Treat it as a bullet list.
+  if (objects.length === 0) {
+    return textToObjects(text);
+  }
+  return objects;
+}
+
 function cleanFurps(value) {
   switch (value.trim().toUpperCase()) {
     case "F": case "FUNCTIONALITY": return "F";
@@ -1346,12 +1464,10 @@ function cleanMoscow(value) {
 }
 
 function cleanStatus(value) {
-  // Translates both old status names, the Danish labels, and PYT variants.
   switch (value.trim().toLowerCase()) {
     case "proposed": case "under review": case "draft": case "foreslået": return "Proposed";
     case "agreed": case "approved": case "aftalt": return "Agreed";
     case "done": case "implemented": case "verified": case "færdig": return "Done";
-    // NEW: PYT synonyms
     case "parked": case "parkeret": case "pyt":
     case "park your treasures": case "parkeret (pyt)": return "Parked";
     case "dropped": case "rejected": case "droppet": return "Dropped";
@@ -1409,9 +1525,7 @@ function buildImportRecords(objects) {
   return { records: records, skipped: skipped, unrecognised: unrecognised };
 }
 
-function onImportClick() {
-  $("importFile").click();
-}
+function onImportClick() { $("importFile").click(); }
 
 async function onImportFileChosen(event) {
   const file = event.target.files[0];
@@ -1420,12 +1534,8 @@ async function onImportFileChosen(event) {
   showMessage("");
 
   let text;
-  try {
-    text = await file.text();
-  } catch (err) {
-    showMessage("Kunne ikke åbne filen.");
-    return;
-  }
+  try { text = await file.text(); }
+  catch (err) { showMessage("Kunne ikke åbne filen."); return; }
   text = text.replace(/^\uFEFF/, "");
 
   const dotPos = file.name.lastIndexOf(".");
@@ -1437,8 +1547,10 @@ async function onImportFileChosen(event) {
       case "json": objects = jsonToObjects(text); break;
       case "csv": objects = csvToObjects(text); break;
       case "txt": objects = textToObjects(text); break;
+      // NEW: .md path uses the Markdown table parser.
+      case "md": case "markdown": objects = markdownToObjects(text); break;
       default:
-        showMessage("Ukendt filtype. Brug .json, .csv eller .txt.");
+        showMessage("Ukendt filtype. Brug .json, .csv, .txt eller .md.");
         return;
     }
   } catch (err) {
@@ -1448,7 +1560,7 @@ async function onImportFileChosen(event) {
 
   const built = buildImportRecords(objects);
   if (built.records.length === 0) {
-    showMessage("Fandt ingen krav i filen.");
+    showMessage("Fandt ingen krav i filen. Hvis det er en Markdown-fil, skal den have en tabel med en kolonne der hedder \"Kravbeskrivelse\".");
     return;
   }
   if (built.records.length > MAX_IMPORT_ROWS) {
@@ -1490,7 +1602,7 @@ async function importRecords(records) {
   }
 }
 
-// ---------- 10. Wire up the buttons ----------
+// ---------- 10. Wire up ----------
 $("sortSelect").value = sortMode;
 $("filterSelect").value = filterMoscow;
 
@@ -1533,10 +1645,7 @@ for (let i = 0; i < colBoxes.length; i++) {
     const col = colBoxes[i].dataset.col;
     const next = Object.assign({}, visibleColumns);
     next[col] = colBoxes[i].checked;
-    if (!hasAnyVisible(next)) {
-      colBoxes[i].checked = true;
-      return;
-    }
+    if (!hasAnyVisible(next)) { colBoxes[i].checked = true; return; }
     visibleColumns = next;
     saveColumns();
     applyColumnPrefs();
