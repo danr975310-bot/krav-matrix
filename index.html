@@ -26,7 +26,20 @@
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
   #msg { color: #b91c1c; margin: 8px 0; }
   #msg:empty { display: none; }
-  #projectName { margin: 0 0 12px; font-size: 22px; }
+  #projectName {
+    margin: 0 0 12px; font-size: 22px;
+    display: inline-block;
+    cursor: pointer;
+    transition: color 0.12s ease;
+  }
+  #projectName:hover { color: #2563eb; text-decoration: underline; }
+  #projectName::before {
+    content: "← ";
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    margin-right: -1.2em;
+  }
+  #projectName:hover::before { opacity: 1; margin-right: 0; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
   .table-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; min-width: 1110px; background: #fff; }
@@ -114,7 +127,6 @@
   #myProjectsList li { margin-bottom: 6px; }
   #myProjectsList button { width: 100%; text-align: left; }
   #myProjectsSection hr { margin: 16px 0; border: 0; border-top: 1px solid #d9dde3; }
-  /* Modal for GitHub settings. */
   .modal {
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.4);
@@ -187,7 +199,7 @@
   </div>
 
   <div id="screenApp" class="hidden">
-    <h2 id="projectName"></h2>
+    <h2 id="projectName" title="Tilbage til projektlisten"></h2>
 
     <div class="toolbar">
       <label>Sortér:
@@ -380,7 +392,6 @@
 </div>
 <div id="panelBackdrop" class="panel-backdrop hidden"></div>
 
-<!-- GitHub settings modal -->
 <div id="githubDialog" class="modal hidden">
   <div class="modal-content">
     <h3>GitHub-integration</h3>
@@ -454,11 +465,8 @@ let unsubReqs = null;
 let unsubMembers = null;
 let visibleColumns = loadColumns();
 
-// Project-level data (name, ownerUid, githubBoardUrl, defaultRepo).
-// Updated by onProjectSnapshot so the GitHub UI stays in sync with the live doc.
 let projectData = {};
 
-// Pending debounced saves, keyed by "reqId|field". Value is the setTimeout id.
 const saveTimers = new Map();
 
 function $(id) { return document.getElementById(id); }
@@ -614,7 +622,6 @@ function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
 }
 
-// ---------- Autosave ----------
 function scheduleSave(el, field, id) {
   const key = id + "|" + field;
   if (saveTimers.has(key)) { clearTimeout(saveTimers.get(key)); }
@@ -693,8 +700,6 @@ function onCellFocusOut(event) {
   if (renderPending) { setTimeout(safeRender, 0); }
 }
 
-// ---------- GitHub integration ----------
-// Two project-level settings, saved on the project doc so everyone sees them.
 function updateGithubUi() {
   const url = String(projectData.githubBoardUrl || "").trim();
   const btn = $("btnOpenBoard");
@@ -720,7 +725,6 @@ function closeGithubDialog() {
 async function saveGithubSettings() {
   const url = $("githubBoardUrlInput").value.trim();
   const repo = $("defaultRepoInput").value.trim();
-  // Basic sanity: a "repo" should look like "owner/name" if it is set at all.
   if (repo !== "" && repo.indexOf("/") < 0) {
     showMessage("Standard repository skal være på formen \"ejer/repo\".");
     return;
@@ -730,7 +734,6 @@ async function saveGithubSettings() {
       githubBoardUrl: url,
       defaultRepo: repo
     });
-    // Live snapshot will update projectData; also reflect immediately.
     projectData.githubBoardUrl = url;
     projectData.defaultRepo = repo;
     updateGithubUi();
@@ -747,10 +750,6 @@ function openBoard() {
   window.open(url, "_blank", "noopener");
 }
 
-// Rewrites GitHub-style references into Markdown links:
-//   "owner/repo#123"  ->  https://github.com/owner/repo/issues/123
-//   "#123"            ->  https://github.com/<defaultRepo>/issues/123
-// If defaultRepo is empty, bare "#123" is left untouched.
 function linkifyGitHubRefs(text, defaultRepo) {
   if (!text) { return ""; }
   const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
@@ -764,7 +763,6 @@ function linkifyGitHubRefs(text, defaultRepo) {
   });
 }
 
-// ---------- Projects / login ----------
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -1348,8 +1346,6 @@ function exportJson() {
   downloadFile("krav.json", JSON.stringify(output, null, 2), "application/json");
 }
 
-// mdCell escapes Markdown specials, then rewrites GitHub-style references
-// (#123, owner/repo#123) into clickable links using the project's default repo.
 function mdCell(value) {
   let text = String(value === undefined || value === null ? "" : value);
   text = text.replace(/\r?\n/g, "<br>");
@@ -1729,7 +1725,6 @@ function markdownToObjects(text) {
       const field = headerCols[c];
       if (field === "") { continue; }
       let value = cells[c].replace(/<br\s*\/?>/gi, "\n").replace(/\\\|/g, "|");
-      // Reverse our own linkify so a re-import keeps the raw "#123" text.
       value = value.replace(/\[([^\]]+)\]\(https:\/\/github\.com\/[^)]+\)/g, "$1");
       obj[field] = value;
     }
@@ -1936,6 +1931,9 @@ $("tbody").addEventListener("input", onCellInput);
 $("tbody").addEventListener("focusout", onCellFocusOut);
 $("tbody").addEventListener("click", onTableClick);
 
+// Project name acts as a link back to the chooser.
+$("projectName").addEventListener("click", leaveProject);
+
 document.addEventListener("visibilitychange", function () {
   if (document.visibilityState === "hidden") { flushAllPendingSaves(); }
 });
@@ -1965,16 +1963,13 @@ for (let i = 0; i < colBoxes.length; i++) {
   });
 }
 
-// GitHub integration wiring.
 $("btnGithub").addEventListener("click", openGithubDialog);
 $("btnOpenBoard").addEventListener("click", openBoard);
 $("btnGithubCancel").addEventListener("click", closeGithubDialog);
 $("btnGithubSave").addEventListener("click", saveGithubSettings);
-// Close the modal on backdrop click or Escape.
 $("githubDialog").addEventListener("click", function (e) {
   if (e.target === $("githubDialog")) { closeGithubDialog(); }
 });
-// Allow Enter in either input to save.
 $("githubBoardUrlInput").addEventListener("keydown", function (e) {
   if (e.key === "Enter") { saveGithubSettings(); }
 });
