@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<!-- SRP: This page's single responsibility is to show a shared, realtime
+     requirements matrix (FURPS+ x MoSCoW) that a project group edits together. -->
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Requirements Matrix</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1c1f24; }
+  header { display: flex; justify-content: space-between; align-items: center;
+           padding: 10px 16px; background: #1f2937; color: #fff; }
+  main { padding: 16px; }
+  .hidden { display: none; }
+  .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
+          padding: 16px; max-width: 480px; margin: 24px auto; }
+  .card h2 { margin-top: 0; }
+  button { cursor: pointer; padding: 6px 12px; border-radius: 6px;
+           border: 1px solid #9aa3af; background: #fff; }
+  button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  input[type=text], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
+  .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
+  #msg { color: #b91c1c; margin: 8px 0; min-height: 1em; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 1250px; background: #fff; }
+  th, td { border: 1px solid #d9dde3; padding: 4px; vertical-align: top; font-size: 13px; }
+  th { background: #eef0f3; text-align: left; }
+  td textarea, td input[type=text], td select { width: 100%; }
+  td textarea { min-height: 48px; resize: vertical; }
+  /* One colour per MoSCoW rank: left border + light row tint */
+  tr.prio-1 { background: #fef2f2; } tr.prio-1 td:first-child { border-left: 6px solid #dc2626; }
+  tr.prio-2 { background: #fff7ed; } tr.prio-2 td:first-child { border-left: 6px solid #f59e0b; }
+  tr.prio-3 { background: #eff6ff; } tr.prio-3 td:first-child { border-left: 6px solid #3b82f6; }
+  tr.prio-4 { background: #f3f4f6; } tr.prio-4 td:first-child { border-left: 6px solid #9ca3af; }
+  tr.group-header td { background: #1f2937; color: #fff; font-weight: 600; }
+  details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
+            border-radius: 8px; padding: 8px 12px; }
+  .small { font-size: 12px; color: #4b5563; }
+</style>
+</head>
+<body>
+
+<header>
+  <strong>Requirements Matrix · FURPS+ × MoSCoW</strong>
+  <div id="userInfo" class="hidden">
+    <span id="userName"></span>
+    <button id="btnLogout">Log ud</button>
+  </div>
+</header>
+
+<main>
+  <div id="msg"></div>
+
+  <!-- Screen 1: login -->
+  <div id="screenLogin" class="card hidden">
+    <h2>Log ind</h2>
+    <p>Log ind for at se og redigere jeres krav.</p>
+    <button id="btnGoogle" class="primary">Log ind med Google</button>
+    <button id="btnGithub">Log ind med GitHub</button>
+    <p class="small">Brug den samme login-metode hver gang.</p>
+  </div>
+
+  <!-- Screen 2: create or join a project -->
+  <div id="screenChooser" class="card hidden">
+    <h2>Opret nyt projekt</h2>
+    <input type="text" id="newProjectName" placeholder="Projektnavn, fx Reolmarked">
+    <button id="btnCreate" class="primary">Opret projekt</button>
+    <hr>
+    <h2>Deltag i projekt</h2>
+    <input type="text" id="joinCode" placeholder="Projektkode eller delt link">
+    <button id="btnJoin">Deltag</button>
+  </div>
+
+  <!-- Screen 3: the matrix -->
+  <div id="screenApp" class="hidden">
+    <h2 id="projectName"></h2>
+
+    <div class="toolbar">
+      <label>Sortér:
+        <select id="sortSelect">
+          <option value="original">Som de dukker op (oprettet)</option>
+          <option value="priority">Prioritet M &gt; S &gt; C &gt; W</option>
+          <option value="category">FURPS+ kategori</option>
+          <option value="status">Status</option>
+        </select>
+      </label>
+      <label>Vis:
+        <select id="filterSelect">
+          <option value="all">Alle prioriteter</option>
+          <option value="Must">Must</option>
+          <option value="Should">Should</option>
+          <option value="Could">Could</option>
+          <option value="Won't">Won't</option>
+        </select>
+      </label>
+      <button id="btnAdd" class="primary">+ Nyt krav</button>
+      <button id="btnImport">Importér</button>
+      <input type="file" id="importFile" accept=".json,.csv,.txt" class="hidden">
+      <button id="btnCsv">Eksportér CSV</button>
+      <button id="btnJson">Eksportér JSON</button>
+      <button id="btnMd">Eksportér Markdown</button>
+      <button id="btnShare">Kopiér delingslink</button>
+      <button id="btnLeave">Skift projekt</button>
+    </div>
+
+    <details>
+      <summary><strong>Legend: FURPS+ and MoSCoW</strong></summary>
+      <p><strong>FURPS+ (requirement type)</strong></p>
+      <ul>
+        <li><strong>F</strong> Functionality: features, capabilities, behaviour.</li>
+        <li><strong>U</strong> Usability: ease of use, accessibility, user experience.</li>
+        <li><strong>R</strong> Reliability: availability, accuracy, recovery.</li>
+        <li><strong>P</strong> Performance: response time, throughput, resource use.</li>
+        <li><strong>S</strong> Supportability: maintainability, testability, adaptability.</li>
+        <li><strong>+</strong> Constraints: design, implementation, interface, legal (e.g. GDPR), physical.</li>
+      </ul>
+      <p><strong>MoSCoW (priority)</strong></p>
+      <ul>
+        <li><strong>Must</strong> Essential for the agreed solution or release.</li>
+        <li><strong>Should</strong> Important, but a workable solution exists without it.</li>
+        <li><strong>Could</strong> Desirable if time and resources permit.</li>
+        <li><strong>Won't</strong> Explicitly excluded from this release (keep the rationale in Notes).</li>
+      </ul>
+      <p class="small">Security and other cross-cutting concerns may be classified under F or +.
+         Choose one convention and apply it consistently.</p>
+    </details>
+
+    <details>
+      <summary><strong>Import: filformater</strong></summary>
+      <ul>
+        <li><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten.
+            Semikolon, komma og tab virker. Gem som "CSV UTF-8" i Excel, så æøå bevares.</li>
+        <li><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
+        <li><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Proposed, som du kan rette bagefter.</li>
+      </ul>
+      <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende. Kravene får nye ID'er,
+         og et gammelt ID fra filen skrives i Notes. Importér ikke samme fil to gange, ellers får du dubletter.
+         Tip: en CSV-eksport fra et tomt projekt er en færdig skabelon.</p>
+    </details>
+
+    <details>
+      <summary><strong>Medlemmer</strong></summary>
+      <ul id="memberList"></ul>
+      <p class="small">Projektkoden fungerer som en adgangskode. Del den kun med gruppen.</p>
+    </details>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:70px">Requirement ID</th>
+            <th style="width:260px">Requirement Description</th>
+            <th style="width:60px">FURPS+</th>
+            <th style="width:90px">MoSCoW</th>
+            <th style="width:170px">Source / Evidence</th>
+            <th style="width:120px">Source Location</th>
+            <th style="width:220px">Acceptance Criteria</th>
+            <th style="width:120px">Status</th>
+            <th style="width:180px">Additional Notes</th>
+            <th style="width:100px">Last edited by</th>
+            <th style="width:40px"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+// SRP: This script's single responsibility is to connect the page to Firebase
+// (login, projects, requirements, import/export) and to draw the requirements table.
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, signOut,
+         GoogleAuthProvider, GithubAuthProvider }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
+         onSnapshot, runTransaction, serverTimestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ---------- 1. Firebase setup ----------
+// Paste YOUR config from the Firebase console here.
+// This config is public by design; the Firestore rules protect the data.
+const firebaseConfig = {
+  apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4",
+  authDomain: "reqmatrix-fc50a.firebaseapp.com",
+  projectId: "reqmatrix-fc50a",
+  appId: "1:480693503390:web:d8c32525e3370b301a428f"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ---------- 2. Constants and state ----------
+// The allowed values live in arrays so the dropdowns and the sorting use the same list.
+const FURPS = ["F", "U", "R", "P", "S", "+"];
+const MOSCOW = ["Must", "Should", "Could", "Won't"];
+const STATUS = ["Proposed", "Under Review", "Approved", "Implemented", "Verified", "Rejected"];
+
+// Import limits. If big imports fail with permission or quota errors, lower the chunk size.
+const MAX_IMPORT_ROWS = 500;
+const IMPORT_CHUNK_SIZE = 100;
+
+let currentUser = null;
+let currentPid = null;       // id (= secret code) of the open project
+let isOwner = false;
+let sortMode = "original";
+let filterMoscow = "all";
+let allReqs = [];            // requirements from Firestore, as plain objects
+let allMembers = [];         // members of the open project
+let renderPending = false;   // true if a redraw was postponed while the user was typing
+let unsubProject = null;     // functions that stop the live listeners
+let unsubReqs = null;
+let unsubMembers = null;
+
+function $(id) { return document.getElementById(id); }
+
+// ---------- 3. Small helpers ----------
+function showMessage(text, isGood) {
+  // Red for errors (default), green when isGood is true.
+  $("msg").textContent = text;
+  $("msg").style.color = isGood ? "#15803d" : "#b91c1c";
+}
+
+function showScreen(name) {
+  // Only one screen is visible at a time.
+  $("screenLogin").classList.add("hidden");
+  $("screenChooser").classList.add("hidden");
+  $("screenApp").classList.add("hidden");
+  switch (name) {
+    case "login": $("screenLogin").classList.remove("hidden"); break;
+    case "chooser": $("screenChooser").classList.remove("hidden"); break;
+    case "app": $("screenApp").classList.remove("hidden"); break;
+  }
+}
+
+function userLabel() {
+  // GitHub users may have no display name, so we fall back to e-mail, then to the id.
+  if (currentUser.displayName) { return currentUser.displayName; }
+  if (currentUser.email) { return currentUser.email; }
+  return currentUser.uid.slice(0, 6);
+}
+
+function rankOf(moscow) {
+  // Text sorts alphabetically (Could < Must), so we turn priority into a number first.
+  switch (moscow) {
+    case "Must": return 1;
+    case "Should": return 2;
+    case "Could": return 3;
+    case "Won't": return 4;
+    default: return 5;
+  }
+}
+
+function reqLabel(seq) {
+  // 1 -> "REQ-001"
+  return "REQ-" + String(seq).padStart(3, "0");
+}
+
+function stopListeners() {
+  // Stop old live listeners so we never listen to two projects at once.
+  if (unsubProject) { unsubProject(); unsubProject = null; }
+  if (unsubReqs) { unsubReqs(); unsubReqs = null; }
+  if (unsubMembers) { unsubMembers(); unsubMembers = null; }
+  allReqs = [];
+  allMembers = [];
+}
+
+function onListenError(err) {
+  showMessage("Fejl ved realtidsopdatering: " + err.code);
+}
+
+// ---------- 4. Login ----------
+async function loginWith(providerName) {
+  let provider;
+  switch (providerName) {
+    case "google": provider = new GoogleAuthProvider(); break;
+    case "github": provider = new GithubAuthProvider(); break;
+    default: return;
+  }
+  try {
+    showMessage("");
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    switch (err.code) {
+      case "auth/account-exists-with-different-credential":
+        showMessage("Denne e-mail er allerede brugt med en anden login-metode. Brug den metode i stedet.");
+        break;
+      case "auth/popup-closed-by-user":
+        showMessage("Login blev afbrudt.");
+        break;
+      default:
+        showMessage("Login fejlede: " + err.code);
+        break;
+    }
+  }
+}
+
+function onAuthChanged(user) {
+  // Runs on page load and every time someone logs in or out.
+  currentUser = user;
+  if (!user) {
+    stopListeners();
+    currentPid = null;
+    $("userInfo").classList.add("hidden");
+    showScreen("login");
+    return;
+  }
+  $("userName").textContent = userLabel();
+  $("userInfo").classList.remove("hidden");
+
+  // Project code from the share link (#code) wins over the last used project.
+  let pid = location.hash.slice(1);
+  if (!pid) { pid = localStorage.getItem("lastProject") || ""; }
+  if (pid) { openProject(pid); } else { showScreen("chooser"); }
+}
+
+// ---------- 5. Projects ----------
+function makeProjectId(name) {
+  // The id doubles as the secret code, so we add 64 random bits to make it impossible to guess.
+  let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  if (slug === "") { slug = "projekt"; }
+  slug = slug.slice(0, 30);
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let suffix = "";
+  for (let i = 0; i < bytes.length; i++) {
+    suffix += bytes[i].toString(16).padStart(2, "0");
+  }
+  return slug + "-" + suffix;
+}
+
+async function createProject() {
+  const name = $("newProjectName").value.trim();
+  if (name === "") { showMessage("Skriv et projektnavn."); return; }
+  const pid = makeProjectId(name);
+  try {
+    await setDoc(doc(db, "projects", pid), {
+      name: name,
+      ownerUid: currentUser.uid,
+      counter: 0,                 // last used requirement number
+      createdAt: serverTimestamp()
+    });
+    await openProject(pid);
+  } catch (err) {
+    showMessage("Kunne ikke oprette projektet: " + err.code);
+  }
+}
+
+async function joinFromInput() {
+  let code = $("joinCode").value.trim();
+  const hashPos = code.indexOf("#");
+  if (hashPos >= 0) { code = code.slice(hashPos + 1); }   // allow pasting the whole link
+  if (code === "") { showMessage("Indsæt en projektkode."); return; }
+  await openProject(code);
+}
+
+async function openProject(pid) {
+  stopListeners();
+  showMessage("");
+  try {
+    const snap = await getDoc(doc(db, "projects", pid));
+    if (!snap.exists()) {
+      showMessage("Projektet findes ikke. Tjek koden.");
+      showScreen("chooser");
+      return;
+    }
+    // Knowing the code makes you a member. merge:true keeps the call safe to repeat.
+    await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
+                 { name: userLabel() }, { merge: true });
+
+    currentPid = pid;
+    localStorage.setItem("lastProject", pid);
+    location.hash = pid;
+
+    unsubProject = onSnapshot(doc(db, "projects", pid), onProjectSnapshot, onListenError);
+    unsubReqs = onSnapshot(collection(db, "projects", pid, "requirements"), onReqsSnapshot, onListenError);
+    unsubMembers = onSnapshot(collection(db, "projects", pid, "members"), onMembersSnapshot, onListenError);
+    showScreen("app");
+  } catch (err) {
+    showMessage("Kunne ikke åbne projektet: " + err.code);
+    showScreen("chooser");
+  }
+}
+
+function leaveProject() {
+  stopListeners();
+  currentPid = null;
+  localStorage.removeItem("lastProject");
+  history.replaceState(null, "", location.pathname);   // remove #code from the address bar
+  showScreen("chooser");
+}
+
+function onProjectSnapshot(snap) {
+  if (!snap.exists()) { return; }
+  const data = snap.data();
+  $("projectName").textContent = data.name;
+  isOwner = (data.ownerUid === currentUser.uid);
+  renderMembers();
+}
+
+function onMembersSnapshot(snapshot) {
+  allMembers = [];
+  for (let i = 0; i < snapshot.docs.length; i++) {
+    const d = snapshot.docs[i];
+    allMembers.push({ uid: d.id, name: d.data().name });
+  }
+  renderMembers();
+}
+
+function renderMembers() {
+  const list = $("memberList");
+  list.innerHTML = "";
+  for (let i = 0; i < allMembers.length; i++) {
+    const m = allMembers[i];
+    const li = document.createElement("li");
+    li.textContent = m.name + " ";
+    // Only the owner can remove others (the Firestore rules enforce this too).
+    if (isOwner && m.uid !== currentUser.uid) {
+      const btn = document.createElement("button");
+      btn.textContent = "Fjern";
+      btn.dataset.uid = m.uid;
+      li.appendChild(btn);
+    }
+    list.appendChild(li);
+  }
+}
+
+async function onMemberListClick(event) {
+  const uid = event.target.dataset.uid;
+  if (!uid) { return; }
+  if (!confirm("Fjern dette medlem?")) { return; }
+  try {
+    await deleteDoc(doc(db, "projects", currentPid, "members", uid));
+  } catch (err) {
+    showMessage("Kunne ikke fjerne medlemmet: " + err.code);
+  }
+}
+
+// ---------- 6. Requirements: write to Firestore ----------
+function emptyRecord() {
+  // The default values of a brand-new requirement (used by "+ Nyt krav" and by import).
+  return {
+    description: "",
+    furps: "F",
+    moscow: "Should",
+    source: "",
+    sourceLocation: "",
+    acceptance: "",
+    status: "Proposed",
+    notes: ""
+  };
+}
+
+// One shared writer for both "+ Nyt krav" (1 record) and import (many records).
+// A transaction makes "read counter, reserve numbers, save" happen as one step,
+// so two people adding at the same time can never get the same ID.
+async function writeRequirements(records) {
+  await runTransaction(db, async function (tx) {
+    const projRef = doc(db, "projects", currentPid);
+    const projSnap = await tx.get(projRef);
+    const last = projSnap.data().counter;
+    tx.update(projRef, { counter: last + records.length });
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      const newRef = doc(collection(db, "projects", currentPid, "requirements"));
+      tx.set(newRef, {
+        seq: last + 1 + i,
+        description: r.description,
+        furps: r.furps,
+        moscow: r.moscow,
+        source: r.source,
+        sourceLocation: r.sourceLocation,
+        acceptance: r.acceptance,
+        status: r.status,
+        notes: r.notes,
+        updatedBy: userLabel(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  });
+}
+
+async function addRequirement() {
+  try {
+    await writeRequirements([emptyRecord()]);
+  } catch (err) {
+    showMessage("Kunne ikke tilføje kravet: " + err.code);
+  }
+}
+
+async function onCellChange(event) {
+  // One listener for the whole table. data-field tells us which field was edited.
+  const el = event.target;
+  const field = el.dataset.field;
+  if (!field) { return; }
+  const changes = {};
+  changes[field] = el.value;
+  changes.updatedBy = userLabel();
+  changes.updatedAt = serverTimestamp();
+  try {
+    await updateDoc(doc(db, "projects", currentPid, "requirements", el.dataset.id), changes);
+  } catch (err) {
+    showMessage("Kunne ikke gemme: " + err.code);
+  }
+  if (el.tagName === "SELECT") { el.blur(); }   // lets a postponed redraw (new sort order) happen
+}
+
+async function onTableClick(event) {
+  const el = event.target;
+  if (el.dataset.action !== "delete") { return; }
+  if (!confirm("Slet dette krav? ID'et bliver ikke genbrugt.")) { return; }
+  try {
+    await deleteDoc(doc(db, "projects", currentPid, "requirements", el.dataset.id));
+  } catch (err) {
+    showMessage("Kunne ikke slette: " + err.code);
+  }
+}
+
+// ---------- 7. Requirements: read and draw ----------
+function onReqsSnapshot(snapshot) {
+  allReqs = [];
+  for (let i = 0; i < snapshot.docs.length; i++) {
+    const d = snapshot.docs[i];
+    allReqs.push(Object.assign({ id: d.id }, d.data()));
+  }
+  safeRender();
+}
+
+function safeRender() {
+  // Redrawing while someone types would steal their cursor, so we wait until they leave the cell.
+  if ($("tbody").contains(document.activeElement)) {
+    renderPending = true;
+  } else {
+    renderPending = false;
+    renderTable();
+  }
+}
+
+function onTableFocusOut() {
+  if (renderPending) { setTimeout(safeRender, 0); }
+}
+
+function compareReqs(a, b) {
+  let result = 0;
+  switch (sortMode) {
+    case "priority":
+      result = rankOf(a.moscow) - rankOf(b.moscow);
+      break;
+    case "category":
+      result = FURPS.indexOf(a.furps) - FURPS.indexOf(b.furps);
+      break;
+    case "status":
+      result = STATUS.indexOf(a.status) - STATUS.indexOf(b.status);
+      break;
+    default:
+      result = 0;
+      break;
+  }
+  if (result !== 0) { return result; }
+  return a.seq - b.seq;   // ties (and "original") fall back to creation order
+}
+
+function renderTable() {
+  const tbody = $("tbody");
+  tbody.innerHTML = "";
+
+  // Filter first, then sort a copy so the original list stays untouched.
+  const visible = [];
+  for (let i = 0; i < allReqs.length; i++) {
+    if (filterMoscow === "all" || allReqs[i].moscow === filterMoscow) {
+      visible.push(allReqs[i]);
+    }
+  }
+  visible.sort(compareReqs);
+
+  let lastRank = 0;
+  for (let i = 0; i < visible.length; i++) {
+    const r = visible[i];
+    // In priority mode, add a heading row for each MoSCoW section.
+    if (sortMode === "priority" && rankOf(r.moscow) !== lastRank) {
+      lastRank = rankOf(r.moscow);
+      tbody.appendChild(buildGroupHeader(r.moscow));
+    }
+    tbody.appendChild(buildRow(r));
+  }
+}
+
+function buildGroupHeader(moscow) {
+  const tr = document.createElement("tr");
+  tr.className = "group-header";
+  const td = document.createElement("td");
+  td.colSpan = 11;
+  td.textContent = moscow.toUpperCase();
+  tr.appendChild(td);
+  return tr;
+}
+
+function buildRow(r) {
+  const tr = document.createElement("tr");
+  tr.className = "prio-" + rankOf(r.moscow);
+
+  const idCell = document.createElement("td");
+  idCell.textContent = reqLabel(r.seq);
+  tr.appendChild(idCell);
+
+  tr.appendChild(wrapCell(makeTextarea("description", r)));
+  tr.appendChild(wrapCell(makeSelect("furps", FURPS, r)));
+  tr.appendChild(wrapCell(makeSelect("moscow", MOSCOW, r)));
+  tr.appendChild(wrapCell(makeTextarea("source", r)));
+  tr.appendChild(wrapCell(makeInput("sourceLocation", r)));
+  tr.appendChild(wrapCell(makeTextarea("acceptance", r)));
+  tr.appendChild(wrapCell(makeSelect("status", STATUS, r)));
+  tr.appendChild(wrapCell(makeTextarea("notes", r)));
+
+  const whoCell = document.createElement("td");
+  whoCell.className = "small";
+  whoCell.textContent = r.updatedBy || "";
+  tr.appendChild(whoCell);
+
+  const delBtn = document.createElement("button");
+  delBtn.textContent = "✕";
+  delBtn.title = "Slet krav";
+  delBtn.dataset.action = "delete";
+  delBtn.dataset.id = r.id;
+  tr.appendChild(wrapCell(delBtn));
+  return tr;
+}
+
+function wrapCell(element) {
+  const td = document.createElement("td");
+  td.appendChild(element);
+  return td;
+}
+
+// We set .value (not innerHTML), so typed text can never be run as HTML.
+function makeTextarea(field, r) {
+  const el = document.createElement("textarea");
+  el.value = r[field] || "";
+  el.dataset.field = field;
+  el.dataset.id = r.id;
+  return el;
+}
+
+function makeInput(field, r) {
+  const el = document.createElement("input");
+  el.type = "text";
+  el.value = r[field] || "";
+  el.dataset.field = field;
+  el.dataset.id = r.id;
+  return el;
+}
+
+function makeSelect(field, options, r) {
+  const el = document.createElement("select");
+  for (let i = 0; i < options.length; i++) {
+    const opt = document.createElement("option");
+    opt.value = options[i];
+    opt.textContent = options[i];
+    el.appendChild(opt);
+  }
+  el.value = r[field];
+  el.dataset.field = field;
+  el.dataset.id = r.id;
+  return el;
+}
+
+// ---------- 8. Sorting/filter controls, export, share ----------
+function onSortChange() { sortMode = $("sortSelect").value; renderTable(); }
+function onFilterChange() { filterMoscow = $("filterSelect").value; renderTable(); }
+
+function downloadFile(filename, text, mimeType) {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Named compare function (instead of an inline lambda): oldest requirement first.
+function compareBySeq(a, b) {
+  return a.seq - b.seq;
+}
+
+function sortedBySeq() {
+  // Exports always use creation order, no matter how the table is sorted on screen.
+  const copy = allReqs.slice();
+  copy.sort(compareBySeq);
+  return copy;
+}
+
+function csvCell(value) {
+  // Quotes inside a value are doubled, and the whole value is wrapped in quotes.
+  const text = String(value === undefined || value === null ? "" : value);
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function exportCsv() {
+  const fields = ["description", "furps", "moscow", "source", "sourceLocation",
+                  "acceptance", "status", "notes", "updatedBy"];
+  // Semicolon + BOM so Excel with Danish settings opens it correctly (æøå too).
+  let csv = "\uFEFF" + "Requirement ID;Requirement Description;FURPS+;MoSCoW;Source / Evidence;" +
+            "Source Location;Acceptance Criteria;Status;Additional Notes;Last edited by\r\n";
+  const rows = sortedBySeq();
+  for (let i = 0; i < rows.length; i++) {
+    const cells = [csvCell(reqLabel(rows[i].seq))];
+    for (let j = 0; j < fields.length; j++) {
+      cells.push(csvCell(rows[i][fields[j]]));
+    }
+    csv += cells.join(";") + "\r\n";
+  }
+  downloadFile("requirements.csv", csv, "text/csv;charset=utf-8");
+}
+
+function exportJson() {
+  const rows = sortedBySeq();
+  const output = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    output.push({
+      id: reqLabel(r.seq), description: r.description, furps: r.furps,
+      moscow: r.moscow, source: r.source, sourceLocation: r.sourceLocation,
+      acceptance: r.acceptance, status: r.status, notes: r.notes, updatedBy: r.updatedBy
+    });
+  }
+  downloadFile("requirements.json", JSON.stringify(output, null, 2), "application/json");
+}
+
+// Makes one value safe to put inside a Markdown table cell.
+function mdCell(value) {
+  let text = String(value === undefined || value === null ? "" : value);
+  text = text.replace(/\r?\n/g, "<br>");   // a line break would end the table row, so we use <br>
+  text = text.replace(/\|/g, "\\|");       // a pipe would start a new column, so we escape it
+  return text.trim();
+}
+
+// Exports one Markdown section per MoSCoW priority, each with its own table.
+function exportMarkdown() {
+  const rows = sortedBySeq();
+  const today = new Date().toISOString().slice(0, 10);
+
+  let md = "# " + $("projectName").textContent + " - Requirements Matrix\n\n";
+  md += "Exported: " + today + "\n\n";
+  md += "FURPS+ classifies the type of requirement. MoSCoW sets the priority, " +
+        "so there is one section per priority.\n\n";
+
+  // MOSCOW is already in the order Must, Should, Could, Won't, so the sections come out in priority order.
+  for (let p = 0; p < MOSCOW.length; p++) {
+    const group = [];
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].moscow === MOSCOW[p]) { group.push(rows[i]); }
+    }
+    if (group.length === 0) { continue; }   // skip empty sections
+
+    md += "## " + MOSCOW[p] + " (" + group.length + ")\n\n";
+    md += "| Requirement ID | Requirement Description | FURPS+ | Source / Evidence | " +
+          "Source Location | Acceptance Criteria | Status | Additional Notes |\n";
+    md += "| --- | --- | --- | --- | --- | --- | --- | --- |\n";
+
+    for (let i = 0; i < group.length; i++) {
+      const r = group[i];
+      const cells = [
+        mdCell(reqLabel(r.seq)),
+        mdCell(r.description),
+        mdCell(r.furps),
+        mdCell(r.source),
+        mdCell(r.sourceLocation),
+        mdCell(r.acceptance),
+        mdCell(r.status),
+        mdCell(r.notes)
+      ];
+      md += "| " + cells.join(" | ") + " |\n";
+    }
+    md += "\n";
+  }
+
+  downloadFile("requirements.md", md, "text/markdown;charset=utf-8");
+}
+
+async function copyShareLink() {
+  const link = location.origin + location.pathname + "#" + currentPid;
+  try {
+    await navigator.clipboard.writeText(link);
+    showMessage("");
+    alert("Link kopieret. Del det kun med gruppen.");
+  } catch (err) {
+    prompt("Kopiér linket:", link);
+  }
+}
+
+// ---------- 9. Import (JSON, CSV, TXT) ----------
+// Plan: read the file -> turn it into plain objects -> clean the values ->
+// ask the user to confirm -> write the records to Firestore in chunks.
+
+function normalizeKey(text) {
+  // "Source / Evidence" -> "sourceevidence", "FURPS+" -> "furps". Makes header matching forgiving.
+  return String(text).toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function fieldFromHeader(header) {
+  // Maps a column name (CSV header or JSON key) to one of our field names. "" = ignore the column.
+  switch (normalizeKey(header)) {
+    case "requirementid":
+    case "reqid":
+    case "id":
+      return "importedId";
+    case "requirementdescription":
+    case "description":
+    case "requirement":
+    case "krav":
+    case "kravbeskrivelse":
+      return "description";
+    case "furps":
+    case "furpscategory":
+    case "category":
+    case "kategori":
+      return "furps";
+    case "moscow":
+    case "moscowpriority":
+    case "priority":
+    case "prioritet":
+      return "moscow";
+    case "sourceevidence":
+    case "source":
+    case "kilde":
+      return "source";
+    case "sourcelocation":
+    case "kildeplacering":
+      return "sourceLocation";
+    case "acceptancecriteria":
+    case "acceptance":
+    case "acceptkriterier":
+      return "acceptance";
+    case "status":
+      return "status";
+    case "additionalnotes":
+    case "notes":
+    case "note":
+    case "evt":
+      return "notes";
+    default:
+      return "";
+  }
+}
+
+function countChar(text, ch) {
+  let n = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === ch) { n++; }
+  }
+  return n;
+}
+
+function detectDelimiter(text) {
+  // Danish Excel uses ";" but other tools use "," or tab, so we look at the header row.
+  const firstLine = text.split("\n")[0];
+  let best = ";";
+  let bestCount = countChar(firstLine, ";");
+  const commas = countChar(firstLine, ",");
+  const tabs = countChar(firstLine, "\t");
+  if (commas > bestCount) { best = ","; bestCount = commas; }
+  if (tabs > bestCount) { best = "\t"; }
+  return best;
+}
+
+function parseCsv(text, delimiter) {
+  // A small CSV reader. A simple split on ";" would break on quoted cells that
+  // contain the delimiter or line breaks, so we read one character at a time.
+  const table = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }   // "" inside quotes = one quote character
+        else { inQuotes = false; }
+      } else {
+        cell += ch;
+      }
+    } else {
+      switch (ch) {
+        case '"':
+          inQuotes = true;
+          break;
+        case delimiter:
+          row.push(cell);
+          cell = "";
+          break;
+        case "\n":
+          row.push(cell);
+          table.push(row);
+          row = [];
+          cell = "";
+          break;
+        case "\r":
+          break;   // ignored: the "\n" ends the row
+        default:
+          cell += ch;
+          break;
+      }
+    }
+  }
+  // The file may not end with a line break, so save the last row too.
+  if (cell !== "" || row.length > 0) {
+    row.push(cell);
+    table.push(row);
+  }
+  return table;
+}
+
+function csvToObjects(text) {
+  const table = parseCsv(text, detectDelimiter(text));
+  if (table.length < 2) { throw new Error("CSV-filen har ingen datarækker."); }
+
+  const fields = [];
+  for (let c = 0; c < table[0].length; c++) {
+    fields.push(fieldFromHeader(table[0][c]));
+  }
+  if (fields.indexOf("description") < 0) {
+    throw new Error("Fandt ingen kolonne med kravbeskrivelse (Requirement Description).");
+  }
+
+  const objects = [];
+  for (let r = 1; r < table.length; r++) {
+    const obj = {};
+    let hasContent = false;
+    for (let c = 0; c < fields.length; c++) {
+      if (fields[c] === "") { continue; }
+      let value = table[r][c];
+      if (value === undefined) { value = ""; }
+      value = value.trim();
+      obj[fields[c]] = value;
+      if (value !== "") { hasContent = true; }
+    }
+    if (hasContent) { objects.push(obj); }   // skip completely empty lines
+  }
+  return objects;
+}
+
+function jsonToObjects(text) {
+  const data = JSON.parse(text);   // throws an error if the file is not valid JSON
+  if (!Array.isArray(data)) { throw new Error("JSON-filen skal være en liste af krav."); }
+
+  const objects = [];
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    if (item === null || typeof item !== "object") { continue; }
+    const obj = {};
+    const keys = Object.keys(item);
+    for (let k = 0; k < keys.length; k++) {
+      const field = fieldFromHeader(keys[k]);
+      if (field === "") { continue; }
+      let value = item[keys[k]];
+      if (value === null || value === undefined) { value = ""; }
+      obj[field] = String(value).trim();
+    }
+    objects.push(obj);
+  }
+  return objects;
+}
+
+function textToObjects(text) {
+  // One requirement per line. Leading bullets like "- ", "* " or "1. " are removed.
+  const lines = text.split(/\r?\n/);
+  const objects = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].replace(/^\s*([-*•]|\d+[.)])\s+/, "").trim();
+    if (line !== "") { objects.push({ description: line }); }
+  }
+  return objects;
+}
+
+// The clean functions return the allowed value, or "" if the text is not recognised.
+function cleanFurps(value) {
+  switch (value.trim().toUpperCase()) {
+    case "F": case "FUNCTIONALITY": return "F";
+    case "U": case "USABILITY": return "U";
+    case "R": case "RELIABILITY": return "R";
+    case "P": case "PERFORMANCE": return "P";
+    case "S": case "SUPPORTABILITY": return "S";
+    case "+": case "CONSTRAINT": case "CONSTRAINTS": return "+";
+    default: return "";
+  }
+}
+
+function cleanMoscow(value) {
+  // In this column "S" can only mean Should, so the one-letter forms are safe here.
+  switch (value.trim().toLowerCase().replace(/’/g, "'")) {
+    case "must": case "must have": case "m": return "Must";
+    case "should": case "should have": case "s": return "Should";
+    case "could": case "could have": case "c": return "Could";
+    case "won't": case "wont": case "won't have": case "wont have":
+    case "won't have (this release)": case "w": return "Won't";
+    default: return "";
+  }
+}
+
+function cleanStatus(value) {
+  const wanted = value.trim().toLowerCase();
+  for (let i = 0; i < STATUS.length; i++) {
+    if (STATUS[i].toLowerCase() === wanted) { return STATUS[i]; }
+  }
+  return "";
+}
+
+function buildImportRecords(objects) {
+  // Turns the raw objects into records that are safe to save, and counts what we had to fix.
+  const records = [];
+  let skipped = 0;        // rows without a description
+  let unrecognised = 0;   // values we replaced with the default
+
+  for (let i = 0; i < objects.length; i++) {
+    const o = objects[i];
+    const description = (o.description || "").trim();
+    if (description === "") { skipped++; continue; }
+
+    const rec = emptyRecord();
+    rec.description = description;
+
+    const furpsRaw = o.furps || "";
+    const furps = cleanFurps(furpsRaw);
+    if (furps !== "") { rec.furps = furps; }
+    else if (furpsRaw.trim() !== "") { unrecognised++; }
+
+    const moscowRaw = o.moscow || "";
+    const moscow = cleanMoscow(moscowRaw);
+    if (moscow !== "") { rec.moscow = moscow; }
+    else if (moscowRaw.trim() !== "") { unrecognised++; }
+
+    const statusRaw = o.status || "";
+    const status = cleanStatus(statusRaw);
+    if (status !== "") { rec.status = status; }
+    else if (statusRaw.trim() !== "") { unrecognised++; }
+
+    rec.source = o.source || "";
+    rec.sourceLocation = o.sourceLocation || "";
+    rec.acceptance = o.acceptance || "";
+    rec.notes = o.notes || "";
+
+    // The old ID is not reused (IDs must stay unique), but we keep it for traceability.
+    if (o.importedId && o.importedId.trim() !== "") {
+      rec.notes = (rec.notes + " [Imported ID: " + o.importedId.trim() + "]").trim();
+    }
+    records.push(rec);
+  }
+  return { records: records, skipped: skipped, unrecognised: unrecognised };
+}
+
+function onImportClick() {
+  $("importFile").click();   // opens the file picker
+}
+
+async function onImportFileChosen(event) {
+  const file = event.target.files[0];
+  event.target.value = "";   // reset, so the same file can be chosen again later
+  if (!file) { return; }
+  showMessage("");
+
+  let text;
+  try {
+    text = await file.text();
+  } catch (err) {
+    showMessage("Kunne ikke åbne filen.");
+    return;
+  }
+  text = text.replace(/^\uFEFF/, "");   // remove the BOM that Excel adds
+
+  const dotPos = file.name.lastIndexOf(".");
+  const ext = dotPos >= 0 ? file.name.slice(dotPos + 1).toLowerCase() : "";
+
+  let objects = [];
+  try {
+    switch (ext) {
+      case "json": objects = jsonToObjects(text); break;
+      case "csv": objects = csvToObjects(text); break;
+      case "txt": objects = textToObjects(text); break;
+      default:
+        showMessage("Ukendt filtype. Brug .json, .csv eller .txt.");
+        return;
+    }
+  } catch (err) {
+    showMessage("Kunne ikke læse filen: " + err.message);
+    return;
+  }
+
+  const built = buildImportRecords(objects);
+  if (built.records.length === 0) {
+    showMessage("Fandt ingen krav i filen.");
+    return;
+  }
+  if (built.records.length > MAX_IMPORT_ROWS) {
+    showMessage("Filen har " + built.records.length + " krav. Maks. er " + MAX_IMPORT_ROWS + " pr. import.");
+    return;
+  }
+
+  let question = "Importér " + built.records.length + " krav i dette projekt?\n\n" +
+                 "De får nye ID'er efter de eksisterende krav. " +
+                 "Importerer du den samme fil to gange, får du dubletter.";
+  if (built.skipped > 0) {
+    question += "\n\n" + built.skipped + " rækker uden beskrivelse springes over.";
+  }
+  if (built.unrecognised > 0) {
+    question += "\n\n" + built.unrecognised + " værdier i FURPS+, MoSCoW eller Status blev ikke genkendt " +
+                "og er sat til standardværdien (F / Should / Proposed).";
+  }
+  if (text.indexOf("\uFFFD") >= 0) {
+    question += "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt. " +
+                "Gem den som UTF-8 og prøv igen, hvis du vil undgå det.";
+  }
+  if (!confirm(question)) { return; }
+
+  await importRecords(built.records);
+}
+
+async function importRecords(records) {
+  // Chunks keep each transaction small. Each chunk reserves its own block of ID numbers.
+  let done = 0;
+  try {
+    for (let start = 0; start < records.length; start += IMPORT_CHUNK_SIZE) {
+      const chunk = records.slice(start, start + IMPORT_CHUNK_SIZE);
+      await writeRequirements(chunk);
+      done += chunk.length;
+      showMessage("Importerer... " + done + " af " + records.length, true);
+    }
+    showMessage("Importerede " + done + " krav.", true);
+  } catch (err) {
+    // The chunks before the failing one are already saved, so we tell the user how many.
+    showMessage("Importen stoppede efter " + done + " af " + records.length + " krav: " + (err.code || err.message));
+  }
+}
+
+// ---------- 10. Wire up the buttons ----------
+$("btnGoogle").addEventListener("click", function () { loginWith("google"); });
+$("btnGithub").addEventListener("click", function () { loginWith("github"); });
+$("btnLogout").addEventListener("click", function () { signOut(auth); });
+$("btnCreate").addEventListener("click", createProject);
+$("btnJoin").addEventListener("click", joinFromInput);
+$("btnAdd").addEventListener("click", addRequirement);
+$("btnImport").addEventListener("click", onImportClick);
+$("importFile").addEventListener("change", onImportFileChosen);
+$("btnCsv").addEventListener("click", exportCsv);
+$("btnJson").addEventListener("click", exportJson);
+$("btnMd").addEventListener("click", exportMarkdown);
+$("btnShare").addEventListener("click", copyShareLink);
+$("btnLeave").addEventListener("click", leaveProject);
+$("sortSelect").addEventListener("change", onSortChange);
+$("filterSelect").addEventListener("change", onFilterChange);
+$("memberList").addEventListener("click", onMemberListClick);
+$("tbody").addEventListener("change", onCellChange);
+$("tbody").addEventListener("click", onTableClick);
+$("tbody").addEventListener("focusout", onTableFocusOut);
+
+// Start: Firebase tells us if someone is already logged in.
+onAuthStateChanged(auth, onAuthChanged);
+</script>
+</body>
+</html>
