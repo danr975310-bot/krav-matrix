@@ -98,7 +98,6 @@
     position: fixed; inset: 0; background: rgba(0,0,0,0.25);
     z-index: 99;
   }
-  /* NEW: "Dine projekter" list in the chooser. */
   #myProjectsList { list-style: none; padding: 0; margin: 8px 0 0; }
   #myProjectsList li { margin-bottom: 6px; }
   #myProjectsList button { width: 100%; text-align: left; }
@@ -132,7 +131,6 @@
   </div>
 
   <div id="screenChooser" class="card hidden">
-    <!-- NEW: "Dine projekter" — lists every project where you are already a member. -->
     <section id="myProjectsSection">
       <h2>Dine projekter</h2>
       <p class="small">Projekter du allerede er medlem af. Klik for at åbne.</p>
@@ -321,7 +319,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
          onSnapshot, runTransaction, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-// ---------- 1. Firebase setup ----------
 const firebaseConfig = {
 apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4", 
 authDomain: "reqmatrix-fc50a.firebaseapp.com", 
@@ -332,7 +329,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ---------- 2. Constants and state ----------
 const FURPS = ["F", "U", "R", "P", "S", "+"];
 const MOSCOW = ["Must", "Should", "Could", "Won't"];
 const STATUS = ["Proposed", "Agreed", "Done", "Parked", "Dropped"];
@@ -361,7 +357,6 @@ let visibleColumns = loadColumns();
 
 function $(id) { return document.getElementById(id); }
 
-// ---------- 3. Small helpers ----------
 function showMessage(text, isGood) {
   $("msg").textContent = text;
   $("msg").style.color = isGood ? "#15803d" : "#b91c1c";
@@ -375,7 +370,6 @@ function showScreen(name) {
     case "login": $("screenLogin").classList.remove("hidden"); break;
     case "chooser":
       $("screenChooser").classList.remove("hidden");
-      // NEW: refresh the "Dine projekter" list every time the chooser appears.
       loadMyProjects();
       break;
     case "app": $("screenApp").classList.remove("hidden"); break;
@@ -514,10 +508,6 @@ function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
 }
 
-// ---------- NEW: "Dine projekter" ----------
-// Lists every project where currentUser is already a member.
-// Uses a collection group query on /projects/*/members/* where uid == auth.uid.
-// Firestore rules restrict this to the caller's own member documents.
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -534,13 +524,11 @@ async function loadMyProjects() {
       empty.classList.remove("hidden");
       return;
     }
-    // Collect pids from each member doc's path: projects/{pid}/members/{uid}
     const pids = [];
     snap.forEach(function (d) {
       const parts = d.ref.path.split("/");
       if (parts.length >= 2 && parts[0] === "projects") { pids.push(parts[1]); }
     });
-    // Fetch the project docs in parallel to get names.
     const projectSnaps = await Promise.all(pids.map(function (pid) {
       return getDoc(doc(db, "projects", pid));
     }));
@@ -558,6 +546,7 @@ async function loadMyProjects() {
     }
     if (list.children.length === 0) { empty.classList.remove("hidden"); }
   } catch (err) {
+    console.error("loadMyProjects failed:", err);
     showMessage("Kunne ikke hente dine projekter: " + (err.code || err.message));
     empty.classList.remove("hidden");
   }
@@ -569,7 +558,6 @@ function onMyProjectsClick(event) {
   openProject(pid);
 }
 
-// ---------- 4. Login ----------
 async function loginWith(providerName) {
   let provider;
   switch (providerName) {
@@ -676,7 +664,6 @@ function onAuthChanged(user) {
   if (pid) { openProject(pid); } else { showScreen("chooser"); }
 }
 
-// ---------- 5. Projects ----------
 function makeProjectId(name) {
   let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (slug === "") { slug = "projekt"; }
@@ -701,10 +688,12 @@ async function createProject() {
       counter: 0,
       createdAt: serverTimestamp()
     });
-    await openProject(pid);
   } catch (err) {
-    showMessage("Kunne ikke oprette projektet: " + err.code);
+    console.error("createProject: setDoc project failed:", err);
+    showMessage("Kunne ikke oprette projektet: " + (err.code || err.message));
+    return;
   }
+  await openProject(pid);
 }
 
 async function joinFromInput() {
@@ -715,33 +704,47 @@ async function joinFromInput() {
   await openProject(code);
 }
 
+// openProject now reports WHICH step failed, so permission errors are easier to diagnose.
 async function openProject(pid) {
   stopListeners();
   showMessage("");
+
+  // Step 1: fetch the project.
+  let snap;
   try {
-    const snap = await getDoc(doc(db, "projects", pid));
-    if (!snap.exists()) {
-      showMessage("Projektet findes ikke. Tjek koden.");
-      showScreen("chooser");
-      return;
-    }
-    // Knowing the code makes you a member. merge:true keeps the call safe to repeat.
-    // NEW: we now store uid as a field too, so "Dine projekter" can query on it.
+    snap = await getDoc(doc(db, "projects", pid));
+  } catch (err) {
+    console.error("openProject: getDoc failed for", pid, err);
+    showMessage("Kunne ikke læse projektet: " + (err.code || err.message));
+    showScreen("chooser");
+    return;
+  }
+  if (!snap.exists()) {
+    showMessage("Projektet findes ikke. Tjek koden.");
+    showScreen("chooser");
+    return;
+  }
+
+  // Step 2: register as a member.
+  try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
                  { name: userLabel(), uid: currentUser.uid }, { merge: true });
-
-    currentPid = pid;
-    localStorage.setItem("lastProject", pid);
-    location.hash = pid;
-
-    unsubProject = onSnapshot(doc(db, "projects", pid), onProjectSnapshot, onListenError);
-    unsubReqs = onSnapshot(collection(db, "projects", pid, "requirements"), onReqsSnapshot, onListenError);
-    unsubMembers = onSnapshot(collection(db, "projects", pid, "members"), onMembersSnapshot, onListenError);
-    showScreen("app");
   } catch (err) {
-    showMessage("Kunne ikke åbne projektet: " + err.code);
+    console.error("openProject: setDoc member failed for", pid, err);
+    showMessage("Kunne ikke registrere medlemskab: " + (err.code || err.message));
     showScreen("chooser");
+    return;
   }
+
+  // Step 3: wire up listeners and show the matrix.
+  currentPid = pid;
+  localStorage.setItem("lastProject", pid);
+  location.hash = pid;
+
+  unsubProject = onSnapshot(doc(db, "projects", pid), onProjectSnapshot, onListenError);
+  unsubReqs = onSnapshot(collection(db, "projects", pid, "requirements"), onReqsSnapshot, onListenError);
+  unsubMembers = onSnapshot(collection(db, "projects", pid, "members"), onMembersSnapshot, onListenError);
+  showScreen("app");
 }
 
 function leaveProject() {
@@ -797,7 +800,6 @@ async function onMemberListClick(event) {
   }
 }
 
-// ---------- 6. Write requirements ----------
 function emptyRecord() {
   return { description: "", furps: "F", moscow: "Should", source: "", status: "Proposed", notes: "" };
 }
@@ -860,7 +862,6 @@ async function onTableClick(event) {
   }
 }
 
-// ---------- 7. Read and draw ----------
 function onReqsSnapshot(snapshot) {
   allReqs = [];
   for (let i = 0; i < snapshot.docs.length; i++) {
@@ -1036,7 +1037,6 @@ function makeSelect(field, options, r, labelFor) {
   return el;
 }
 
-// ---------- 8. Sorting/filter controls, export, share ----------
 function onSortChange() { sortMode = $("sortSelect").value; renderTable(); }
 function onFilterChange() { filterMoscow = $("filterSelect").value; renderTable(); }
 
@@ -1274,7 +1274,6 @@ async function copyShareLink() {
   }
 }
 
-// ---------- 9. Import (JSON, CSV, TXT, MD) ----------
 function normalizeKey(text) {
   return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
@@ -1651,7 +1650,6 @@ async function importRecords(records) {
   }
 }
 
-// ---------- 10. Wire up ----------
 $("sortSelect").value = sortMode;
 $("filterSelect").value = filterMoscow;
 
