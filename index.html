@@ -31,13 +31,17 @@
     display: inline-block;
     cursor: pointer;
     color: #2563eb;
-    transition: color 0.12s ease;
+    padding: 2px 6px 2px 4px;
+    border-radius: 4px;
+    transition: background-color 0.12s ease, color 0.12s ease;
   }
-  #projectName:hover { text-decoration: underline; }
-  /* Always-visible back arrow so the clickability is obvious even without hover. */
+  #projectName:hover {
+    text-decoration: underline;
+    background: rgba(37, 99, 235, 0.08);
+  }
   #projectName::before {
     content: "← ";
-    opacity: 0.45;
+    opacity: 0.7;
     transition: opacity 0.12s ease;
     font-weight: normal;
   }
@@ -55,6 +59,9 @@
   tr.prio-4 { background: #f3f4f6; } tr.prio-4 td:first-child { border-left: 6px solid #9ca3af; }
   tr.row-resolved { opacity: 0.5; transition: opacity 0.12s ease; }
   tr.row-resolved:hover { opacity: 1; }
+  /* When arriving from a deep link, the targeted row flashes briefly. */
+  tr.row-flash td { background: #fef3c7; }
+  tr.row-flash td:first-child { border-left-color: #f59e0b; }
   tr.group-header td { color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
                        padding: 8px 10px; border-top: 4px solid #1c1f24; }
   tr.group-1 td { background: #b91c1c; }
@@ -75,7 +82,6 @@
   td.age-urgent { color: #b91c1c; font-weight: 700; }
   td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
-  /* GitHub reference column: monospace links, stacked vertically. */
   td.refs { font-size: 12px; line-height: 1.5; word-break: break-all; }
   td.refs a {
     color: #2563eb; text-decoration: none;
@@ -88,6 +94,9 @@
     cursor: help;
   }
   td.refs-empty { color: #d1d5db; text-align: center; }
+  td.actions { white-space: nowrap; text-align: right; }
+  td.actions button { padding: 4px 8px; }
+  td.actions button + button { margin-left: 4px; }
   textarea.just-saved, select.just-saved {
     box-shadow: 0 0 0 2px #86efac;
     transition: box-shadow 0.2s ease;
@@ -283,7 +292,7 @@
             <th data-col="updatedBy" style="width:100px">Sidst rettet af</th>
             <th data-col="age" style="width:60px"
                 title="Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter 14 og 28 dage.">Alder</th>
-            <th style="width:40px"></th>
+            <th style="width:70px"></th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -375,8 +384,18 @@
         <li>Er standard-repo ikke sat, vises <code>#123</code> som grå tekst
             med et hint om at sætte det.</li>
       </ul>
-      <p class="small">Referencerne <em>vises</em> kun — selve teksten i Noter eller
-         Kilde ændres ikke. I Markdown-eksporten bliver de også til links.</p>
+    </section>
+
+    <section>
+      <h3>Del et krav via link 🔗</h3>
+      <p>Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til
+         det pågældende krav, fx:</p>
+      <p><code>https://…/#reolmarked-abc123&req=xyz789</code></p>
+      <p>Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når
+         nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver
+         rækken et kort gult blink.</p>
+      <p class="small">Bemærk: kun medlemmer af projektet kan åbne linket.
+         Ikke-medlemmer får besked om at projektet ikke findes.</p>
     </section>
 
     <section>
@@ -384,31 +403,24 @@
       <p>Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
       <ul>
         <li><strong>Scrum board URL</strong> — fx
-            <code>https://github.com/users/DGARosendal/projects/4</code>.
-            Når den er sat, vises knappen "Scrum board ↗" i værktøjslinjen.</li>
+            <code>https://github.com/users/DGARosendal/projects/4</code>.</li>
         <li><strong>Standard repository</strong> — fx
             <code>DGARosendal/reolmarked</code>. Bruges til at udvide
             <code>#123</code>.</li>
       </ul>
-      <p class="small">Begge felter gemmes på projektet, så hele gruppen ser dem.</p>
     </section>
 
     <section>
       <h3>Import: filformater</h3>
       <ul>
         <li><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten
-            (danske eller engelske). Semikolon, komma og tab virker.
-            Gem som "CSV UTF-8" i Excel, så æøå bevares.</li>
+            (danske eller engelske). Semikolon, komma og tab virker.</li>
         <li><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
         <li><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps
-            egen Markdown-eksport og med håndskrevne tabeller, hvor kolonnerne har
-            genkendelige navne.</li>
+            egen Markdown-eksport og med håndskrevne tabeller.</li>
         <li><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
-      <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende. Kravene får nye ID'er,
-         og et gammelt ID fra filen skrives i Noter. Importér ikke samme fil to gange, ellers får du dubletter.
-         Ældre eksportfiler virker også: Source Location lægges ind i Kilde, Acceptance Criteria i Noter,
-         og de gamle statusser oversættes. Tip: en CSV-eksport fra et tomt projekt er en færdig skabelon.</p>
+      <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende.</p>
     </section>
 
     <section>
@@ -495,6 +507,10 @@ let visibleColumns = loadColumns();
 
 let projectData = {};
 
+// When the page is opened via a deep link (#pid&req=xyz), this holds the
+// requirement id that should be scrolled to and flashed once the table renders.
+let pendingScrollToReq = null;
+
 const saveTimers = new Map();
 
 function $(id) { return document.getElementById(id); }
@@ -553,6 +569,38 @@ function staleness(req) {
   if (days >= STALE_URGENT_DAYS) { return 2; }
   if (days >= STALE_WARN_DAYS) { return 1; }
   return 0;
+}
+
+// ---------- Hash parsing for deep links ----------
+// Format: "#<pid>" or "#<pid>&req=<reqid>"
+// Anything else after "&" is ignored, so we can add new params later.
+function parseHash() {
+  const raw = location.hash.slice(1);
+  if (!raw) { return { pid: "", reqid: "" }; }
+  const parts = raw.split("&");
+  const pid = parts[0] || "";
+  let reqid = "";
+  for (let i = 1; i < parts.length; i++) {
+    if (parts[i].indexOf("req=") === 0) {
+      try { reqid = decodeURIComponent(parts[i].slice(4)); }
+      catch (e) { reqid = parts[i].slice(4); }
+      break;
+    }
+  }
+  return { pid: pid, reqid: reqid };
+}
+
+// Scrolls to and flashes the row that matches pendingScrollToReq.
+// Called after every table render; does nothing until the row exists.
+function tryScrollToPendingReq() {
+  if (!pendingScrollToReq) { return; }
+  const tr = document.querySelector('#tbody tr[data-req-id="' + pendingScrollToReq + '"]');
+  if (!tr) { return; }
+  pendingScrollToReq = null;
+  try { tr.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  catch (e) { tr.scrollIntoView(); }
+  tr.classList.add("row-flash");
+  setTimeout(function () { tr.classList.remove("row-flash"); }, 2500);
 }
 
 function defaultColumns() {
@@ -650,6 +698,7 @@ function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
 }
 
+// ---------- Autosave with debounce ----------
 function scheduleSave(el, field, id) {
   const key = id + "|" + field;
   if (saveTimers.has(key)) { clearTimeout(saveTimers.get(key)); }
@@ -728,6 +777,7 @@ function onCellFocusOut(event) {
   if (renderPending) { setTimeout(safeRender, 0); }
 }
 
+// ---------- GitHub integration ----------
 function updateGithubUi() {
   const url = String(projectData.githubBoardUrl || "").trim();
   const btn = $("btnOpenBoard");
@@ -779,8 +829,6 @@ function openBoard() {
   window.open(url, "_blank", "noopener");
 }
 
-// Rewrites GitHub-style references in a single text string into Markdown links.
-// Used by the Markdown export so exported files contain clickable refs.
 function linkifyGitHubRefs(text, defaultRepo) {
   if (!text) { return ""; }
   const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
@@ -794,9 +842,6 @@ function linkifyGitHubRefs(text, defaultRepo) {
   });
 }
 
-// Scans a requirement's free-text fields for GitHub references and returns
-// a de-duplicated list of { raw, url }. url may be "" when no default repo
-// is set and the reference is a bare "#123".
 function extractGithubRefs(req, defaultRepo) {
   const refs = [];
   const seen = new Set();
@@ -825,8 +870,6 @@ function extractGithubRefs(req, defaultRepo) {
   return refs;
 }
 
-// Builds the "Referencer" cell. Each reference becomes a clickable link if we
-// can resolve it to a URL; otherwise a plain text with a helpful tooltip.
 function buildRefsCell(r) {
   const td = document.createElement("td");
   td.className = "refs";
@@ -858,6 +901,21 @@ function buildRefsCell(r) {
   return td;
 }
 
+// ---------- Deep link to a requirement (reverse of GitHub refs) ----------
+// Copies a shareable URL that will open this project and flash this specific
+// requirement. Meant to be pasted into a GitHub issue comment or wherever.
+async function copyReqLink(rid) {
+  if (!currentPid) { return; }
+  const link = location.origin + location.pathname + "#" + currentPid + "&req=" + rid;
+  try {
+    await navigator.clipboard.writeText(link);
+    showMessage("Link til kravet kopieret — klar til at sætte ind i GitHub.", true);
+  } catch (err) {
+    prompt("Kopiér linket:", link);
+  }
+}
+
+// ---------- Projects ----------
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -995,6 +1053,7 @@ function onAuthChanged(user) {
     currentPid = null;
     saveTimers.clear();
     projectData = {};
+    pendingScrollToReq = null;
     $("lastSaved").classList.add("hidden");
     $("userInfo").classList.add("hidden");
     updateLinkButton();
@@ -1005,8 +1064,10 @@ function onAuthChanged(user) {
   $("userInfo").classList.remove("hidden");
   updateLinkButton();
 
-  let pid = location.hash.slice(1);
+  const parsed = parseHash();
+  let pid = parsed.pid;
   if (!pid) { pid = localStorage.getItem("lastProject") || ""; }
+  if (parsed.reqid) { pendingScrollToReq = parsed.reqid; }
   if (pid) { openProject(pid); } else { showScreen("chooser"); }
 }
 
@@ -1047,7 +1108,12 @@ async function createProject() {
 async function joinFromInput() {
   let code = $("joinCode").value.trim();
   const hashPos = code.indexOf("#");
-  if (hashPos >= 0) { code = code.slice(hashPos + 1); }
+  if (hashPos >= 0) {
+    // Support pasting a whole share link, including the req=... part.
+    code = code.slice(hashPos + 1);
+    const ampPos = code.indexOf("&");
+    if (ampPos >= 0) { code = code.slice(0, ampPos); }
+  }
   if (code === "") { showMessage("Indsæt en projektkode."); return; }
   await openProject(code);
 }
@@ -1105,6 +1171,7 @@ function leaveProject() {
   stopListeners();
   currentPid = null;
   projectData = {};
+  pendingScrollToReq = null;
   updateGithubUi();
   localStorage.removeItem("lastProject");
   history.replaceState(null, "", location.pathname);
@@ -1117,8 +1184,6 @@ function onProjectSnapshot(snap) {
   $("projectName").textContent = projectData.name || "";
   isOwner = (projectData.ownerUid === currentUser.uid);
   updateGithubUi();
-  // Re-render so the "Referencer" column picks up a changed default repo.
-  renderTable();
   renderMembers();
 }
 
@@ -1194,6 +1259,10 @@ async function addRequirement() {
 
 async function onTableClick(event) {
   const el = event.target;
+  if (el.dataset.action === "copy-link") {
+    await copyReqLink(el.dataset.id);
+    return;
+  }
   if (el.dataset.action !== "delete") { return; }
   if (!confirm("Slet dette krav? ID'et bliver ikke genbrugt.")) { return; }
   try {
@@ -1259,6 +1328,7 @@ function renderTable() {
       : "Ingen krav at vise.";
     tr.appendChild(td);
     tbody.appendChild(tr);
+    tryScrollToPendingReq();
     return;
   }
 
@@ -1271,6 +1341,8 @@ function renderTable() {
     }
     tbody.appendChild(buildRow(r));
   }
+
+  tryScrollToPendingReq();
 }
 
 function buildGroupHeader(moscow, count) {
@@ -1286,6 +1358,7 @@ function buildGroupHeader(moscow, count) {
 function buildRow(r) {
   const tr = document.createElement("tr");
   tr.className = "prio-" + rankOf(r.moscow);
+  tr.dataset.reqId = r.id;   // used by tryScrollToPendingReq
   if (r.status === "Done" || r.status === "Parked" || r.status === "Dropped") {
     tr.classList.add("row-resolved");
   }
@@ -1306,7 +1379,6 @@ function buildRow(r) {
 
   tr.appendChild(maybeHidden(wrapCell(makeTextarea("notes", r)), "notes"));
 
-  // Referencer column: clickable GitHub-issue links derived from the text fields.
   tr.appendChild(maybeHidden(buildRefsCell(r), "refs"));
 
   const whoCell = document.createElement("td");
@@ -1343,12 +1415,25 @@ function buildRow(r) {
   maybeHidden(ageCell, "age");
   tr.appendChild(ageCell);
 
+  // Actions: copy deep link + delete.
+  const actionsCell = document.createElement("td");
+  actionsCell.className = "actions";
+
+  const linkBtn = document.createElement("button");
+  linkBtn.textContent = "🔗";
+  linkBtn.title = "Kopiér et link til dette krav — klar til at sætte i GitHub";
+  linkBtn.dataset.action = "copy-link";
+  linkBtn.dataset.id = r.id;
+  actionsCell.appendChild(linkBtn);
+
   const delBtn = document.createElement("button");
   delBtn.textContent = "✕";
   delBtn.title = "Slet krav";
   delBtn.dataset.action = "delete";
   delBtn.dataset.id = r.id;
-  tr.appendChild(wrapCell(delBtn));
+  actionsCell.appendChild(delBtn);
+
+  tr.appendChild(actionsCell);
   return tr;
 }
 
@@ -1655,6 +1740,7 @@ async function copyShareLink() {
   }
 }
 
+// ---------- Import ----------
 function normalizeKey(text) {
   return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
@@ -1769,6 +1855,7 @@ function csvToObjects(text) {
     let hasContent = false;
     for (let c = 0; c < fields.length; c++) {
       if (fields[c] === "") { continue; }
+      if (fields[c] === "references") { continue; }
       let value = table[r][c];
       if (value === undefined) { value = ""; }
       value = value.trim();
@@ -1792,9 +1879,9 @@ function jsonToObjects(text) {
     for (let k = 0; k < keys.length; k++) {
       const field = fieldFromHeader(keys[k]);
       if (field === "") { continue; }
+      if (field === "references") { continue; }
       let value = item[keys[k]];
       if (value === null || value === undefined) { value = ""; }
-      if (field === "references") { continue; }   // derived field — ignore on import
       obj[field] = String(value).trim();
     }
     objects.push(obj);
@@ -1995,7 +2082,7 @@ async function onImportFileChosen(event) {
 
   const built = buildImportRecords(objects);
   if (built.records.length === 0) {
-    showMessage("Fandt ingen krav i filen. Hvis det er en Markdown-fil, skal den have en tabel med en kolonne der hedder \"Kravbeskrivelse\".");
+    showMessage("Fandt ingen krav i filen.");
     return;
   }
   if (built.records.length > MAX_IMPORT_ROWS) {
@@ -2004,8 +2091,7 @@ async function onImportFileChosen(event) {
   }
 
   let question = "Importér " + built.records.length + " krav i dette projekt?\n\n" +
-                 "De får nye ID'er efter de eksisterende krav. " +
-                 "Importerer du den samme fil to gange, får du dubletter.";
+                 "De får nye ID'er efter de eksisterende krav.";
   if (built.skipped > 0) {
     question += "\n\n" + built.skipped + " rækker uden beskrivelse springes over.";
   }
@@ -2014,8 +2100,7 @@ async function onImportFileChosen(event) {
                 "og er sat til standardværdien (F / Should / Foreslået).";
   }
   if (text.indexOf("\uFFFD") >= 0) {
-    question += "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt. " +
-                "Gem den som UTF-8 og prøv igen, hvis du vil undgå det.";
+    question += "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt.";
   }
   if (!confirm(question)) { return; }
 
@@ -2037,6 +2122,7 @@ async function importRecords(records) {
   }
 }
 
+// ---------- Wire up ----------
 $("sortSelect").value = sortMode;
 $("filterSelect").value = filterMoscow;
 
