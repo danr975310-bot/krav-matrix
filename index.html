@@ -24,7 +24,7 @@
   #msg { color: #b91c1c; margin: 8px 0; min-height: 1em; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
   .table-wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; min-width: 1050px; background: #fff; }
+  table { border-collapse: collapse; width: 100%; min-width: 1110px; background: #fff; }
   th, td { border: 1px solid #d9dde3; padding: 4px; vertical-align: top; font-size: 13px; }
   th { background: #eef0f3; text-align: left; }
   td textarea, td input[type=text], td select { width: 100%; }
@@ -49,6 +49,25 @@
   details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
             border-radius: 8px; padding: 8px 12px; }
   .small { font-size: 12px; color: #4b5563; }
+  /* "Alder" column — days since a not-yet-resolved requirement was last touched. */
+  td.age { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.age-fresh  { color: #9ca3af; }
+  td.age-warn   { color: #b45309; font-weight: 600; }
+  td.age-urgent { color: #b91c1c; font-weight: 700; }
+  td.age-none   { color: #d1d5db; }
+  /* Column visibility: each th/td carries a col-* class; hiding a column is
+     one CSS rule per element. Preferences are per-user, saved in localStorage. */
+  th.hidden-col, td.hidden-col { display: none; }
+  .colprefs { position: relative; }
+  .colprefs-panel {
+    position: absolute; top: 100%; left: 0; z-index: 20;
+    background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
+    padding: 8px 12px; margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    min-width: 200px;
+  }
+  .colprefs-panel label { display: block; font-size: 13px; padding: 3px 0; cursor: pointer; }
+  .colprefs-panel .small { margin: 6px 0 0; }
 </style>
 </head>
 <body>
@@ -116,6 +135,23 @@
       <button id="btnMd">Eksportér Markdown</button>
       <button id="btnShare">Kopiér delingslink</button>
       <button id="btnLeave">Skift projekt</button>
+
+      <!-- NEW: per-user column visibility -->
+      <div class="colprefs">
+        <button id="btnCols" title="Vælg hvilke kolonner du vil se. Gemmes kun i din browser.">Vis kolonner ▾</button>
+        <div id="colsPanel" class="colprefs-panel hidden">
+          <label><input type="checkbox" data-col="id"> Krav-ID</label>
+          <label><input type="checkbox" data-col="description"> Kravbeskrivelse</label>
+          <label><input type="checkbox" data-col="furps"> FURPS+</label>
+          <label><input type="checkbox" data-col="moscow"> MoSCoW</label>
+          <label><input type="checkbox" data-col="source"> Kilde</label>
+          <label><input type="checkbox" data-col="status"> Status</label>
+          <label><input type="checkbox" data-col="notes"> Noter</label>
+          <label><input type="checkbox" data-col="updatedBy"> Sidst rettet af</label>
+          <label><input type="checkbox" data-col="age"> Alder</label>
+          <p class="small">Gemmes kun i din browser. Påvirker ikke andre i gruppen.</p>
+        </div>
+      </div>
     </div>
 
     <details>
@@ -143,6 +179,15 @@
         <li><strong>Færdig</strong> Gennemført i løsningen.</li>
         <li><strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).</li>
       </ul>
+      <p><strong>Alder</strong></p>
+      <ul>
+        <li>Antal dage siden kravet sidst blev rettet.</li>
+        <li>Krav der <em>ikke</em> er Færdige eller Droppede markeres:
+            gul efter 14 dage, rød efter 28 dage.</li>
+        <li>Færdige og droppede krav vises som "–" og tæller ikke med.</li>
+        <li>Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt —
+            så I kan tage stilling, før det forsvinder af sig selv.</li>
+      </ul>
       <p class="small">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
          Vælg én konvention, og brug den konsekvent.</p>
     </details>
@@ -169,17 +214,19 @@
     </details>
 
     <div class="table-wrap">
-      <table>
+      <table id="matrixTable">
         <thead>
           <tr>
-            <th style="width:70px">Krav-ID</th>
-            <th style="width:300px">Kravbeskrivelse</th>
-            <th style="width:60px">FURPS+</th>
-            <th style="width:90px">MoSCoW</th>
-            <th style="width:240px">Kilde (citat, dokument, side)</th>
-            <th style="width:110px">Status</th>
-            <th style="width:200px">Noter</th>
-            <th style="width:100px">Sidst rettet af</th>
+            <th data-col="id" style="width:70px">Krav-ID</th>
+            <th data-col="description" style="width:300px">Kravbeskrivelse</th>
+            <th data-col="furps" style="width:60px">FURPS+</th>
+            <th data-col="moscow" style="width:90px">MoSCoW</th>
+            <th data-col="source" style="width:240px">Kilde (citat, dokument, side)</th>
+            <th data-col="status" style="width:110px">Status</th>
+            <th data-col="notes" style="width:200px">Noter</th>
+            <th data-col="updatedBy" style="width:100px">Sidst rettet af</th>
+            <th data-col="age" style="width:60px"
+                title="Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter 14 og 28 dage.">Alder</th>
             <th style="width:40px"></th>
           </tr>
         </thead>
@@ -225,6 +272,17 @@ const STATUS = ["Proposed", "Agreed", "Done", "Dropped"];
 const MAX_IMPORT_ROWS = 500;
 const IMPORT_CHUNK_SIZE = 100;
 
+// A requirement that is neither Done nor Dropped is flagged in the "Alder"
+// column when nobody has touched it for this long. The idea is to surface
+// forgotten Should/Could requirements before they silently disappear.
+const STALE_WARN_DAYS = 14;
+const STALE_URGENT_DAYS = 28;
+
+// NEW: column visibility. These are the columns a user can toggle.
+// "actions" (the delete button) is intentionally not in the list — it stays always.
+const COLUMNS = ["id", "description", "furps", "moscow", "source",
+                 "status", "notes", "updatedBy", "age"];
+
 let currentUser = null;
 let currentPid = null;       // id (= secret code) of the open project
 let isOwner = false;
@@ -236,6 +294,7 @@ let renderPending = false;   // true if a redraw was postponed while the user wa
 let unsubProject = null;     // functions that stop the live listeners
 let unsubReqs = null;
 let unsubMembers = null;
+let visibleColumns = loadColumns();   // NEW: per-user column prefs, from localStorage
 
 function $(id) { return document.getElementById(id); }
 
@@ -279,6 +338,92 @@ function rankOf(moscow) {
 function reqLabel(seq) {
   // 1 -> "REQ-001"
   return "REQ-" + String(seq).padStart(3, "0");
+}
+
+// How many whole days since a Firestore Timestamp.
+// Returns null if the timestamp is missing or invalid, so callers can show "?".
+function daysSince(ts) {
+  if (!ts) { return null; }
+  const date = (typeof ts.toDate === "function") ? ts.toDate() : new Date(ts);
+  if (isNaN(date.getTime())) { return null; }
+  return Math.floor((Date.now() - date.getTime()) / 86400000);
+}
+
+// Staleness level for the "Alder" column.
+//  -1 = resolved (Done or Dropped) -> show "–" and do not count
+//   0 = fresh
+//   1 = warning (yellow) after STALE_WARN_DAYS
+//   2 = urgent (red) after STALE_URGENT_DAYS
+function staleness(req) {
+  if (req.status === "Done" || req.status === "Dropped") { return -1; }
+  const days = daysSince(req.updatedAt);
+  if (days === null) { return 0; }
+  if (days >= STALE_URGENT_DAYS) { return 2; }
+  if (days >= STALE_WARN_DAYS) { return 1; }
+  return 0;
+}
+
+// ---------- NEW: per-user column preferences (localStorage) ----------
+function defaultColumns() {
+  const o = {};
+  for (let i = 0; i < COLUMNS.length; i++) { o[COLUMNS[i]] = true; }
+  return o;
+}
+
+function hasAnyVisible(o) {
+  for (let i = 0; i < COLUMNS.length; i++) { if (o[COLUMNS[i]]) { return true; } }
+  return false;
+}
+
+function visibleCount() {
+  let n = 0;
+  for (let i = 0; i < COLUMNS.length; i++) { if (visibleColumns[COLUMNS[i]]) { n++; } }
+  return n;
+}
+
+function loadColumns() {
+  try {
+    const raw = localStorage.getItem("visibleColumns");
+    if (!raw) { return defaultColumns(); }
+    const parsed = JSON.parse(raw);
+    const o = defaultColumns();
+    for (let i = 0; i < COLUMNS.length; i++) {
+      if (typeof parsed[COLUMNS[i]] === "boolean") { o[COLUMNS[i]] = parsed[COLUMNS[i]]; }
+    }
+    // Guard against a corrupted setting that hides everything.
+    if (!hasAnyVisible(o)) { return defaultColumns(); }
+    return o;
+  } catch (err) {
+    return defaultColumns();
+  }
+}
+
+function saveColumns() {
+  try { localStorage.setItem("visibleColumns", JSON.stringify(visibleColumns)); }
+  catch (err) { /* private mode etc. — ignore */ }
+}
+
+// Adds the "col-*" marker class and hides the element if the user turned it off.
+// Keeping the class on every cell makes the CSS rule trivial.
+function maybeHidden(el, col) {
+  el.classList.add("col-" + col);
+  if (!visibleColumns[col]) { el.classList.add("hidden-col"); }
+  return el;
+}
+
+// Applies the current prefs to the static <thead> and redraws the body.
+function applyColumnPrefs() {
+  const ths = document.querySelectorAll("thead th[data-col]");
+  for (let i = 0; i < ths.length; i++) {
+    const col = ths[i].dataset.col;
+    if (visibleColumns[col]) { ths[i].classList.remove("hidden-col"); }
+    else { ths[i].classList.add("hidden-col"); }
+  }
+  const cbs = document.querySelectorAll("#colsPanel input[type=checkbox]");
+  for (let i = 0; i < cbs.length; i++) {
+    cbs[i].checked = !!visibleColumns[cbs[i].dataset.col];
+  }
+  renderTable();
 }
 
 // Labels for the dropdowns: what the user sees can differ from what is stored.
@@ -709,7 +854,8 @@ function buildGroupHeader(moscow, count) {
   const tr = document.createElement("tr");
   tr.className = "group-header group-" + rankOf(moscow);
   const td = document.createElement("td");
-  td.colSpan = 9;
+  // NEW: spans the currently visible columns + the always-visible action column.
+  td.colSpan = visibleCount() + 1;
   td.textContent = moscow.toUpperCase() + " (" + count + ")";
   tr.appendChild(td);
   return tr;
@@ -721,25 +867,53 @@ function buildRow(r) {
 
   const idCell = document.createElement("td");
   idCell.textContent = reqLabel(r.seq);
+  maybeHidden(idCell, "id");
   tr.appendChild(idCell);
 
-  tr.appendChild(wrapCell(makeTextarea("description", r)));
-  tr.appendChild(wrapCell(makeSelect("furps", FURPS, r, plainLabel)));
-  tr.appendChild(wrapCell(makeSelect("moscow", MOSCOW, r, plainLabel)));
-  tr.appendChild(wrapCell(makeTextarea("source", r)));
+  tr.appendChild(maybeHidden(wrapCell(makeTextarea("description", r)), "description"));
+  tr.appendChild(maybeHidden(wrapCell(makeSelect("furps", FURPS, r, plainLabel)), "furps"));
+  tr.appendChild(maybeHidden(wrapCell(makeSelect("moscow", MOSCOW, r, plainLabel)), "moscow"));
+  tr.appendChild(maybeHidden(wrapCell(makeTextarea("source", r)), "source"));
 
   // The status dropdown gets its own colour class (status-proposed, status-agreed, ...).
   const statusSelect = makeSelect("status", STATUS, r, statusLabel);
   statusSelect.className = "status-" + r.status.toLowerCase();
-  tr.appendChild(wrapCell(statusSelect));
+  tr.appendChild(maybeHidden(wrapCell(statusSelect), "status"));
 
-  tr.appendChild(wrapCell(makeTextarea("notes", r)));
+  tr.appendChild(maybeHidden(wrapCell(makeTextarea("notes", r)), "notes"));
 
   const whoCell = document.createElement("td");
   whoCell.className = "small";
   whoCell.textContent = r.updatedBy || "";
+  maybeHidden(whoCell, "updatedBy");
   tr.appendChild(whoCell);
 
+  // "Alder" cell — days since last edit, with warning/urgent colours.
+  // Done and Dropped requirements show "–" and are excluded from the count.
+  const ageCell = document.createElement("td");
+  ageCell.className = "age";
+  const level = staleness(r);
+  const days = daysSince(r.updatedAt);
+  if (level === -1) {
+    ageCell.textContent = "–";
+    ageCell.classList.add("age-none");
+    ageCell.title = "Afsluttet – tæller ikke";
+  } else if (days === null) {
+    ageCell.textContent = "?";
+    ageCell.classList.add("age-none");
+    ageCell.title = "Ingen tidsstempel";
+  } else {
+    ageCell.textContent = days + "d";
+    if (level === 2) { ageCell.classList.add("age-urgent"); }
+    else if (level === 1) { ageCell.classList.add("age-warn"); }
+    else { ageCell.classList.add("age-fresh"); }
+    const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
+    ageCell.title = "Sidst rettet: " + d.toISOString().slice(0, 10);
+  }
+  maybeHidden(ageCell, "age");
+  tr.appendChild(ageCell);
+
+  // The action column is always visible — there is no checkbox for it.
   const delBtn = document.createElement("button");
   delBtn.textContent = "✕";
   delBtn.title = "Slet krav";
@@ -813,6 +987,7 @@ function csvCell(value) {
 
 function exportCsv() {
   // Semicolon + BOM so Excel with Danish settings opens it correctly (æøå too).
+  // Exports include all fields regardless of which columns the user has hidden on screen.
   let csv = "\uFEFF" + "Krav-ID;Kravbeskrivelse;FURPS+;MoSCoW;Kilde;Status;Noter;Sidst rettet af\r\n";
   const rows = sortedBySeq();
   for (let i = 0; i < rows.length; i++) {
@@ -1293,6 +1468,43 @@ $("memberList").addEventListener("click", onMemberListClick);
 $("tbody").addEventListener("change", onCellChange);
 $("tbody").addEventListener("click", onTableClick);
 $("tbody").addEventListener("focusout", onTableFocusOut);
+
+// NEW: column-preference UI.
+// Open/close the panel when the button is clicked.
+$("btnCols").addEventListener("click", function (e) {
+  e.stopPropagation();
+  $("colsPanel").classList.toggle("hidden");
+});
+
+// Close the panel when the user clicks outside of it.
+document.addEventListener("click", function (e) {
+  const panel = $("colsPanel");
+  if (panel.classList.contains("hidden")) { return; }
+  if (panel.contains(e.target)) { return; }
+  if (e.target === $("btnCols")) { return; }
+  panel.classList.add("hidden");
+});
+
+// Toggle a column on/off. The last visible column cannot be turned off.
+const colBoxes = document.querySelectorAll("#colsPanel input[type=checkbox]");
+for (let i = 0; i < colBoxes.length; i++) {
+  colBoxes[i].addEventListener("change", function () {
+    const col = colBoxes[i].dataset.col;
+    const next = Object.assign({}, visibleColumns);
+    next[col] = colBoxes[i].checked;
+    if (!hasAnyVisible(next)) {
+      // Refuse to hide everything — the table would be meaningless.
+      colBoxes[i].checked = true;
+      return;
+    }
+    visibleColumns = next;
+    saveColumns();
+    applyColumnPrefs();
+  });
+}
+
+// Apply the loaded (or default) column prefs before the first render.
+applyColumnPrefs();
 
 // Start: Firebase tells us if someone is already logged in.
 onAuthStateChanged(auth, onAuthChanged);
