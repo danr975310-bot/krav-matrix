@@ -315,8 +315,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
          GoogleAuthProvider, GithubAuthProvider }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
-         collectionGroup, query, where, getDocs,
-         onSnapshot, runTransaction, serverTimestamp }
+         getDocs, onSnapshot, runTransaction, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -508,6 +507,8 @@ function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
 }
 
+// Lists the projects the current user has already opened. Reads from
+// users/{uid}/projects — a simple collection, no collection-group index needed.
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -518,33 +519,26 @@ async function loadMyProjects() {
   }
   empty.classList.add("hidden");
   try {
-    const q = query(collectionGroup(db, "members"), where("uid", "==", currentUser.uid));
-    const snap = await getDocs(q);
+    const snap = await getDocs(collection(db, "users", currentUser.uid, "projects"));
     if (snap.empty) {
       empty.classList.remove("hidden");
       return;
     }
-    const pids = [];
+    const items = [];
     snap.forEach(function (d) {
-      const parts = d.ref.path.split("/");
-      if (parts.length >= 2 && parts[0] === "projects") { pids.push(parts[1]); }
+      const data = d.data();
+      items.push({ pid: d.id, name: data.name || d.id });
     });
-    const projectSnaps = await Promise.all(pids.map(function (pid) {
-      return getDoc(doc(db, "projects", pid));
-    }));
-    for (let i = 0; i < pids.length; i++) {
-      const pid = pids[i];
-      const pSnap = projectSnaps[i];
-      if (!pSnap.exists()) { continue; }
-      const name = pSnap.data().name || pid;
+    items.sort(function (a, b) { return a.name.localeCompare(b.name, "da"); });
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
       const li = document.createElement("li");
       const btn = document.createElement("button");
-      btn.textContent = name;
-      btn.dataset.pid = pid;
+      btn.textContent = it.name;
+      btn.dataset.pid = it.pid;
       li.appendChild(btn);
       list.appendChild(li);
     }
-    if (list.children.length === 0) { empty.classList.remove("hidden"); }
   } catch (err) {
     console.error("loadMyProjects failed:", err);
     showMessage("Kunne ikke hente dine projekter: " + (err.code || err.message));
@@ -704,12 +698,10 @@ async function joinFromInput() {
   await openProject(code);
 }
 
-// openProject now reports WHICH step failed, so permission errors are easier to diagnose.
 async function openProject(pid) {
   stopListeners();
   showMessage("");
 
-  // Step 1: fetch the project.
   let snap;
   try {
     snap = await getDoc(doc(db, "projects", pid));
@@ -725,7 +717,7 @@ async function openProject(pid) {
     return;
   }
 
-  // Step 2: register as a member.
+  // Register as a member. Non-fatal if it fails — the project still opens.
   try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
                  { name: userLabel(), uid: currentUser.uid }, { merge: true });
@@ -736,7 +728,16 @@ async function openProject(pid) {
     return;
   }
 
-  // Step 3: wire up listeners and show the matrix.
+  // Also record this project in the user's own list, so "Dine projekter" works.
+  try {
+    await setDoc(doc(db, "users", currentUser.uid, "projects", pid),
+                 { pid: pid, name: snap.data().name || pid, joinedAt: serverTimestamp() },
+                 { merge: true });
+  } catch (err) {
+    // Non-fatal: the project is openable via the code, it just won't appear in the list.
+    console.warn("openProject: setDoc user project list failed:", err);
+  }
+
   currentPid = pid;
   localStorage.setItem("lastProject", pid);
   location.hash = pid;
