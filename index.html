@@ -30,19 +30,21 @@
     margin: 0 0 12px; font-size: 22px;
     display: inline-block;
     cursor: pointer;
+    color: #2563eb;
     transition: color 0.12s ease;
   }
-  #projectName:hover { color: #2563eb; text-decoration: underline; }
+  #projectName:hover { text-decoration: underline; }
+  /* Always-visible back arrow so the clickability is obvious even without hover. */
   #projectName::before {
     content: "← ";
-    opacity: 0;
+    opacity: 0.45;
     transition: opacity 0.12s ease;
-    margin-right: -1.2em;
+    font-weight: normal;
   }
-  #projectName:hover::before { opacity: 1; margin-right: 0; }
+  #projectName:hover::before { opacity: 1; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
   .table-wrap { overflow-x: auto; }
-  table { border-collapse: collapse; width: 100%; min-width: 1110px; background: #fff; }
+  table { border-collapse: collapse; width: 100%; min-width: 1240px; background: #fff; }
   th, td { border: 1px solid #d9dde3; padding: 4px; vertical-align: top; font-size: 13px; }
   th { background: #eef0f3; text-align: left; }
   td textarea, td input[type=text], td select { width: 100%; }
@@ -73,6 +75,19 @@
   td.age-urgent { color: #b91c1c; font-weight: 700; }
   td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
+  /* GitHub reference column: monospace links, stacked vertically. */
+  td.refs { font-size: 12px; line-height: 1.5; word-break: break-all; }
+  td.refs a {
+    color: #2563eb; text-decoration: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  td.refs a:hover { text-decoration: underline; }
+  td.refs span.unlinked {
+    color: #9ca3af;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    cursor: help;
+  }
+  td.refs-empty { color: #d1d5db; text-align: center; }
   textarea.just-saved, select.just-saved {
     box-shadow: 0 0 0 2px #86efac;
     transition: box-shadow 0.2s ease;
@@ -133,7 +148,6 @@
     z-index: 200;
     display: flex; align-items: center; justify-content: center;
   }
-  /* Ensure .hidden still wins over .modal's display:flex. */
   .modal.hidden { display: none; }
   .modal-content {
     background: #fff; border-radius: 8px;
@@ -241,6 +255,7 @@
           <label><input type="checkbox" data-col="source"> Kilde</label>
           <label><input type="checkbox" data-col="status"> Status</label>
           <label><input type="checkbox" data-col="notes"> Noter</label>
+          <label><input type="checkbox" data-col="refs"> Referencer (GitHub)</label>
           <label><input type="checkbox" data-col="updatedBy"> Sidst rettet af</label>
           <label><input type="checkbox" data-col="age"> Alder</label>
           <p class="small">Gemmes kun i din browser. Påvirker ikke andre i gruppen.</p>
@@ -263,6 +278,8 @@
             <th data-col="source" style="width:240px">Kilde (citat, dokument, side)</th>
             <th data-col="status" style="width:110px">Status</th>
             <th data-col="notes" style="width:200px">Noter</th>
+            <th data-col="refs" style="width:130px"
+                title="GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter. Skriv #123 eller ejer/repo#123.">Referencer</th>
             <th data-col="updatedBy" style="width:100px">Sidst rettet af</th>
             <th data-col="age" style="width:60px"
                 title="Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter 14 og 28 dage.">Alder</th>
@@ -348,6 +365,21 @@
     </section>
 
     <section>
+      <h3>Referencer (GitHub)</h3>
+      <p>Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i
+         Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.</p>
+      <ul>
+        <li><code>#123</code> → linker til standard-repo'et sat under ⚙️ GitHub.</li>
+        <li><code>ejer/repo#123</code> → linker til det angivne repo, uanset standard.</li>
+        <li>Står der flere referencer i samme krav, vises de under hinanden.</li>
+        <li>Er standard-repo ikke sat, vises <code>#123</code> som grå tekst
+            med et hint om at sætte det.</li>
+      </ul>
+      <p class="small">Referencerne <em>vises</em> kun — selve teksten i Noter eller
+         Kilde ændres ikke. I Markdown-eksporten bliver de også til links.</p>
+    </section>
+
+    <section>
       <h3>GitHub-integration</h3>
       <p>Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
       <ul>
@@ -356,14 +388,9 @@
             Når den er sat, vises knappen "Scrum board ↗" i værktøjslinjen.</li>
         <li><strong>Standard repository</strong> — fx
             <code>DGARosendal/reolmarked</code>. Bruges til at udvide
-            <code>#123</code> i Markdown-eksporten.</li>
+            <code>#123</code>.</li>
       </ul>
-      <p>I Markdown-eksporten bliver <code>#123</code> til et link til
-         <code>https://github.com/&lt;standard-repo&gt;/issues/123</code>.
-         Du kan altid pege på et andet repo ved at skrive
-         <code>ejer/repo#123</code>.</p>
-      <p class="small">Referencen findes kun i den eksporterede fil. Kravmatrixen
-         ændrer ikke selve teksten i Noter eller Kilde.</p>
+      <p class="small">Begge felter gemmes på projektet, så hele gruppen ser dem.</p>
     </section>
 
     <section>
@@ -375,8 +402,7 @@
         <li><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
         <li><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps
             egen Markdown-eksport og med håndskrevne tabeller, hvor kolonnerne har
-            genkendelige navne (Krav-ID, Kravbeskrivelse, FURPS+, MoSCoW, Status, Noter).
-            Hvis filen ikke har tabeller, behandles den som en .txt (én linje = ét krav).</li>
+            genkendelige navne.</li>
         <li><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
       <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende. Kravene får nye ID'er,
@@ -410,8 +436,8 @@
     <p class="small">
       Scrum board URL vises som en "Scrum board"-knap i værktøjslinjen.<br>
       Standard repository bruges til at udvide <code>#123</code> til et klikbart
-      link i Markdown-eksporten. Du kan altid skrive <code>ejer/repo#123</code>
-      for at pege på et andet repo.
+      link. Du kan altid skrive <code>ejer/repo#123</code> for at pege på et
+      andet repo.
     </p>
     <div class="modal-actions">
       <button id="btnGithubCancel">Annullér</button>
@@ -451,7 +477,7 @@ const STALE_URGENT_DAYS = 28;
 const AUTOSAVE_DELAY_MS = 800;
 
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
-                 "status", "notes", "updatedBy", "age"];
+                 "status", "notes", "refs", "updatedBy", "age"];
 
 let currentUser = null;
 let currentPid = null;
@@ -739,6 +765,7 @@ async function saveGithubSettings() {
     projectData.githubBoardUrl = url;
     projectData.defaultRepo = repo;
     updateGithubUi();
+    renderTable();
     closeGithubDialog();
     showMessage("GitHub-indstillinger gemt.", true);
   } catch (err) {
@@ -752,6 +779,8 @@ function openBoard() {
   window.open(url, "_blank", "noopener");
 }
 
+// Rewrites GitHub-style references in a single text string into Markdown links.
+// Used by the Markdown export so exported files contain clickable refs.
 function linkifyGitHubRefs(text, defaultRepo) {
   if (!text) { return ""; }
   const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
@@ -763,6 +792,70 @@ function linkifyGitHubRefs(text, defaultRepo) {
     const url = "https://github.com/" + target + "/issues/" + num;
     return "[" + match + "](" + url + ")";
   });
+}
+
+// Scans a requirement's free-text fields for GitHub references and returns
+// a de-duplicated list of { raw, url }. url may be "" when no default repo
+// is set and the reference is a bare "#123".
+function extractGithubRefs(req, defaultRepo) {
+  const refs = [];
+  const seen = new Set();
+  const fields = [req.description, req.source, req.notes];
+  const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
+  for (let i = 0; i < fields.length; i++) {
+    const text = String(fields[i] || "");
+    pattern.lastIndex = 0;
+    let m;
+    while ((m = pattern.exec(text)) !== null) {
+      const raw = m[0];
+      const owner = m[1];
+      const repo = m[2];
+      const num = m[3];
+      let url = "";
+      if (owner && repo) {
+        url = "https://github.com/" + owner + "/" + repo + "/issues/" + num;
+      } else if (defaultRepo) {
+        url = "https://github.com/" + defaultRepo + "/issues/" + num;
+      }
+      if (seen.has(raw)) { continue; }
+      seen.add(raw);
+      refs.push({ raw: raw, url: url });
+    }
+  }
+  return refs;
+}
+
+// Builds the "Referencer" cell. Each reference becomes a clickable link if we
+// can resolve it to a URL; otherwise a plain text with a helpful tooltip.
+function buildRefsCell(r) {
+  const td = document.createElement("td");
+  td.className = "refs";
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
+  const refs = extractGithubRefs(r, defaultRepo);
+  if (refs.length === 0) {
+    td.textContent = "–";
+    td.classList.add("refs-empty");
+    return td;
+  }
+  for (let i = 0; i < refs.length; i++) {
+    if (i > 0) { td.appendChild(document.createElement("br")); }
+    const ref = refs[i];
+    if (ref.url) {
+      const a = document.createElement("a");
+      a.href = ref.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = ref.raw;
+      td.appendChild(a);
+    } else {
+      const span = document.createElement("span");
+      span.className = "unlinked";
+      span.textContent = ref.raw;
+      span.title = "Sæt et standard repository under ⚙️ GitHub for at linke #numre";
+      td.appendChild(span);
+    }
+  }
+  return td;
 }
 
 async function loadMyProjects() {
@@ -1024,6 +1117,8 @@ function onProjectSnapshot(snap) {
   $("projectName").textContent = projectData.name || "";
   isOwner = (projectData.ownerUid === currentUser.uid);
   updateGithubUi();
+  // Re-render so the "Referencer" column picks up a changed default repo.
+  renderTable();
   renderMembers();
 }
 
@@ -1211,6 +1306,9 @@ function buildRow(r) {
 
   tr.appendChild(maybeHidden(wrapCell(makeTextarea("notes", r)), "notes"));
 
+  // Referencer column: clickable GitHub-issue links derived from the text fields.
+  tr.appendChild(maybeHidden(buildRefsCell(r), "refs"));
+
   const whoCell = document.createElement("td");
   whoCell.className = "small";
   whoCell.textContent = r.updatedBy || "";
@@ -1315,10 +1413,13 @@ function csvCell(value) {
 }
 
 function exportCsv() {
-  let csv = "\uFEFF" + "Krav-ID;Kravbeskrivelse;FURPS+;MoSCoW;Kilde;Status;Noter;Sidst rettet af\r\n";
+  let csv = "\uFEFF" + "Krav-ID;Kravbeskrivelse;FURPS+;MoSCoW;Kilde;Status;Noter;Referencer;Sidst rettet af\r\n";
   const rows = sortedBySeq();
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
+    const refs = extractGithubRefs(r, defaultRepo);
+    const refsText = refs.map(function (x) { return x.raw; }).join(" ");
     const cells = [
       csvCell(reqLabel(r.seq)),
       csvCell(r.description),
@@ -1327,6 +1428,7 @@ function exportCsv() {
       csvCell(r.source),
       csvCell(statusLabel(r.status)),
       csvCell(r.notes),
+      csvCell(refsText),
       csvCell(r.updatedBy)
     ];
     csv += cells.join(";") + "\r\n";
@@ -1337,12 +1439,16 @@ function exportCsv() {
 function exportJson() {
   const rows = sortedBySeq();
   const output = [];
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
+    const refs = extractGithubRefs(r, defaultRepo).map(function (x) {
+      return { raw: x.raw, url: x.url };
+    });
     output.push({
       id: reqLabel(r.seq), description: r.description, furps: r.furps,
       moscow: r.moscow, source: r.source, status: r.status,
-      notes: r.notes, updatedBy: r.updatedBy
+      notes: r.notes, updatedBy: r.updatedBy, references: refs
     });
   }
   downloadFile("krav.json", JSON.stringify(output, null, 2), "application/json");
@@ -1361,11 +1467,13 @@ function exportMarkdown() {
   const today = new Date().toISOString().slice(0, 10);
   const projName = $("projectName").textContent;
 
-  let anySource = false, anyNotes = false, anyUpdatedBy = false;
+  let anySource = false, anyNotes = false, anyUpdatedBy = false, anyRefs = false;
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
   for (let i = 0; i < rows.length; i++) {
     if ((rows[i].source || "").trim() !== "") { anySource = true; }
     if ((rows[i].notes || "").trim() !== "") { anyNotes = true; }
     if ((rows[i].updatedBy || "").trim() !== "") { anyUpdatedBy = true; }
+    if (extractGithubRefs(rows[i], defaultRepo).length > 0) { anyRefs = true; }
   }
 
   let md = "# " + projName + " — Kravmatrix\n\n";
@@ -1378,7 +1486,6 @@ function exportMarkdown() {
   if (boardUrl) {
     md += "Scrum board: " + boardUrl + "\n\n";
   }
-  const defaultRepo = String(projectData.defaultRepo || "").trim();
   if (defaultRepo) {
     md += "Referencer på formen `#123` linker til `https://github.com/" +
           defaultRepo + "/issues/123`.\n\n";
@@ -1413,16 +1520,30 @@ function exportMarkdown() {
         totals.agreed + "** | **" + totals.proposed + "** | **" + totals.parked +
         "** | **" + totals.dropped + "** |\n\n";
 
+  function refsCellFor(r) {
+    const refs = extractGithubRefs(r, defaultRepo);
+    if (refs.length === 0) { return "–"; }
+    const parts = [];
+    for (let i = 0; i < refs.length; i++) {
+      const ref = refs[i];
+      if (ref.url) { parts.push("[" + ref.raw + "](" + ref.url + ")"); }
+      else { parts.push("`" + ref.raw + "`"); }
+    }
+    return parts.join("<br>");
+  }
+
   function buildActiveTable(group) {
     let head = "| Krav-ID | Kravbeskrivelse | FURPS+ |";
     if (anySource) { head += " Kilde |"; }
     head += " Status |";
     if (anyNotes) { head += " Noter |"; }
+    if (anyRefs) { head += " Referencer |"; }
     if (anyUpdatedBy) { head += " Sidst rettet af |"; }
     head += "\n| --- | --- | --- |";
     if (anySource) { head += " --- |"; }
     head += " --- |";
     if (anyNotes) { head += " --- |"; }
+    if (anyRefs) { head += " --- |"; }
     if (anyUpdatedBy) { head += " --- |"; }
     head += "\n";
 
@@ -1434,6 +1555,7 @@ function exportMarkdown() {
       if (anySource) { body += " " + mdCell(r.source) + " |"; }
       body += " " + mdCell(statusLabel(r.status)) + " |";
       if (anyNotes) { body += " " + mdCell(r.notes) + " |"; }
+      if (anyRefs) { body += " " + refsCellFor(r) + " |"; }
       if (anyUpdatedBy) { body += " " + mdCell(r.updatedBy) + " |"; }
       body += "\n";
     }
@@ -1465,8 +1587,10 @@ function exportMarkdown() {
           "om de skal opgraderes eller droppes.\n\n";
     let h = "| Krav-ID | Kravbeskrivelse | Oprindelig prioritet | FURPS+ |";
     if (anyNotes) { h += " Noter |"; }
+    if (anyRefs) { h += " Referencer |"; }
     h += "\n| --- | --- | --- | --- |";
     if (anyNotes) { h += " --- |"; }
+    if (anyRefs) { h += " --- |"; }
     h += "\n";
     md += h;
     for (let i = 0; i < parked.length; i++) {
@@ -1474,6 +1598,7 @@ function exportMarkdown() {
       md += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) + " | " +
             mdCell(r.moscow) + " | " + mdCell(r.furps) + " |";
       if (anyNotes) { md += " " + mdCell(r.notes) + " |"; }
+      if (anyRefs) { md += " " + refsCellFor(r) + " |"; }
       md += "\n";
     }
     md += "\n";
@@ -1575,6 +1700,9 @@ function fieldFromHeader(header) {
     case "evt":
     case "begrundelse":
       return "notes";
+    case "referencer":
+    case "references":
+      return "references";
     default:
       if (key.indexOf("source") === 0 || key.indexOf("kilde") === 0) { return "source"; }
       return "";
@@ -1666,6 +1794,7 @@ function jsonToObjects(text) {
       if (field === "") { continue; }
       let value = item[keys[k]];
       if (value === null || value === undefined) { value = ""; }
+      if (field === "references") { continue; }   // derived field — ignore on import
       obj[field] = String(value).trim();
     }
     objects.push(obj);
@@ -1726,6 +1855,7 @@ function markdownToObjects(text) {
     for (let c = 0; c < headerCols.length && c < cells.length; c++) {
       const field = headerCols[c];
       if (field === "") { continue; }
+      if (field === "references") { continue; }
       let value = cells[c].replace(/<br\s*\/?>/gi, "\n").replace(/\\\|/g, "|");
       value = value.replace(/\[([^\]]+)\]\(https:\/\/github\.com\/[^)]+\)/g, "$1");
       obj[field] = value;
