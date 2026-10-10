@@ -34,6 +34,7 @@
     transition: color 0.12s ease;
   }
   #projectName:hover { text-decoration: underline; }
+  /* Always-visible back arrow so the clickability is obvious even without hover. */
   #projectName::before {
     content: "← ";
     opacity: 0.45;
@@ -74,6 +75,7 @@
   td.age-urgent { color: #b91c1c; font-weight: 700; }
   td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
+  /* GitHub reference column: monospace links, stacked vertically. */
   td.refs { font-size: 12px; line-height: 1.5; word-break: break-all; }
   td.refs a {
     color: #2563eb; text-decoration: none;
@@ -365,8 +367,7 @@
     <section>
       <h3>Referencer (GitHub)</h3>
       <p>Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i
-         Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.
-         Kolonnen opdateres løbende, efterhånden som du skriver.</p>
+         Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.</p>
       <ul>
         <li><code>#123</code> → linker til standard-repo'et sat under ⚙️ GitHub.</li>
         <li><code>ejer/repo#123</code> → linker til det angivne repo, uanset standard.</li>
@@ -778,6 +779,8 @@ function openBoard() {
   window.open(url, "_blank", "noopener");
 }
 
+// Rewrites GitHub-style references in a single text string into Markdown links.
+// Used by the Markdown export so exported files contain clickable refs.
 function linkifyGitHubRefs(text, defaultRepo) {
   if (!text) { return ""; }
   const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
@@ -791,6 +794,9 @@ function linkifyGitHubRefs(text, defaultRepo) {
   });
 }
 
+// Scans a requirement's free-text fields for GitHub references and returns
+// a de-duplicated list of { raw, url }. url may be "" when no default repo
+// is set and the reference is a bare "#123".
 function extractGithubRefs(req, defaultRepo) {
   const refs = [];
   const seen = new Set();
@@ -819,6 +825,8 @@ function extractGithubRefs(req, defaultRepo) {
   return refs;
 }
 
+// Builds the "Referencer" cell. Each reference becomes a clickable link if we
+// can resolve it to a URL; otherwise a plain text with a helpful tooltip.
 function buildRefsCell(r) {
   const td = document.createElement("td");
   td.className = "refs";
@@ -848,28 +856,6 @@ function buildRefsCell(r) {
     }
   }
   return td;
-}
-
-// Live-updates only the Referencer cell on each row, without touching the
-// other cells. This keeps the user's cursor in whatever field they are
-// editing while still showing the effect of a "#123" as soon as it is typed.
-function refreshRefsCellsInPlace() {
-  if (!visibleColumns.refs) { return; }
-  const rows = document.querySelectorAll("#tbody tr[data-req-id]");
-  for (let i = 0; i < rows.length; i++) {
-    const tr = rows[i];
-    const id = tr.dataset.reqId;
-    let req = null;
-    for (let j = 0; j < allReqs.length; j++) {
-      if (allReqs[j].id === id) { req = allReqs[j]; break; }
-    }
-    if (!req) { continue; }
-    const oldCell = tr.querySelector("td.refs");
-    if (!oldCell) { continue; }
-    const newCell = buildRefsCell(req);
-    newCell.classList.add("col-refs");
-    tr.replaceChild(newCell, oldCell);
-  }
 }
 
 async function loadMyProjects() {
@@ -1131,6 +1117,7 @@ function onProjectSnapshot(snap) {
   $("projectName").textContent = projectData.name || "";
   isOwner = (projectData.ownerUid === currentUser.uid);
   updateGithubUi();
+  // Re-render so the "Referencer" column picks up a changed default repo.
   renderTable();
   renderMembers();
 }
@@ -1225,9 +1212,6 @@ function onReqsSnapshot(snapshot) {
     req.status = (cleaned !== "") ? cleaned : "Proposed";
     allReqs.push(req);
   }
-  // Opdatér kun Referencer-kolonnen med det samme. Resten af genoptegningen
-  // (som ville forstyrre cursor i et tekstfelt) venter til brugeren forlader cellen.
-  refreshRefsCellsInPlace();
   safeRender();
 }
 
@@ -1302,7 +1286,6 @@ function buildGroupHeader(moscow, count) {
 function buildRow(r) {
   const tr = document.createElement("tr");
   tr.className = "prio-" + rankOf(r.moscow);
-  tr.dataset.reqId = r.id;   // lets refreshRefsCellsInPlace find the row again
   if (r.status === "Done" || r.status === "Parked" || r.status === "Dropped") {
     tr.classList.add("row-resolved");
   }
@@ -1786,7 +1769,6 @@ function csvToObjects(text) {
     let hasContent = false;
     for (let c = 0; c < fields.length; c++) {
       if (fields[c] === "") { continue; }
-      if (fields[c] === "references") { continue; }
       let value = table[r][c];
       if (value === undefined) { value = ""; }
       value = value.trim();
@@ -1810,9 +1792,9 @@ function jsonToObjects(text) {
     for (let k = 0; k < keys.length; k++) {
       const field = fieldFromHeader(keys[k]);
       if (field === "") { continue; }
-      if (field === "references") { continue; }
       let value = item[keys[k]];
       if (value === null || value === undefined) { value = ""; }
+      if (field === "references") { continue; }   // derived field — ignore on import
       obj[field] = String(value).trim();
     }
     objects.push(obj);
@@ -2081,6 +2063,7 @@ $("tbody").addEventListener("input", onCellInput);
 $("tbody").addEventListener("focusout", onCellFocusOut);
 $("tbody").addEventListener("click", onTableClick);
 
+// Project name acts as a link back to the chooser.
 $("projectName").addEventListener("click", leaveProject);
 
 document.addEventListener("visibilitychange", function () {
@@ -2110,7 +2093,7 @@ for (let i = 0; i < colBoxes.length; i++) {
     saveColumns();
     applyColumnPrefs();
   });
-});
+}
 
 $("btnGithubSettings").addEventListener("click", openGithubDialog);
 $("btnOpenBoard").addEventListener("click", openBoard);
