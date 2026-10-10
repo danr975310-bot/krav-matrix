@@ -15,7 +15,8 @@
   #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
                transition: opacity 0.2s ease; }
   main { padding: 8px 16px 16px; }
-  .hidden { display: none; }
+  /* FIX: !important, so .hidden also wins over rules like .modal { display: flex } further down. */
+  .hidden { display: none !important; }
   .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
           padding: 16px; max-width: 480px; margin: 24px auto; }
   .card h2 { margin-top: 0; }
@@ -252,7 +253,8 @@
         </div>
       </div>
 
-      <button id="btnGithub" title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
+      <!-- FIX: id renamed from btnGithub (already used by the login button) to btnGithubSettings. -->
+      <button id="btnGithubSettings" title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
       <button id="btnOpenBoard" class="hidden" title="Åbn Scrum board i ny fane">Scrum board ↗</button>
       <button id="btnInfo" title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
     </div>
@@ -430,6 +432,9 @@
 </div>
 
 <script type="module">
+// SRP: This script's single responsibility is to connect the page to Firebase
+// (login, projects, requirements, import/export) and to draw the requirements table.
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
          GoogleAuthProvider, GithubAuthProvider }
@@ -1998,7 +2003,8 @@ for (let i = 0; i < colBoxes.length; i++) {
   });
 }
 
-$("btnGithub").addEventListener("click", openGithubDialog);
+// FIX: the settings button now has its own id, so this no longer attaches to the login button.
+$("btnGithubSettings").addEventListener("click", openGithubDialog);
 $("btnOpenBoard").addEventListener("click", openBoard);
 $("btnGithubCancel").addEventListener("click", closeGithubDialog);
 $("btnGithubSave").addEventListener("click", saveGithubSettings);
