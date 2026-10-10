@@ -5,11 +5,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Requirements Matrix</title>
+<title>Kravmatrix</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1c1f24; }
   header { display: flex; justify-content: space-between; align-items: center;
            padding: 10px 16px; background: #1f2937; color: #fff; }
+  #userInfo button { margin-left: 8px; }
   main { padding: 16px; }
   .hidden { display: none; }
   .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
@@ -53,9 +54,10 @@
 <body>
 
 <header>
-  <strong>Requirements Matrix · FURPS+ × MoSCoW</strong>
+  <strong>Kravmatrix · FURPS+ × MoSCoW</strong>
   <div id="userInfo" class="hidden">
     <span id="userName"></span>
+    <button id="btnLink" class="hidden"></button>
     <button id="btnLogout">Log ud</button>
   </div>
 </header>
@@ -69,7 +71,8 @@
     <p>Log ind for at se og redigere jeres krav.</p>
     <button id="btnGoogle" class="primary">Log ind med Google</button>
     <button id="btnGithub">Log ind med GitHub</button>
-    <p class="small">Brug den samme login-metode hver gang.</p>
+    <p class="small">Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte
+       den anden metode (knappen øverst til højre), så begge virker.</p>
   </div>
 
   <!-- Screen 2: create or join a project -->
@@ -116,45 +119,46 @@
     </div>
 
     <details>
-      <summary><strong>Legend: FURPS+, MoSCoW and Status</strong></summary>
-      <p><strong>FURPS+ (requirement type)</strong></p>
+      <summary><strong>Forklaring: FURPS+, MoSCoW og status</strong></summary>
+      <p><strong>FURPS+ (kravtype)</strong></p>
       <ul>
-        <li><strong>F</strong> Functionality: features, capabilities, behaviour.</li>
-        <li><strong>U</strong> Usability: ease of use, accessibility, user experience.</li>
-        <li><strong>R</strong> Reliability: availability, accuracy, recovery.</li>
-        <li><strong>P</strong> Performance: response time, throughput, resource use.</li>
-        <li><strong>S</strong> Supportability: maintainability, testability, adaptability.</li>
-        <li><strong>+</strong> Constraints: design, implementation, interface, legal (e.g. GDPR), physical.</li>
+        <li><strong>F</strong> Funktionalitet: funktioner, muligheder og adfærd.</li>
+        <li><strong>U</strong> Brugbarhed (Usability): lethed i brug, tilgængelighed, brugeroplevelse.</li>
+        <li><strong>R</strong> Pålidelighed (Reliability): tilgængelighed, nøjagtighed, genopretning.</li>
+        <li><strong>P</strong> Ydeevne (Performance): svartid, kapacitet, ressourceforbrug.</li>
+        <li><strong>S</strong> Vedligeholdelse (Supportability): vedligeholdbarhed, testbarhed, tilpasningsevne.</li>
+        <li><strong>+</strong> Begrænsninger: design, implementering, grænseflader, jura (fx GDPR), fysiske krav.</li>
       </ul>
-      <p><strong>MoSCoW (priority)</strong></p>
+      <p><strong>MoSCoW (prioritet)</strong></p>
       <ul>
-        <li><strong>Must</strong> Essential for the agreed solution or release.</li>
-        <li><strong>Should</strong> Important, but a workable solution exists without it.</li>
-        <li><strong>Could</strong> Desirable if time and resources permit.</li>
-        <li><strong>Won't</strong> Explicitly excluded from this release (keep the rationale in Notes).</li>
+        <li><strong>Must</strong> Uundværlig for den aftalte løsning eller version.</li>
+        <li><strong>Should</strong> Vigtig, men en brugbar løsning findes uden.</li>
+        <li><strong>Could</strong> Ønskeligt, hvis tid og ressourcer rækker.</li>
+        <li><strong>Won't</strong> Bevidst fravalgt i denne version (skriv begrundelsen i Noter).</li>
       </ul>
       <p><strong>Status</strong></p>
       <ul>
-        <li><strong>Proposed</strong> Captured, but not yet confirmed.</li>
-        <li><strong>Agreed</strong> Confirmed by the group or the customer.</li>
-        <li><strong>Done</strong> Implemented in the solution.</li>
-        <li><strong>Dropped</strong> No longer relevant (write why in Notes).</li>
+        <li><strong>Foreslået</strong> Registreret, men endnu ikke bekræftet.</li>
+        <li><strong>Aftalt</strong> Bekræftet af gruppen eller kunden.</li>
+        <li><strong>Færdig</strong> Gennemført i løsningen.</li>
+        <li><strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).</li>
       </ul>
-      <p class="small">Security and other cross-cutting concerns may be classified under F or +.
-         Choose one convention and apply it consistently.</p>
+      <p class="small">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
+         Vælg én konvention, og brug den konsekvent.</p>
     </details>
 
     <details>
       <summary><strong>Import: filformater</strong></summary>
       <ul>
-        <li><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten.
-            Semikolon, komma og tab virker. Gem som "CSV UTF-8" i Excel, så æøå bevares.</li>
+        <li><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten
+            (danske eller engelske). Semikolon, komma og tab virker.
+            Gem som "CSV UTF-8" i Excel, så æøå bevares.</li>
         <li><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
-        <li><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Proposed, som du kan rette bagefter.</li>
+        <li><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
       <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende. Kravene får nye ID'er,
-         og et gammelt ID fra filen skrives i Notes. Importér ikke samme fil to gange, ellers får du dubletter.
-         Ældre eksportfiler virker også: Source Location lægges ind i Source, Acceptance Criteria i Notes,
+         og et gammelt ID fra filen skrives i Noter. Importér ikke samme fil to gange, ellers får du dubletter.
+         Ældre eksportfiler virker også: Source Location lægges ind i Kilde, Acceptance Criteria i Noter,
          og de gamle statusser oversættes. Tip: en CSV-eksport fra et tomt projekt er en færdig skabelon.</p>
     </details>
 
@@ -168,14 +172,14 @@
       <table>
         <thead>
           <tr>
-            <th style="width:70px">Requirement ID</th>
-            <th style="width:300px">Requirement Description</th>
+            <th style="width:70px">Krav-ID</th>
+            <th style="width:300px">Kravbeskrivelse</th>
             <th style="width:60px">FURPS+</th>
             <th style="width:90px">MoSCoW</th>
-            <th style="width:240px">Source (quote, document, page)</th>
+            <th style="width:240px">Kilde (citat, dokument, side)</th>
             <th style="width:110px">Status</th>
-            <th style="width:200px">Additional Notes</th>
-            <th style="width:100px">Last edited by</th>
+            <th style="width:200px">Noter</th>
+            <th style="width:100px">Sidst rettet af</th>
             <th style="width:40px"></th>
           </tr>
         </thead>
@@ -187,10 +191,10 @@
 
 <script type="module">
 // SRP: This script's single responsibility is to connect the page to Firebase
-// (login, projects, requirements, import/export) and to draw the requirements table.
+// (login, linking logins, projects, requirements, import/export) and to draw the requirements table.
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getAuth, onAuthStateChanged, signInWithPopup, signOut,
+import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
          GoogleAuthProvider, GithubAuthProvider }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
@@ -212,6 +216,7 @@ const db = getFirestore(app);
 
 // ---------- 2. Constants and state ----------
 // The allowed values live in arrays so the dropdowns and the sorting use the same list.
+// The database always stores these English values. Only the labels on screen are Danish.
 const FURPS = ["F", "U", "R", "P", "S", "+"];
 const MOSCOW = ["Must", "Should", "Could", "Won't"];
 const STATUS = ["Proposed", "Agreed", "Done", "Dropped"];
@@ -276,6 +281,22 @@ function reqLabel(seq) {
   return "REQ-" + String(seq).padStart(3, "0");
 }
 
+// Labels for the dropdowns: what the user sees can differ from what is stored.
+function statusLabel(value) {
+  switch (value) {
+    case "Proposed": return "Foreslået";
+    case "Agreed": return "Aftalt";
+    case "Done": return "Færdig";
+    case "Dropped": return "Droppet";
+    default: return value;
+  }
+}
+
+function plainLabel(value) {
+  // FURPS+ and MoSCoW are shown exactly as stored.
+  return value;
+}
+
 function stopListeners() {
   // Stop old live listeners so we never listen to two projects at once.
   if (unsubProject) { unsubProject(); unsubProject = null; }
@@ -289,7 +310,7 @@ function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
 }
 
-// ---------- 4. Login ----------
+// ---------- 4. Login and linking logins ----------
 async function loginWith(providerName) {
   let provider;
   switch (providerName) {
@@ -303,13 +324,82 @@ async function loginWith(providerName) {
   } catch (err) {
     switch (err.code) {
       case "auth/account-exists-with-different-credential":
-        showMessage("Denne e-mail er allerede brugt med en anden login-metode. Brug den metode i stedet.");
+        // The e-mail already belongs to an account made with the other method.
+        if (providerName === "github") {
+          showMessage("Din e-mail er allerede brugt med Google. Log ind med Google, og tryk så på " +
+                      "'Tilknyt GitHub' øverst til højre. Bagefter virker begge.");
+        } else {
+          showMessage("Din e-mail er allerede brugt med GitHub. Log ind med GitHub, og tryk så på " +
+                      "'Tilknyt Google' øverst til højre. Bagefter virker begge.");
+        }
         break;
       case "auth/popup-closed-by-user":
         showMessage("Login blev afbrudt.");
         break;
       default:
         showMessage("Login fejlede: " + err.code);
+        break;
+    }
+  }
+}
+
+function hasProvider(providerId) {
+  // providerData lists every login method that is linked to the current account.
+  for (let i = 0; i < currentUser.providerData.length; i++) {
+    if (currentUser.providerData[i].providerId === providerId) { return true; }
+  }
+  return false;
+}
+
+function updateLinkButton() {
+  // Shows a button for the login method that is NOT linked yet. Hidden when both are linked.
+  const btn = $("btnLink");
+  if (!currentUser) {
+    btn.classList.add("hidden");
+    return;
+  }
+  if (!hasProvider("google.com")) {
+    btn.textContent = "Tilknyt Google";
+    btn.dataset.provider = "google";
+    btn.classList.remove("hidden");
+  } else if (!hasProvider("github.com")) {
+    btn.textContent = "Tilknyt GitHub";
+    btn.dataset.provider = "github";
+    btn.classList.remove("hidden");
+  } else {
+    btn.classList.add("hidden");
+  }
+}
+
+async function linkLogin() {
+  const providerName = $("btnLink").dataset.provider;
+  let provider;
+  switch (providerName) {
+    case "google": provider = new GoogleAuthProvider(); break;
+    case "github": provider = new GithubAuthProvider(); break;
+    default: return;
+  }
+  try {
+    showMessage("");
+    // Adds the second login method to the account we are already logged in with.
+    await linkWithPopup(currentUser, provider);
+    updateLinkButton();
+    showMessage("Login tilknyttet. Nu kan du logge ind med begge metoder.", true);
+  } catch (err) {
+    switch (err.code) {
+      case "auth/credential-already-in-use":
+        showMessage("Den login-konto bruges allerede af en anden bruger i appen, så den kan ikke " +
+                    "tilknyttes. Brug i stedet den metode, du er logget ind med nu.");
+        break;
+      case "auth/provider-already-linked":
+        showMessage("Den login-metode er allerede tilknyttet.");
+        updateLinkButton();
+        break;
+      case "auth/popup-closed-by-user":
+        showMessage("Tilknytningen blev afbrudt.");
+        break;
+      default:
+        showMessage("Kunne ikke tilknytte login: " + err.code);
         break;
     }
   }
@@ -322,11 +412,13 @@ function onAuthChanged(user) {
     stopListeners();
     currentPid = null;
     $("userInfo").classList.add("hidden");
+    updateLinkButton();
     showScreen("login");
     return;
   }
   $("userName").textContent = userLabel();
   $("userInfo").classList.remove("hidden");
+  updateLinkButton();
 
   // Project code from the share link (#code) wins over the last used project.
   let pid = location.hash.slice(1);
@@ -632,12 +724,12 @@ function buildRow(r) {
   tr.appendChild(idCell);
 
   tr.appendChild(wrapCell(makeTextarea("description", r)));
-  tr.appendChild(wrapCell(makeSelect("furps", FURPS, r)));
-  tr.appendChild(wrapCell(makeSelect("moscow", MOSCOW, r)));
+  tr.appendChild(wrapCell(makeSelect("furps", FURPS, r, plainLabel)));
+  tr.appendChild(wrapCell(makeSelect("moscow", MOSCOW, r, plainLabel)));
   tr.appendChild(wrapCell(makeTextarea("source", r)));
 
   // The status dropdown gets its own colour class (status-proposed, status-agreed, ...).
-  const statusSelect = makeSelect("status", STATUS, r);
+  const statusSelect = makeSelect("status", STATUS, r, statusLabel);
   statusSelect.className = "status-" + r.status.toLowerCase();
   tr.appendChild(wrapCell(statusSelect));
 
@@ -672,12 +764,13 @@ function makeTextarea(field, r) {
   return el;
 }
 
-function makeSelect(field, options, r) {
+function makeSelect(field, options, r, labelFor) {
+  // labelFor turns a stored value (e.g. "Proposed") into the text shown to the user.
   const el = document.createElement("select");
   for (let i = 0; i < options.length; i++) {
     const opt = document.createElement("option");
     opt.value = options[i];
-    opt.textContent = options[i];
+    opt.textContent = labelFor(options[i]);
     el.appendChild(opt);
   }
   el.value = r[field];
@@ -719,22 +812,28 @@ function csvCell(value) {
 }
 
 function exportCsv() {
-  const fields = ["description", "furps", "moscow", "source", "status", "notes", "updatedBy"];
   // Semicolon + BOM so Excel with Danish settings opens it correctly (æøå too).
-  let csv = "\uFEFF" + "Requirement ID;Requirement Description;FURPS+;MoSCoW;Source;" +
-            "Status;Additional Notes;Last edited by\r\n";
+  let csv = "\uFEFF" + "Krav-ID;Kravbeskrivelse;FURPS+;MoSCoW;Kilde;Status;Noter;Sidst rettet af\r\n";
   const rows = sortedBySeq();
   for (let i = 0; i < rows.length; i++) {
-    const cells = [csvCell(reqLabel(rows[i].seq))];
-    for (let j = 0; j < fields.length; j++) {
-      cells.push(csvCell(rows[i][fields[j]]));
-    }
+    const r = rows[i];
+    const cells = [
+      csvCell(reqLabel(r.seq)),
+      csvCell(r.description),
+      csvCell(r.furps),
+      csvCell(r.moscow),
+      csvCell(r.source),
+      csvCell(statusLabel(r.status)),   // Danish status text, easier to read in Excel
+      csvCell(r.notes),
+      csvCell(r.updatedBy)
+    ];
     csv += cells.join(";") + "\r\n";
   }
-  downloadFile("requirements.csv", csv, "text/csv;charset=utf-8");
+  downloadFile("krav.csv", csv, "text/csv;charset=utf-8");
 }
 
 function exportJson() {
+  // JSON keeps the English keys and values: it is meant for backup and for programs.
   const rows = sortedBySeq();
   const output = [];
   for (let i = 0; i < rows.length; i++) {
@@ -745,7 +844,7 @@ function exportJson() {
       notes: r.notes, updatedBy: r.updatedBy
     });
   }
-  downloadFile("requirements.json", JSON.stringify(output, null, 2), "application/json");
+  downloadFile("krav.json", JSON.stringify(output, null, 2), "application/json");
 }
 
 // Makes one value safe to put inside a Markdown table cell.
@@ -761,10 +860,10 @@ function exportMarkdown() {
   const rows = sortedBySeq();
   const today = new Date().toISOString().slice(0, 10);
 
-  let md = "# " + $("projectName").textContent + " - Requirements Matrix\n\n";
-  md += "Exported: " + today + "\n\n";
-  md += "FURPS+ classifies the type of requirement. MoSCoW sets the priority, " +
-        "so there is one section per priority.\n\n";
+  let md = "# " + $("projectName").textContent + " - Kravmatrix\n\n";
+  md += "Eksporteret: " + today + "\n\n";
+  md += "FURPS+ angiver kravets type. MoSCoW angiver prioriteten, " +
+        "så der er ét afsnit pr. prioritet.\n\n";
 
   // MOSCOW is already in the order Must, Should, Could, Won't, so the sections come out in priority order.
   for (let p = 0; p < MOSCOW.length; p++) {
@@ -775,7 +874,7 @@ function exportMarkdown() {
     if (group.length === 0) { continue; }   // skip empty sections
 
     md += "## " + MOSCOW[p] + " (" + group.length + ")\n\n";
-    md += "| Requirement ID | Requirement Description | FURPS+ | Source | Status | Additional Notes |\n";
+    md += "| Krav-ID | Kravbeskrivelse | FURPS+ | Kilde | Status | Noter |\n";
     md += "| --- | --- | --- | --- | --- | --- |\n";
 
     for (let i = 0; i < group.length; i++) {
@@ -785,7 +884,7 @@ function exportMarkdown() {
         mdCell(r.description),
         mdCell(r.furps),
         mdCell(r.source),
-        mdCell(r.status),
+        mdCell(statusLabel(r.status)),
         mdCell(r.notes)
       ];
       md += "| " + cells.join(" | ") + " |\n";
@@ -793,10 +892,11 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  downloadFile("requirements.md", md, "text/markdown;charset=utf-8");
+  downloadFile("krav.md", md, "text/markdown;charset=utf-8");
 }
 
 async function copyShareLink() {
+  // location.origin means the link follows the address the page is opened from (also a custom domain).
   const link = location.origin + location.pathname + "#" + currentPid;
   try {
     await navigator.clipboard.writeText(link);
@@ -813,7 +913,7 @@ async function copyShareLink() {
 
 function normalizeKey(text) {
   // "Source / Evidence" -> "sourceevidence", "FURPS+" -> "furps". Makes header matching forgiving.
-  return String(text).toLowerCase().replace(/[^a-z0-9]/g, "");
+  return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
 
 function fieldFromHeader(header) {
@@ -823,6 +923,7 @@ function fieldFromHeader(header) {
   switch (key) {
     case "requirementid":
     case "reqid":
+    case "kravid":
     case "id":
       return "importedId";
     case "requirementdescription":
@@ -853,11 +954,12 @@ function fieldFromHeader(header) {
     case "additionalnotes":
     case "notes":
     case "note":
+    case "noter":
     case "evt":
       return "notes";
     default:
-      // "Source", "Source / Evidence", "Source (quote, document, page)" and "Kilde" are all the source column.
-      if (key.indexOf("source") === 0 || key === "kilde") { return "source"; }
+      // "Source", "Source / Evidence", "Kilde" and "Kilde (citat, dokument, side)" are all the source column.
+      if (key.indexOf("source") === 0 || key.indexOf("kilde") === 0) { return "source"; }
       return "";
   }
 }
@@ -939,7 +1041,7 @@ function csvToObjects(text) {
     fields.push(fieldFromHeader(table[0][c]));
   }
   if (fields.indexOf("description") < 0) {
-    throw new Error("Fandt ingen kolonne med kravbeskrivelse (Requirement Description).");
+    throw new Error("Fandt ingen kolonne med kravbeskrivelse (Kravbeskrivelse).");
   }
 
   const objects = [];
@@ -1018,12 +1120,12 @@ function cleanMoscow(value) {
 }
 
 function cleanStatus(value) {
-  // Also translates the old status names, so old data and old export files still work.
+  // Also translates the old status names and the Danish labels, so old data and export files still work.
   switch (value.trim().toLowerCase()) {
-    case "proposed": case "under review": case "draft": return "Proposed";
-    case "agreed": case "approved": return "Agreed";
-    case "done": case "implemented": case "verified": return "Done";
-    case "dropped": case "rejected": return "Dropped";
+    case "proposed": case "under review": case "draft": case "foreslået": return "Proposed";
+    case "agreed": case "approved": case "aftalt": return "Agreed";
+    case "done": case "implemented": case "verified": case "færdig": return "Done";
+    case "dropped": case "rejected": case "droppet": return "Dropped";
     default: return "";
   }
 }
@@ -1057,7 +1159,7 @@ function buildImportRecords(objects) {
     if (status !== "") { rec.status = status; }
     else if (statusRaw.trim() !== "") { unrecognised++; }
 
-    // Older files have a separate Source Location column. We fold it into Source.
+    // Older files have a separate Source Location column. We fold it into the source.
     let source = (o.source || "").trim();
     const location = (o.sourceLocation || "").trim();
     if (location !== "") {
@@ -1065,7 +1167,7 @@ function buildImportRecords(objects) {
     }
     rec.source = source;
 
-    // Older files have an Acceptance Criteria column. We keep it as text in Notes.
+    // Older files have an Acceptance Criteria column. We keep it as text in the notes.
     let notes = (o.notes || "").trim();
     const acceptance = (o.acceptance || "").trim();
     if (acceptance !== "") {
@@ -1138,7 +1240,7 @@ async function onImportFileChosen(event) {
   }
   if (built.unrecognised > 0) {
     question += "\n\n" + built.unrecognised + " værdier i FURPS+, MoSCoW eller Status blev ikke genkendt " +
-                "og er sat til standardværdien (F / Should / Proposed).";
+                "og er sat til standardværdien (F / Should / Foreslået).";
   }
   if (text.indexOf("\uFFFD") >= 0) {
     question += "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt. " +
@@ -1173,6 +1275,7 @@ $("filterSelect").value = filterMoscow;
 
 $("btnGoogle").addEventListener("click", function () { loginWith("google"); });
 $("btnGithub").addEventListener("click", function () { loginWith("github"); });
+$("btnLink").addEventListener("click", linkLogin);
 $("btnLogout").addEventListener("click", function () { signOut(auth); });
 $("btnCreate").addEventListener("click", createProject);
 $("btnJoin").addEventListener("click", joinFromInput);
