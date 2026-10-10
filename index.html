@@ -12,7 +12,6 @@
            padding: 10px 16px; background: #1f2937; color: #fff; }
   #userInfo button { margin-left: 8px; }
   .header-right { display: flex; align-items: center; gap: 16px; }
-  /* Small global "last saved" ticker next to the user info. */
   #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
                transition: opacity 0.2s ease; }
   main { padding: 8px 16px 16px; }
@@ -61,8 +60,6 @@
   td.age-urgent { color: #b91c1c; font-weight: 700; }
   td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
-  /* Debounced autosave: the just-edited field flashes a soft green glow when
-     the write reaches Firestore. No layout shift, no extra DOM. */
   textarea.just-saved, select.just-saved {
     box-shadow: 0 0 0 2px #86efac;
     transition: box-shadow 0.2s ease;
@@ -106,6 +103,9 @@
   .side-panel-body ul { margin: 4px 0 8px; padding-left: 20px; }
   .side-panel-body li { font-size: 13px; line-height: 1.5; }
   .side-panel-body p { font-size: 13px; line-height: 1.5; }
+  .side-panel-body code {
+    background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
+  }
   .panel-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,0.25);
     z-index: 99;
@@ -114,8 +114,31 @@
   #myProjectsList li { margin-bottom: 6px; }
   #myProjectsList button { width: 100%; text-align: left; }
   #myProjectsSection hr { margin: 16px 0; border: 0; border-top: 1px solid #d9dde3; }
+  /* Modal for GitHub settings. */
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal-content {
+    background: #fff; border-radius: 8px;
+    padding: 20px 24px; min-width: 420px; max-width: 92vw;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .modal-content h3 { margin: 0 0 16px; font-size: 16px; }
+  .modal-content label { display: block; margin-bottom: 14px; font-size: 13px; }
+  .modal-content label input {
+    width: 100%; padding: 6px; margin-top: 4px;
+    font: inherit; font-size: 13px; box-sizing: border-box;
+  }
+  .modal-content code {
+    background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
+  }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   @media (max-width: 500px) {
     .side-panel { width: 100vw; max-width: 100vw; }
+    .modal-content { min-width: 0; width: 92vw; }
   }
 </style>
 </head>
@@ -210,6 +233,8 @@
         </div>
       </div>
 
+      <button id="btnGithub" title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
+      <button id="btnOpenBoard" class="hidden" title="Åbn Scrum board i ny fane">Scrum board ↗</button>
       <button id="btnInfo" title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
     </div>
 
@@ -309,6 +334,25 @@
     </section>
 
     <section>
+      <h3>GitHub-integration</h3>
+      <p>Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
+      <ul>
+        <li><strong>Scrum board URL</strong> — fx
+            <code>https://github.com/users/DGARosendal/projects/4</code>.
+            Når den er sat, vises knappen "Scrum board ↗" i værktøjslinjen.</li>
+        <li><strong>Standard repository</strong> — fx
+            <code>DGARosendal/reolmarked</code>. Bruges til at udvide
+            <code>#123</code> i Markdown-eksporten.</li>
+      </ul>
+      <p>I Markdown-eksporten bliver <code>#123</code> til et link til
+         <code>https://github.com/&lt;standard-repo&gt;/issues/123</code>.
+         Du kan altid pege på et andet repo ved at skrive
+         <code>ejer/repo#123</code>.</p>
+      <p class="small">Referencen findes kun i den eksporterede fil. Kravmatrixen
+         ændrer ikke selve teksten i Noter eller Kilde.</p>
+    </section>
+
+    <section>
       <h3>Import: filformater</h3>
       <ul>
         <li><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten
@@ -335,6 +379,33 @@
   </div>
 </div>
 <div id="panelBackdrop" class="panel-backdrop hidden"></div>
+
+<!-- GitHub settings modal -->
+<div id="githubDialog" class="modal hidden">
+  <div class="modal-content">
+    <h3>GitHub-integration</h3>
+    <label>
+      Scrum board URL
+      <input type="text" id="githubBoardUrlInput"
+             placeholder="https://github.com/users/DGARosendal/projects/4">
+    </label>
+    <label>
+      Standard repository
+      <input type="text" id="defaultRepoInput"
+             placeholder="DGARosendal/reolmarked">
+    </label>
+    <p class="small">
+      Scrum board URL vises som en "Scrum board"-knap i værktøjslinjen.<br>
+      Standard repository bruges til at udvide <code>#123</code> til et klikbart
+      link i Markdown-eksporten. Du kan altid skrive <code>ejer/repo#123</code>
+      for at pege på et andet repo.
+    </p>
+    <div class="modal-actions">
+      <button id="btnGithubCancel">Annullér</button>
+      <button id="btnGithubSave" class="primary">Gem</button>
+    </div>
+  </div>
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -364,8 +435,6 @@ const IMPORT_CHUNK_SIZE = 100;
 const STALE_WARN_DAYS = 14;
 const STALE_URGENT_DAYS = 28;
 
-// How long a text field waits after the last keystroke before it is saved.
-// Dropdowns ignore this and save immediately.
 const AUTOSAVE_DELAY_MS = 800;
 
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
@@ -384,6 +453,10 @@ let unsubProject = null;
 let unsubReqs = null;
 let unsubMembers = null;
 let visibleColumns = loadColumns();
+
+// Project-level data (name, ownerUid, githubBoardUrl, defaultRepo).
+// Updated by onProjectSnapshot so the GitHub UI stays in sync with the live doc.
+let projectData = {};
 
 // Pending debounced saves, keyed by "reqId|field". Value is the setTimeout id.
 const saveTimers = new Map();
@@ -542,7 +615,6 @@ function onListenError(err) {
 }
 
 // ---------- Autosave ----------
-// Called on every keystroke. Restarts the timer so only the last pause counts.
 function scheduleSave(el, field, id) {
   const key = id + "|" + field;
   if (saveTimers.has(key)) { clearTimeout(saveTimers.get(key)); }
@@ -553,7 +625,6 @@ function scheduleSave(el, field, id) {
   saveTimers.set(key, timer);
 }
 
-// Called when a field loses focus or the page is hidden. Fires any pending save now.
 function flushSave(key) {
   if (!saveTimers.has(key)) { return; }
   clearTimeout(saveTimers.get(key));
@@ -600,15 +671,12 @@ function updateLastSaved() {
   el.classList.remove("hidden");
 }
 
-// One listener for the whole table. Dropdowns save immediately; text fields wait.
 function onCellInput(event) {
   const el = event.target;
   const field = el.dataset.field;
   if (!field) { return; }
   const id = el.dataset.id;
-
   if (el.tagName === "SELECT") {
-    // A dropdown selection is a deliberate act — no need to wait.
     el.blur();
     saveCell(el, field, id);
     return;
@@ -625,6 +693,78 @@ function onCellFocusOut(event) {
   if (renderPending) { setTimeout(safeRender, 0); }
 }
 
+// ---------- GitHub integration ----------
+// Two project-level settings, saved on the project doc so everyone sees them.
+function updateGithubUi() {
+  const url = String(projectData.githubBoardUrl || "").trim();
+  const btn = $("btnOpenBoard");
+  if (url) {
+    btn.classList.remove("hidden");
+    btn.title = "Åbn " + url;
+  } else {
+    btn.classList.add("hidden");
+  }
+}
+
+function openGithubDialog() {
+  $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
+  $("defaultRepoInput").value = projectData.defaultRepo || "";
+  $("githubDialog").classList.remove("hidden");
+  setTimeout(function () { $("githubBoardUrlInput").focus(); }, 0);
+}
+
+function closeGithubDialog() {
+  $("githubDialog").classList.add("hidden");
+}
+
+async function saveGithubSettings() {
+  const url = $("githubBoardUrlInput").value.trim();
+  const repo = $("defaultRepoInput").value.trim();
+  // Basic sanity: a "repo" should look like "owner/name" if it is set at all.
+  if (repo !== "" && repo.indexOf("/") < 0) {
+    showMessage("Standard repository skal være på formen \"ejer/repo\".");
+    return;
+  }
+  try {
+    await updateDoc(doc(db, "projects", currentPid), {
+      githubBoardUrl: url,
+      defaultRepo: repo
+    });
+    // Live snapshot will update projectData; also reflect immediately.
+    projectData.githubBoardUrl = url;
+    projectData.defaultRepo = repo;
+    updateGithubUi();
+    closeGithubDialog();
+    showMessage("GitHub-indstillinger gemt.", true);
+  } catch (err) {
+    showMessage("Kunne ikke gemme GitHub-indstillinger: " + (err.code || err.message));
+  }
+}
+
+function openBoard() {
+  const url = String(projectData.githubBoardUrl || "").trim();
+  if (!url) { return; }
+  window.open(url, "_blank", "noopener");
+}
+
+// Rewrites GitHub-style references into Markdown links:
+//   "owner/repo#123"  ->  https://github.com/owner/repo/issues/123
+//   "#123"            ->  https://github.com/<defaultRepo>/issues/123
+// If defaultRepo is empty, bare "#123" is left untouched.
+function linkifyGitHubRefs(text, defaultRepo) {
+  if (!text) { return ""; }
+  const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
+  return text.replace(pattern, function (match, owner, repo, num) {
+    let target;
+    if (owner && repo) { target = owner + "/" + repo; }
+    else if (defaultRepo) { target = defaultRepo; }
+    else { return match; }
+    const url = "https://github.com/" + target + "/issues/" + num;
+    return "[" + match + "](" + url + ")";
+  });
+}
+
+// ---------- Projects / login ----------
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -761,6 +901,7 @@ function onAuthChanged(user) {
     stopListeners();
     currentPid = null;
     saveTimers.clear();
+    projectData = {};
     $("lastSaved").classList.add("hidden");
     $("userInfo").classList.add("hidden");
     updateLinkButton();
@@ -798,6 +939,8 @@ async function createProject() {
       name: name,
       ownerUid: currentUser.uid,
       counter: 0,
+      githubBoardUrl: "",
+      defaultRepo: "",
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -868,6 +1011,8 @@ function leaveProject() {
   flushAllPendingSaves();
   stopListeners();
   currentPid = null;
+  projectData = {};
+  updateGithubUi();
   localStorage.removeItem("lastProject");
   history.replaceState(null, "", location.pathname);
   showScreen("chooser");
@@ -875,9 +1020,10 @@ function leaveProject() {
 
 function onProjectSnapshot(snap) {
   if (!snap.exists()) { return; }
-  const data = snap.data();
-  $("projectName").textContent = data.name;
-  isOwner = (data.ownerUid === currentUser.uid);
+  projectData = snap.data() || {};
+  $("projectName").textContent = projectData.name || "";
+  isOwner = (projectData.ownerUid === currentUser.uid);
+  updateGithubUi();
   renderMembers();
 }
 
@@ -1202,10 +1348,13 @@ function exportJson() {
   downloadFile("krav.json", JSON.stringify(output, null, 2), "application/json");
 }
 
+// mdCell escapes Markdown specials, then rewrites GitHub-style references
+// (#123, owner/repo#123) into clickable links using the project's default repo.
 function mdCell(value) {
   let text = String(value === undefined || value === null ? "" : value);
   text = text.replace(/\r?\n/g, "<br>");
   text = text.replace(/\|/g, "\\|");
+  text = linkifyGitHubRefs(text, String(projectData.defaultRepo || "").trim());
   return text.trim();
 }
 
@@ -1226,6 +1375,16 @@ function exportMarkdown() {
   md += "FURPS+ angiver kravets type, MoSCoW angiver prioriteten. " +
         "Aktive krav er grupperet efter prioritet. Parkerede (PYT), \"Won't\" " +
         "og droppede vises i særskilte afsnit, fordi de ikke længere er aktive.\n\n";
+
+  const boardUrl = String(projectData.githubBoardUrl || "").trim();
+  if (boardUrl) {
+    md += "Scrum board: " + boardUrl + "\n\n";
+  }
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
+  if (defaultRepo) {
+    md += "Referencer på formen `#123` linker til `https://github.com/" +
+          defaultRepo + "/issues/123`.\n\n";
+  }
 
   const moscowOrder = ["Must", "Should", "Could", "Won't"];
   const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
@@ -1570,6 +1729,8 @@ function markdownToObjects(text) {
       const field = headerCols[c];
       if (field === "") { continue; }
       let value = cells[c].replace(/<br\s*\/?>/gi, "\n").replace(/\\\|/g, "|");
+      // Reverse our own linkify so a re-import keeps the raw "#123" text.
+      value = value.replace(/\[([^\]]+)\]\(https:\/\/github\.com\/[^)]+\)/g, "$1");
       obj[field] = value;
     }
     if (!obj.moscow && (currentSection === "Must" || currentSection === "Should"
@@ -1771,12 +1932,10 @@ $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
 $("memberList").addEventListener("click", onMemberListClick);
 $("myProjectsList").addEventListener("click", onMyProjectsClick);
-// Autosave: `input` fires on every keystroke; `focusout` flushes any pending save.
 $("tbody").addEventListener("input", onCellInput);
 $("tbody").addEventListener("focusout", onCellFocusOut);
 $("tbody").addEventListener("click", onTableClick);
 
-// Flush pending saves when the tab is hidden or the page unloads, so nothing is lost.
 document.addEventListener("visibilitychange", function () {
   if (document.visibilityState === "hidden") { flushAllPendingSaves(); }
 });
@@ -1806,11 +1965,29 @@ for (let i = 0; i < colBoxes.length; i++) {
   });
 }
 
+// GitHub integration wiring.
+$("btnGithub").addEventListener("click", openGithubDialog);
+$("btnOpenBoard").addEventListener("click", openBoard);
+$("btnGithubCancel").addEventListener("click", closeGithubDialog);
+$("btnGithubSave").addEventListener("click", saveGithubSettings);
+// Close the modal on backdrop click or Escape.
+$("githubDialog").addEventListener("click", function (e) {
+  if (e.target === $("githubDialog")) { closeGithubDialog(); }
+});
+// Allow Enter in either input to save.
+$("githubBoardUrlInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("defaultRepoInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+
 $("btnInfo").addEventListener("click", openPanel);
 $("btnClosePanel").addEventListener("click", closePanel);
 $("panelBackdrop").addEventListener("click", closePanel);
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && $("sidePanel").classList.contains("open")) { closePanel(); }
+  if (e.key === "Escape" && !$("githubDialog").classList.contains("hidden")) { closeGithubDialog(); }
 });
 
 applyColumnPrefs();
