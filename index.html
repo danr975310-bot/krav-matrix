@@ -98,6 +98,11 @@
     position: fixed; inset: 0; background: rgba(0,0,0,0.25);
     z-index: 99;
   }
+  /* NEW: "Dine projekter" list in the chooser. */
+  #myProjectsList { list-style: none; padding: 0; margin: 8px 0 0; }
+  #myProjectsList li { margin-bottom: 6px; }
+  #myProjectsList button { width: 100%; text-align: left; }
+  #myProjectsSection hr { margin: 16px 0; border: 0; border-top: 1px solid #d9dde3; }
   @media (max-width: 500px) {
     .side-panel { width: 100vw; max-width: 100vw; }
   }
@@ -127,6 +132,15 @@
   </div>
 
   <div id="screenChooser" class="card hidden">
+    <!-- NEW: "Dine projekter" — lists every project where you are already a member. -->
+    <section id="myProjectsSection">
+      <h2>Dine projekter</h2>
+      <p class="small">Projekter du allerede er medlem af. Klik for at åbne.</p>
+      <ul id="myProjectsList"></ul>
+      <p id="myProjectsEmpty" class="small hidden">Du er ikke medlem af nogen projekter endnu.</p>
+      <hr>
+    </section>
+
     <h2>Opret nyt projekt</h2>
     <input type="text" id="newProjectName" placeholder="Projektnavn, fx Reolmarked">
     <button id="btnCreate" class="primary">Opret projekt</button>
@@ -160,7 +174,6 @@
       <button id="btnPyt" title="Vis kun parkerede (PYT) krav — idéer der venter på review">PYT</button>
       <button id="btnAdd" class="primary">+ Nyt krav</button>
       <button id="btnImport">Importér</button>
-      <!-- NEW: .md is now accepted -->
       <input type="file" id="importFile" accept=".json,.csv,.txt,.md,text/markdown,text/plain" class="hidden">
       <button id="btnCsv">Eksportér CSV</button>
       <button id="btnJson">Eksportér JSON</button>
@@ -304,6 +317,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
          GoogleAuthProvider, GithubAuthProvider }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
+         collectionGroup, query, where, getDocs,
          onSnapshot, runTransaction, serverTimestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -359,7 +373,11 @@ function showScreen(name) {
   $("screenApp").classList.add("hidden");
   switch (name) {
     case "login": $("screenLogin").classList.remove("hidden"); break;
-    case "chooser": $("screenChooser").classList.remove("hidden"); break;
+    case "chooser":
+      $("screenChooser").classList.remove("hidden");
+      // NEW: refresh the "Dine projekter" list every time the chooser appears.
+      loadMyProjects();
+      break;
     case "app": $("screenApp").classList.remove("hidden"); break;
   }
 }
@@ -494,6 +512,61 @@ function stopListeners() {
 
 function onListenError(err) {
   showMessage("Fejl ved realtidsopdatering: " + err.code);
+}
+
+// ---------- NEW: "Dine projekter" ----------
+// Lists every project where currentUser is already a member.
+// Uses a collection group query on /projects/*/members/* where uid == auth.uid.
+// Firestore rules restrict this to the caller's own member documents.
+async function loadMyProjects() {
+  const list = $("myProjectsList");
+  const empty = $("myProjectsEmpty");
+  list.innerHTML = "";
+  if (!currentUser) {
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+  try {
+    const q = query(collectionGroup(db, "members"), where("uid", "==", currentUser.uid));
+    const snap = await getDocs(q);
+    if (snap.empty) {
+      empty.classList.remove("hidden");
+      return;
+    }
+    // Collect pids from each member doc's path: projects/{pid}/members/{uid}
+    const pids = [];
+    snap.forEach(function (d) {
+      const parts = d.ref.path.split("/");
+      if (parts.length >= 2 && parts[0] === "projects") { pids.push(parts[1]); }
+    });
+    // Fetch the project docs in parallel to get names.
+    const projectSnaps = await Promise.all(pids.map(function (pid) {
+      return getDoc(doc(db, "projects", pid));
+    }));
+    for (let i = 0; i < pids.length; i++) {
+      const pid = pids[i];
+      const pSnap = projectSnaps[i];
+      if (!pSnap.exists()) { continue; }
+      const name = pSnap.data().name || pid;
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.textContent = name;
+      btn.dataset.pid = pid;
+      li.appendChild(btn);
+      list.appendChild(li);
+    }
+    if (list.children.length === 0) { empty.classList.remove("hidden"); }
+  } catch (err) {
+    showMessage("Kunne ikke hente dine projekter: " + (err.code || err.message));
+    empty.classList.remove("hidden");
+  }
+}
+
+function onMyProjectsClick(event) {
+  const pid = event.target.dataset.pid;
+  if (!pid) { return; }
+  openProject(pid);
 }
 
 // ---------- 4. Login ----------
@@ -652,8 +725,10 @@ async function openProject(pid) {
       showScreen("chooser");
       return;
     }
+    // Knowing the code makes you a member. merge:true keeps the call safe to repeat.
+    // NEW: we now store uid as a field too, so "Dine projekter" can query on it.
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
-                 { name: userLabel() }, { merge: true });
+                 { name: userLabel(), uid: currentUser.uid }, { merge: true });
 
     currentPid = pid;
     localStorage.setItem("lastProject", pid);
@@ -1035,13 +1110,11 @@ function mdCell(value) {
   return text.trim();
 }
 
-// NEW: full Markdown export with summary, split sections, and adaptive columns.
 function exportMarkdown() {
   const rows = sortedBySeq();
   const today = new Date().toISOString().slice(0, 10);
   const projName = $("projectName").textContent;
 
-  // Detect which optional columns are actually used, so we don't emit empty columns.
   let anySource = false, anyNotes = false, anyUpdatedBy = false;
   for (let i = 0; i < rows.length; i++) {
     if ((rows[i].source || "").trim() !== "") { anySource = true; }
@@ -1055,7 +1128,6 @@ function exportMarkdown() {
         "Aktive krav er grupperet efter prioritet. Parkerede (PYT), \"Won't\" " +
         "og droppede vises i særskilte afsnit, fordi de ikke længere er aktive.\n\n";
 
-  // ---- Summary counts ----
   const moscowOrder = ["Must", "Should", "Could", "Won't"];
   const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
   let grandTotal = 0;
@@ -1085,7 +1157,6 @@ function exportMarkdown() {
         totals.agreed + "** | **" + totals.proposed + "** | **" + totals.parked +
         "** | **" + totals.dropped + "** |\n\n";
 
-  // ---- Shared table builder for active sections (adaptive columns) ----
   function buildActiveTable(group) {
     let head = "| Krav-ID | Kravbeskrivelse | FURPS+ |";
     if (anySource) { head += " Kilde |"; }
@@ -1113,7 +1184,6 @@ function exportMarkdown() {
     return head + body;
   }
 
-  // ---- Active sections ----
   const activePriorities = ["Must", "Should", "Could"];
   for (let p = 0; p < activePriorities.length; p++) {
     const group = [];
@@ -1129,7 +1199,6 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // ---- PYT ----
   const parked = [];
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].status === "Parked") { parked.push(rows[i]); }
@@ -1154,7 +1223,6 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // ---- Won't ----
   const wonts = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -1175,7 +1243,6 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // ---- Droppede ----
   const dropped = [];
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].status === "Dropped") { dropped.push(rows[i]); }
@@ -1235,7 +1302,6 @@ function fieldFromHeader(header) {
     case "moscowpriority":
     case "priority":
     case "prioritet":
-    // NEW: "Oprindelig prioritet" appears in the PYT and Droppede tables.
     case "oprindeligprioritet":
       return "moscow";
     case "sourcelocation":
@@ -1252,7 +1318,6 @@ function fieldFromHeader(header) {
     case "note":
     case "noter":
     case "evt":
-    // NEW: "Begrundelse" appears in the Won't and Droppede tables.
     case "begrundelse":
       return "notes";
     default:
@@ -1363,10 +1428,6 @@ function textToObjects(text) {
   return objects;
 }
 
-// NEW: parse a Markdown file that contains one or more tables.
-// - The section heading (## Must, ## PYT, ## Won't, etc.) sets defaults for moscow/status.
-// - The "Oversigt" summary table is skipped entirely.
-// - If no table rows are found, falls back to textToObjects so bullets still work.
 function markdownToObjects(text) {
   const lines = text.split(/\r?\n/);
   const objects = [];
@@ -1376,7 +1437,6 @@ function markdownToObjects(text) {
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
 
-    // Section heading?
     const headingMatch = line.match(/^##\s+(.+?)\s*$/);
     if (headingMatch) {
       const name = headingMatch[1].trim();
@@ -1393,24 +1453,19 @@ function markdownToObjects(text) {
     }
 
     if (currentSection === null || currentSection === "Oversigt") { continue; }
-
-    // Table row?
     if (line.length < 2 || line[0] !== "|") { continue; }
     const inner = line.slice(1, line.length - 1);
     const cells = inner.split("|");
     for (let c = 0; c < cells.length; c++) { cells[c] = cells[c].trim(); }
 
-    // Separator row (| --- | --- |)? Skip and keep headerCols.
     if (cells.length > 0 && cells[0].replace(/-/g, "").trim() === "") { continue; }
 
-    // First content row = header.
     if (headerCols === null) {
       headerCols = [];
       for (let c = 0; c < cells.length; c++) { headerCols.push(fieldFromHeader(cells[c])); }
       continue;
     }
 
-    // Data row.
     if (cells.length < 2) { continue; }
     const obj = {};
     for (let c = 0; c < headerCols.length && c < cells.length; c++) {
@@ -1419,7 +1474,6 @@ function markdownToObjects(text) {
       let value = cells[c].replace(/<br\s*\/?>/gi, "\n").replace(/\\\|/g, "|");
       obj[field] = value;
     }
-    // Section defaults fill in what the table does not carry.
     if (!obj.moscow && (currentSection === "Must" || currentSection === "Should"
                         || currentSection === "Could" || currentSection === "Won't")) {
       obj.moscow = currentSection;
@@ -1428,15 +1482,11 @@ function markdownToObjects(text) {
       if (currentSection === "PYT") { obj.status = "Parked"; }
       else if (currentSection === "Droppede") { obj.status = "Dropped"; }
     }
-    // Ignore rows that have no description (e.g. stray cells).
     if (!obj.description || String(obj.description).trim() === "") { continue; }
     objects.push(obj);
   }
 
-  // Fallback: no tables found? Treat it as a bullet list.
-  if (objects.length === 0) {
-    return textToObjects(text);
-  }
+  if (objects.length === 0) { return textToObjects(text); }
   return objects;
 }
 
@@ -1547,7 +1597,6 @@ async function onImportFileChosen(event) {
       case "json": objects = jsonToObjects(text); break;
       case "csv": objects = csvToObjects(text); break;
       case "txt": objects = textToObjects(text); break;
-      // NEW: .md path uses the Markdown table parser.
       case "md": case "markdown": objects = markdownToObjects(text); break;
       default:
         showMessage("Ukendt filtype. Brug .json, .csv, .txt eller .md.");
@@ -1624,6 +1673,7 @@ $("btnPyt").addEventListener("click", onPytToggle);
 $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
 $("memberList").addEventListener("click", onMemberListClick);
+$("myProjectsList").addEventListener("click", onMyProjectsClick);
 $("tbody").addEventListener("change", onCellChange);
 $("tbody").addEventListener("click", onTableClick);
 $("tbody").addEventListener("focusout", onTableFocusOut);
