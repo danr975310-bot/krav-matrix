@@ -22,8 +22,6 @@
   button { cursor: pointer; padding: 6px 12px; border-radius: 6px;
            border: 1px solid #9aa3af; background: #fff; }
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-  button.danger { background: #fff; color: #b91c1c; border-color: #dc2626; }
-  button.danger:hover { background: #fef2f2; }
   input[type=text], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
   #msg { color: #b91c1c; margin: 8px 0; }
@@ -135,6 +133,9 @@
     z-index: 200;
     display: flex; align-items: center; justify-content: center;
   }
+  /* Ensure .hidden still wins over .modal's display:flex (same specificity rule,
+     but .hidden appears earlier in the sheet — so we need this explicit override). */
+  .modal.hidden { display: none; }
   .modal-content {
     background: #fff; border-radius: 8px;
     padding: 20px 24px; min-width: 420px; max-width: 92vw;
@@ -149,12 +150,7 @@
   .modal-content code {
     background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
   }
-  /* Actions row: "Fjern" sits on the left, primary actions on the right. */
-  .modal-actions {
-    display: flex; gap: 8px; align-items: center;
-    margin-top: 16px;
-  }
-  .modal-actions .spacer { flex: 1; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   @media (max-width: 500px) {
     .side-panel { width: 100vw; max-width: 100vw; }
     .modal-content { min-width: 0; width: 92vw; }
@@ -367,8 +363,6 @@
          <code>https://github.com/&lt;standard-repo&gt;/issues/123</code>.
          Du kan altid pege på et andet repo ved at skrive
          <code>ejer/repo#123</code>.</p>
-      <p>For at fjerne integrationen: klik <strong>⚙️ GitHub</strong>, og tryk
-         <strong>Fjern integration</strong> i dialogen.</p>
       <p class="small">Referencen findes kun i den eksporterede fil. Kravmatrixen
          ændrer ikke selve teksten i Noter eller Kilde.</p>
     </section>
@@ -421,8 +415,6 @@
       for at pege på et andet repo.
     </p>
     <div class="modal-actions">
-      <button id="btnGithubClear" class="danger">Fjern integration</button>
-      <span class="spacer"></span>
       <button id="btnGithubCancel">Annullér</button>
       <button id="btnGithubSave" class="primary">Gem</button>
     </div>
@@ -725,11 +717,6 @@ function updateGithubUi() {
 function openGithubDialog() {
   $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
   $("defaultRepoInput").value = projectData.defaultRepo || "";
-  // The "Fjern integration" button only makes sense if something is set.
-  const hasAny = (String(projectData.githubBoardUrl || "").trim() !== "") ||
-                 (String(projectData.defaultRepo || "").trim() !== "");
-  if (hasAny) { $("btnGithubClear").classList.remove("hidden"); }
-  else { $("btnGithubClear").classList.add("hidden"); }
   $("githubDialog").classList.remove("hidden");
   setTimeout(function () { $("githubBoardUrlInput").focus(); }, 0);
 }
@@ -757,26 +744,6 @@ async function saveGithubSettings() {
     showMessage("GitHub-indstillinger gemt.", true);
   } catch (err) {
     showMessage("Kunne ikke gemme GitHub-indstillinger: " + (err.code || err.message));
-  }
-}
-
-async function clearGithubSettings() {
-  if (!confirm("Fjern GitHub-integrationen?\n\nScrum board-linket og standard-repoet " +
-               "ryddes. Du kan sætte dem igen senere.")) {
-    return;
-  }
-  try {
-    await updateDoc(doc(db, "projects", currentPid), {
-      githubBoardUrl: "",
-      defaultRepo: ""
-    });
-    projectData.githubBoardUrl = "";
-    projectData.defaultRepo = "";
-    updateGithubUi();
-    closeGithubDialog();
-    showMessage("GitHub-integrationen er fjernet.", true);
-  } catch (err) {
-    showMessage("Kunne ikke fjerne integrationen: " + (err.code || err.message));
   }
 }
 
@@ -1967,6 +1934,7 @@ $("tbody").addEventListener("input", onCellInput);
 $("tbody").addEventListener("focusout", onCellFocusOut);
 $("tbody").addEventListener("click", onTableClick);
 
+// Project name acts as a link back to the chooser.
 $("projectName").addEventListener("click", leaveProject);
 
 document.addEventListener("visibilitychange", function () {
@@ -2002,7 +1970,6 @@ $("btnGithub").addEventListener("click", openGithubDialog);
 $("btnOpenBoard").addEventListener("click", openBoard);
 $("btnGithubCancel").addEventListener("click", closeGithubDialog);
 $("btnGithubSave").addEventListener("click", saveGithubSettings);
-$("btnGithubClear").addEventListener("click", clearGithubSettings);
 $("githubDialog").addEventListener("click", function (e) {
   if (e.target === $("githubDialog")) { closeGithubDialog(); }
 });
