@@ -11,7 +11,8 @@
   header { display: flex; justify-content: space-between; align-items: center;
            padding: 10px 16px; background: #1f2937; color: #fff; }
   #userInfo button { margin-left: 8px; }
-  main { padding: 16px; }
+  /* Tightened: no permanent empty bar above the matrix. */
+  main { padding: 8px 16px 16px; }
   .hidden { display: none; }
   .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
           padding: 16px; max-width: 480px; margin: 24px auto; }
@@ -21,7 +22,10 @@
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
   input[type=text], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
-  #msg { color: #b91c1c; margin: 8px 0; min-height: 1em; }
+  #msg { color: #b91c1c; margin: 8px 0; }
+  /* Empty message area takes no space at all. */
+  #msg:empty { display: none; }
+  #projectName { margin: 0 0 12px; font-size: 22px; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
   .table-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; min-width: 1110px; background: #fff; }
@@ -41,10 +45,12 @@
   tr.group-2 td { background: #b45309; }
   tr.group-3 td { background: #1d4ed8; }
   tr.group-4 td { background: #4b5563; }
-  /* One colour per status, so the four statuses are easy to tell apart */
+  /* One colour per status, so the statuses are easy to tell apart.
+     "Parked" (PYT) gets an orange tint, clearly different from Proposed and Dropped. */
   select.status-proposed { background: #fef9c3; }
   select.status-agreed { background: #ddd6fe; }
   select.status-done { background: #bbf7d0; }
+  select.status-parked { background: #fed7aa; }
   select.status-dropped { background: #e5e7eb; color: #6b7280; }
   details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
             border-radius: 8px; padding: 8px 12px; }
@@ -54,6 +60,7 @@
   td.age-fresh  { color: #9ca3af; }
   td.age-warn   { color: #b45309; font-weight: 600; }
   td.age-urgent { color: #b91c1c; font-weight: 700; }
+  td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
   /* Column visibility */
   th.hidden-col, td.hidden-col { display: none; }
@@ -67,7 +74,7 @@
   }
   .colprefs-panel label { display: block; font-size: 13px; padding: 3px 0; cursor: pointer; }
   .colprefs-panel .small { margin: 6px 0 0; }
-  /* NEW: side panel. Slides in from the right; keeps the table unobstructed. */
+  /* Side panel */
   .side-panel {
     position: fixed; top: 0; right: 0;
     height: 100vh; width: 440px; max-width: 92vw;
@@ -162,6 +169,8 @@
           <option value="Won't">Won't</option>
         </select>
       </label>
+      <!-- NEW: show only parked (PYT) requirements. Toggle button. -->
+      <button id="btnPyt" title="Vis kun parkerede (PYT) krav — idéer der venter på review">PYT</button>
       <button id="btnAdd" class="primary">+ Nyt krav</button>
       <button id="btnImport">Importér</button>
       <input type="file" id="importFile" accept=".json,.csv,.txt" class="hidden">
@@ -171,7 +180,6 @@
       <button id="btnShare">Kopiér delingslink</button>
       <button id="btnLeave">Skift projekt</button>
 
-      <!-- Column visibility -->
       <div class="colprefs">
         <button id="btnCols" title="Vælg hvilke kolonner du vil se. Gemmes kun i din browser.">Vis kolonner ▾</button>
         <div id="colsPanel" class="colprefs-panel hidden">
@@ -188,8 +196,7 @@
         </div>
       </div>
 
-      <!-- NEW: info/hjælp-knap. Åbner side-panelet. -->
-      <button id="btnInfo" title="Forklaring, import-info og medlemmer">ℹ️ Info</button>
+      <button id="btnInfo" title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
     </div>
 
     <div class="table-wrap">
@@ -215,7 +222,7 @@
   </div>
 </main>
 
-<!-- NEW: side panel. All reference content lives here, off the main canvas. -->
+<!-- Side panel: all reference content lives here, off the main canvas. -->
 <div id="sidePanel" class="side-panel" aria-hidden="true">
   <div class="side-panel-header">
     <strong>Information</strong>
@@ -246,15 +253,31 @@
         <li><strong>Foreslået</strong> Registreret, men endnu ikke bekræftet.</li>
         <li><strong>Aftalt</strong> Bekræftet af gruppen eller kunden.</li>
         <li><strong>Færdig</strong> Gennemført i løsningen.</li>
+        <li><strong>Parkeret (PYT)</strong> Idé der ikke besluttes nu — se nedenfor.</li>
         <li><strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).</li>
       </ul>
+
+      <!-- NEW: PYT-forklaring -->
+      <h3>PYT — Park Your Treasures</h3>
+      <p>Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget
+         i denne omgang — eller kun hvis der bliver tid. Sæt status til
+         <strong>Parkeret (PYT)</strong>, så forsvinder de ikke, men fylder heller
+         ikke i den aktive liste.</p>
+      <ul>
+        <li>PYT-krav tæller <em>ikke</em> med i alders-advarsler. De er bevidst parkeret.</li>
+        <li>Brug <strong>PYT</strong>-knappen i værktøjslinjen for at se dem isoleret.</li>
+        <li>Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret
+            — eller om de skal opgraderes til et rigtigt krav.</li>
+      </ul>
+      <p class="small">Forskellen fra "Droppet": Droppet betyder "vi har besluttet ikke at gøre det".
+         Parkeret betyder "vi beslutter det ikke nu".</p>
 
       <h3>Alder</h3>
       <ul>
         <li>Antal dage siden kravet sidst blev rettet.</li>
-        <li>Krav der <em>ikke</em> er Færdige eller Droppede markeres:
+        <li>Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres:
             gul efter 14 dage, rød efter 28 dage.</li>
-        <li>Færdige og droppede krav vises som "–" og tæller ikke med.</li>
+        <li>Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
         <li>Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt —
             så I kan tage stilling, før det forsvinder af sig selv.</li>
       </ul>
@@ -299,8 +322,6 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // ---------- 1. Firebase setup ----------
-// Paste YOUR config from the Firebase console here.
-// This config is public by design; the Firestore rules protect the data.
 const firebaseConfig = {
 apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4", 
 authDomain: "reqmatrix-fc50a.firebaseapp.com", 
@@ -312,51 +333,44 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ---------- 2. Constants and state ----------
-// The allowed values live in arrays so the dropdowns and the sorting use the same list.
-// The database always stores these English values. Only the labels on screen are Danish.
 const FURPS = ["F", "U", "R", "P", "S", "+"];
 const MOSCOW = ["Must", "Should", "Could", "Won't"];
-const STATUS = ["Proposed", "Agreed", "Done", "Dropped"];
+// "Parked" is PYT: an idea that is not decided now but should be remembered.
+// It sits between "Done" and "Dropped" because it is not resolved and not rejected.
+const STATUS = ["Proposed", "Agreed", "Done", "Parked", "Dropped"];
 
-// Import limits. If big imports fail with permission or quota errors, lower the chunk size.
 const MAX_IMPORT_ROWS = 500;
 const IMPORT_CHUNK_SIZE = 100;
 
-// A requirement that is neither Done nor Dropped is flagged in the "Alder"
-// column when nobody has touched it for this long. The idea is to surface
-// forgotten Should/Could requirements before they silently disappear.
 const STALE_WARN_DAYS = 14;
 const STALE_URGENT_DAYS = 28;
 
-// Column visibility. These are the columns a user can toggle.
-// "actions" (the delete button) is intentionally not in the list — it stays always.
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
                  "status", "notes", "updatedBy", "age"];
 
 let currentUser = null;
-let currentPid = null;       // id (= secret code) of the open project
+let currentPid = null;
 let isOwner = false;
-let sortMode = "priority";   // the table starts sorted Must > Should > Could > Won't
+let sortMode = "priority";
 let filterMoscow = "all";
-let allReqs = [];            // requirements from Firestore, as plain objects
-let allMembers = [];         // members of the open project
-let renderPending = false;   // true if a redraw was postponed while the user was typing
-let unsubProject = null;     // functions that stop the live listeners
+let onlyPyt = false;         // NEW: when true, only "Parked" requirements are shown
+let allReqs = [];
+let allMembers = [];
+let renderPending = false;
+let unsubProject = null;
 let unsubReqs = null;
 let unsubMembers = null;
-let visibleColumns = loadColumns();   // per-user column prefs, from localStorage
+let visibleColumns = loadColumns();
 
 function $(id) { return document.getElementById(id); }
 
 // ---------- 3. Small helpers ----------
 function showMessage(text, isGood) {
-  // Red for errors (default), green when isGood is true.
   $("msg").textContent = text;
   $("msg").style.color = isGood ? "#15803d" : "#b91c1c";
 }
 
 function showScreen(name) {
-  // Only one screen is visible at a time.
   $("screenLogin").classList.add("hidden");
   $("screenChooser").classList.add("hidden");
   $("screenApp").classList.add("hidden");
@@ -368,14 +382,12 @@ function showScreen(name) {
 }
 
 function userLabel() {
-  // GitHub users may have no display name, so we fall back to e-mail, then to the id.
   if (currentUser.displayName) { return currentUser.displayName; }
   if (currentUser.email) { return currentUser.email; }
   return currentUser.uid.slice(0, 6);
 }
 
 function rankOf(moscow) {
-  // Text sorts alphabetically (Could < Must), so we turn priority into a number first.
   switch (moscow) {
     case "Must": return 1;
     case "Should": return 2;
@@ -386,12 +398,9 @@ function rankOf(moscow) {
 }
 
 function reqLabel(seq) {
-  // 1 -> "REQ-001"
   return "REQ-" + String(seq).padStart(3, "0");
 }
 
-// How many whole days since a Firestore Timestamp.
-// Returns null if the timestamp is missing or invalid, so callers can show "?".
 function daysSince(ts) {
   if (!ts) { return null; }
   const date = (typeof ts.toDate === "function") ? ts.toDate() : new Date(ts);
@@ -404,8 +413,10 @@ function daysSince(ts) {
 //   0 = fresh
 //   1 = warning (yellow) after STALE_WARN_DAYS
 //   2 = urgent (red) after STALE_URGENT_DAYS
+//   3 = parked (PYT) -> show days in neutral italic, no warning colour
 function staleness(req) {
   if (req.status === "Done" || req.status === "Dropped") { return -1; }
+  if (req.status === "Parked") { return 3; }
   const days = daysSince(req.updatedAt);
   if (days === null) { return 0; }
   if (days >= STALE_URGENT_DAYS) { return 2; }
@@ -472,7 +483,7 @@ function applyColumnPrefs() {
   renderTable();
 }
 
-// ---------- NEW: side panel ----------
+// ---------- Side panel ----------
 function openPanel() {
   $("sidePanel").classList.add("open");
   $("sidePanel").setAttribute("aria-hidden", "false");
@@ -485,24 +496,22 @@ function closePanel() {
   $("panelBackdrop").classList.add("hidden");
 }
 
-// Labels for the dropdowns: what the user sees can differ from what is stored.
 function statusLabel(value) {
   switch (value) {
     case "Proposed": return "Foreslået";
     case "Agreed": return "Aftalt";
     case "Done": return "Færdig";
+    case "Parked": return "Parkeret (PYT)";
     case "Dropped": return "Droppet";
     default: return value;
   }
 }
 
 function plainLabel(value) {
-  // FURPS+ and MoSCoW are shown exactly as stored.
   return value;
 }
 
 function stopListeners() {
-  // Stop old live listeners so we never listen to two projects at once.
   if (unsubProject) { unsubProject(); unsubProject = null; }
   if (unsubReqs) { unsubReqs(); unsubReqs = null; }
   if (unsubMembers) { unsubMembers(); unsubMembers = null; }
@@ -528,7 +537,6 @@ async function loginWith(providerName) {
   } catch (err) {
     switch (err.code) {
       case "auth/account-exists-with-different-credential":
-        // The e-mail already belongs to an account made with the other method.
         if (providerName === "github") {
           showMessage("Din e-mail er allerede brugt med Google. Log ind med Google, og tryk så på " +
                       "'Tilknyt GitHub' øverst til højre. Bagefter virker begge.");
@@ -548,7 +556,6 @@ async function loginWith(providerName) {
 }
 
 function hasProvider(providerId) {
-  // providerData lists every login method that is linked to the current account.
   for (let i = 0; i < currentUser.providerData.length; i++) {
     if (currentUser.providerData[i].providerId === providerId) { return true; }
   }
@@ -556,7 +563,6 @@ function hasProvider(providerId) {
 }
 
 function updateLinkButton() {
-  // Shows a button for the login method that is NOT linked yet. Hidden when both are linked.
   const btn = $("btnLink");
   if (!currentUser) {
     btn.classList.add("hidden");
@@ -585,7 +591,6 @@ async function linkLogin() {
   }
   try {
     showMessage("");
-    // Adds the second login method to the account we are already logged in with.
     await linkWithPopup(currentUser, provider);
     updateLinkButton();
     showMessage("Login tilknyttet. Nu kan du logge ind med begge metoder.", true);
@@ -610,7 +615,6 @@ async function linkLogin() {
 }
 
 function onAuthChanged(user) {
-  // Runs on page load and every time someone logs in or out.
   currentUser = user;
   if (!user) {
     stopListeners();
@@ -624,7 +628,6 @@ function onAuthChanged(user) {
   $("userInfo").classList.remove("hidden");
   updateLinkButton();
 
-  // Project code from the share link (#code) wins over the last used project.
   let pid = location.hash.slice(1);
   if (!pid) { pid = localStorage.getItem("lastProject") || ""; }
   if (pid) { openProject(pid); } else { showScreen("chooser"); }
@@ -632,7 +635,6 @@ function onAuthChanged(user) {
 
 // ---------- 5. Projects ----------
 function makeProjectId(name) {
-  // The id doubles as the secret code, so we add 64 random bits to make it impossible to guess.
   let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (slug === "") { slug = "projekt"; }
   slug = slug.slice(0, 30);
@@ -653,7 +655,7 @@ async function createProject() {
     await setDoc(doc(db, "projects", pid), {
       name: name,
       ownerUid: currentUser.uid,
-      counter: 0,                 // last used requirement number
+      counter: 0,
       createdAt: serverTimestamp()
     });
     await openProject(pid);
@@ -665,7 +667,7 @@ async function createProject() {
 async function joinFromInput() {
   let code = $("joinCode").value.trim();
   const hashPos = code.indexOf("#");
-  if (hashPos >= 0) { code = code.slice(hashPos + 1); }   // allow pasting the whole link
+  if (hashPos >= 0) { code = code.slice(hashPos + 1); }
   if (code === "") { showMessage("Indsæt en projektkode."); return; }
   await openProject(code);
 }
@@ -680,7 +682,6 @@ async function openProject(pid) {
       showScreen("chooser");
       return;
     }
-    // Knowing the code makes you a member. merge:true keeps the call safe to repeat.
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
                  { name: userLabel() }, { merge: true });
 
@@ -702,7 +703,7 @@ function leaveProject() {
   stopListeners();
   currentPid = null;
   localStorage.removeItem("lastProject");
-  history.replaceState(null, "", location.pathname);   // remove #code from the address bar
+  history.replaceState(null, "", location.pathname);
   showScreen("chooser");
 }
 
@@ -730,7 +731,6 @@ function renderMembers() {
     const m = allMembers[i];
     const li = document.createElement("li");
     li.textContent = m.name + " ";
-    // Only the owner can remove others (the Firestore rules enforce this too).
     if (isOwner && m.uid !== currentUser.uid) {
       const btn = document.createElement("button");
       btn.textContent = "Fjern";
@@ -754,7 +754,6 @@ async function onMemberListClick(event) {
 
 // ---------- 6. Requirements: write to Firestore ----------
 function emptyRecord() {
-  // The default values of a brand-new requirement (used by "+ Nyt krav" and by import).
   return {
     description: "",
     furps: "F",
@@ -765,9 +764,6 @@ function emptyRecord() {
   };
 }
 
-// One shared writer for both "+ Nyt krav" (1 record) and import (many records).
-// A transaction makes "read counter, reserve numbers, save" happen as one step,
-// so two people adding at the same time can never get the same ID.
 async function writeRequirements(records) {
   await runTransaction(db, async function (tx) {
     const projRef = doc(db, "projects", currentPid);
@@ -801,14 +797,12 @@ async function addRequirement() {
 }
 
 async function onCellChange(event) {
-  // One listener for the whole table. data-field tells us which field was edited.
   const el = event.target;
   const field = el.dataset.field;
   if (!field) { return; }
   const id = el.dataset.id;
   const newValue = el.value;
 
-  // For dropdowns we leave the field first, so the table can redraw (and re-sort) right away.
   if (el.tagName === "SELECT") { el.blur(); }
 
   const changes = {};
@@ -839,7 +833,6 @@ function onReqsSnapshot(snapshot) {
   for (let i = 0; i < snapshot.docs.length; i++) {
     const d = snapshot.docs[i];
     const req = Object.assign({ id: d.id }, d.data());
-    // Older requirements may still have the old status names, so we translate them for display.
     const cleaned = cleanStatus(req.status || "");
     req.status = (cleaned !== "") ? cleaned : "Proposed";
     allReqs.push(req);
@@ -848,7 +841,6 @@ function onReqsSnapshot(snapshot) {
 }
 
 function safeRender() {
-  // Redrawing while someone types would steal their cursor, so we wait until they leave the cell.
   if ($("tbody").contains(document.activeElement)) {
     renderPending = true;
   } else {
@@ -878,18 +870,19 @@ function compareReqs(a, b) {
       break;
   }
   if (result !== 0) { return result; }
-  return a.seq - b.seq;   // ties (and "original") fall back to creation order
+  return a.seq - b.seq;
 }
 
 function renderTable() {
   const tbody = $("tbody");
   tbody.innerHTML = "";
 
-  // Filter first, then sort a copy so the original list stays untouched.
   const visible = [];
-  const counts = {};   // how many visible requirements each priority has
+  const counts = {};
   for (let i = 0; i < allReqs.length; i++) {
     const r = allReqs[i];
+    // NEW: PYT filter — when active, only "Parked" requirements are shown.
+    if (onlyPyt && r.status !== "Parked") { continue; }
     if (filterMoscow === "all" || r.moscow === filterMoscow) {
       visible.push(r);
       counts[r.moscow] = (counts[r.moscow] || 0) + 1;
@@ -897,10 +890,24 @@ function renderTable() {
   }
   visible.sort(compareReqs);
 
+  // Empty state — helpful when the PYT filter returns nothing.
+  if (visible.length === 0) {
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = visibleCount() + 1;
+    td.className = "small";
+    td.style.padding = "16px";
+    td.textContent = onlyPyt
+      ? "Ingen parkerede (PYT) krav endnu. Sæt status til \"Parkeret (PYT)\" på et krav for at se det her."
+      : "Ingen krav at vise.";
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
   let lastRank = 0;
   for (let i = 0; i < visible.length; i++) {
     const r = visible[i];
-    // In priority mode, add a heading row for each MoSCoW section.
     if (sortMode === "priority" && rankOf(r.moscow) !== lastRank) {
       lastRank = rankOf(r.moscow);
       tbody.appendChild(buildGroupHeader(r.moscow, counts[r.moscow]));
@@ -913,7 +920,6 @@ function buildGroupHeader(moscow, count) {
   const tr = document.createElement("tr");
   tr.className = "group-header group-" + rankOf(moscow);
   const td = document.createElement("td");
-  // Spans the currently visible columns + the always-visible action column.
   td.colSpan = visibleCount() + 1;
   td.textContent = moscow.toUpperCase() + " (" + count + ")";
   tr.appendChild(td);
@@ -934,7 +940,7 @@ function buildRow(r) {
   tr.appendChild(maybeHidden(wrapCell(makeSelect("moscow", MOSCOW, r, plainLabel)), "moscow"));
   tr.appendChild(maybeHidden(wrapCell(makeTextarea("source", r)), "source"));
 
-  // The status dropdown gets its own colour class (status-proposed, status-agreed, ...).
+  // Status dropdown — colour class matches the stored value ("status-parked" etc.).
   const statusSelect = makeSelect("status", STATUS, r, statusLabel);
   statusSelect.className = "status-" + r.status.toLowerCase();
   tr.appendChild(maybeHidden(wrapCell(statusSelect), "status"));
@@ -947,7 +953,7 @@ function buildRow(r) {
   maybeHidden(whoCell, "updatedBy");
   tr.appendChild(whoCell);
 
-  // "Alder" cell — days since last edit, with warning/urgent colours.
+  // "Alder" cell — four levels: resolved, parked, fresh/warn/urgent.
   const ageCell = document.createElement("td");
   ageCell.className = "age";
   const level = staleness(r);
@@ -962,16 +968,24 @@ function buildRow(r) {
     ageCell.title = "Ingen tidsstempel";
   } else {
     ageCell.textContent = days + "d";
-    if (level === 2) { ageCell.classList.add("age-urgent"); }
-    else if (level === 1) { ageCell.classList.add("age-warn"); }
-    else { ageCell.classList.add("age-fresh"); }
-    const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
-    ageCell.title = "Sidst rettet: " + d.toISOString().slice(0, 10);
+    if (level === 3) {
+      ageCell.classList.add("age-parked");
+      ageCell.title = "Parkeret (PYT) i " + days + " dage — venter på review";
+    } else if (level === 2) {
+      ageCell.classList.add("age-urgent");
+    } else if (level === 1) {
+      ageCell.classList.add("age-warn");
+    } else {
+      ageCell.classList.add("age-fresh");
+    }
+    if (level !== 3) {
+      const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
+      ageCell.title = "Sidst rettet: " + d.toISOString().slice(0, 10);
+    }
   }
   maybeHidden(ageCell, "age");
   tr.appendChild(ageCell);
 
-  // The action column is always visible — there is no checkbox for it.
   const delBtn = document.createElement("button");
   delBtn.textContent = "✕";
   delBtn.title = "Slet krav";
@@ -987,7 +1001,6 @@ function wrapCell(element) {
   return td;
 }
 
-// We set .value (not innerHTML), so typed text can never be run as HTML.
 function makeTextarea(field, r) {
   const el = document.createElement("textarea");
   el.value = r[field] || "";
@@ -997,7 +1010,6 @@ function makeTextarea(field, r) {
 }
 
 function makeSelect(field, options, r, labelFor) {
-  // labelFor turns a stored value (e.g. "Proposed") into the text shown to the user.
   const el = document.createElement("select");
   for (let i = 0; i < options.length; i++) {
     const opt = document.createElement("option");
@@ -1015,6 +1027,13 @@ function makeSelect(field, options, r, labelFor) {
 function onSortChange() { sortMode = $("sortSelect").value; renderTable(); }
 function onFilterChange() { filterMoscow = $("filterSelect").value; renderTable(); }
 
+// NEW: toggle PYT-only view. Button becomes blue ("primary") when active.
+function onPytToggle() {
+  onlyPyt = !onlyPyt;
+  $("btnPyt").classList.toggle("primary", onlyPyt);
+  renderTable();
+}
+
 function downloadFile(filename, text, mimeType) {
   const blob = new Blob([text], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -1025,27 +1044,20 @@ function downloadFile(filename, text, mimeType) {
   URL.revokeObjectURL(url);
 }
 
-// Named compare function (instead of an inline lambda): oldest requirement first.
-function compareBySeq(a, b) {
-  return a.seq - b.seq;
-}
+function compareBySeq(a, b) { return a.seq - b.seq; }
 
 function sortedBySeq() {
-  // Exports always use creation order, no matter how the table is sorted on screen.
   const copy = allReqs.slice();
   copy.sort(compareBySeq);
   return copy;
 }
 
 function csvCell(value) {
-  // Quotes inside a value are doubled, and the whole value is wrapped in quotes.
   const text = String(value === undefined || value === null ? "" : value);
   return '"' + text.replace(/"/g, '""') + '"';
 }
 
 function exportCsv() {
-  // Semicolon + BOM so Excel with Danish settings opens it correctly (æøå too).
-  // Exports include all fields regardless of which columns the user has hidden on screen.
   let csv = "\uFEFF" + "Krav-ID;Kravbeskrivelse;FURPS+;MoSCoW;Kilde;Status;Noter;Sidst rettet af\r\n";
   const rows = sortedBySeq();
   for (let i = 0; i < rows.length; i++) {
@@ -1056,7 +1068,7 @@ function exportCsv() {
       csvCell(r.furps),
       csvCell(r.moscow),
       csvCell(r.source),
-      csvCell(statusLabel(r.status)),   // Danish status text, easier to read in Excel
+      csvCell(statusLabel(r.status)),
       csvCell(r.notes),
       csvCell(r.updatedBy)
     ];
@@ -1066,7 +1078,6 @@ function exportCsv() {
 }
 
 function exportJson() {
-  // JSON keeps the English keys and values: it is meant for backup and for programs.
   const rows = sortedBySeq();
   const output = [];
   for (let i = 0; i < rows.length; i++) {
@@ -1080,15 +1091,13 @@ function exportJson() {
   downloadFile("krav.json", JSON.stringify(output, null, 2), "application/json");
 }
 
-// Makes one value safe to put inside a Markdown table cell.
 function mdCell(value) {
   let text = String(value === undefined || value === null ? "" : value);
-  text = text.replace(/\r?\n/g, "<br>");   // a line break would end the table row, so we use <br>
-  text = text.replace(/\|/g, "\\|");       // a pipe would start a new column, so we escape it
+  text = text.replace(/\r?\n/g, "<br>");
+  text = text.replace(/\|/g, "\\|");
   return text.trim();
 }
 
-// Exports one Markdown section per MoSCoW priority, each with its own table.
 function exportMarkdown() {
   const rows = sortedBySeq();
   const today = new Date().toISOString().slice(0, 10);
@@ -1128,7 +1137,6 @@ function exportMarkdown() {
 }
 
 async function copyShareLink() {
-  // location.origin means the link follows the address the page is opened from (also a custom domain).
   const link = location.origin + location.pathname + "#" + currentPid;
   try {
     await navigator.clipboard.writeText(link);
@@ -1141,12 +1149,10 @@ async function copyShareLink() {
 
 // ---------- 9. Import (JSON, CSV, TXT) ----------
 function normalizeKey(text) {
-  // "Source / Evidence" -> "sourceevidence", "FURPS+" -> "furps". Makes header matching forgiving.
   return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
 
 function fieldFromHeader(header) {
-  // Maps a column name (CSV header or JSON key) to one of our field names. "" = ignore the column.
   const key = normalizeKey(header);
   switch (key) {
     case "requirementid":
@@ -1186,7 +1192,6 @@ function fieldFromHeader(header) {
     case "evt":
       return "notes";
     default:
-      // "Source", "Source / Evidence", "Kilde" and "Kilde (citat, dokument, side)" are all the source column.
       if (key.indexOf("source") === 0 || key.indexOf("kilde") === 0) { return "source"; }
       return "";
   }
@@ -1201,7 +1206,6 @@ function countChar(text, ch) {
 }
 
 function detectDelimiter(text) {
-  // Danish Excel uses ";" but other tools use "," or tab, so we look at the header row.
   const firstLine = text.split("\n")[0];
   let best = ";";
   let bestCount = countChar(firstLine, ";");
@@ -1213,8 +1217,6 @@ function detectDelimiter(text) {
 }
 
 function parseCsv(text, delimiter) {
-  // A small CSV reader. A simple split on ";" would break on quoted cells that
-  // contain the delimiter or line breaks, so we read one character at a time.
   const table = [];
   let row = [];
   let cell = "";
@@ -1224,7 +1226,7 @@ function parseCsv(text, delimiter) {
     const ch = text[i];
     if (inQuotes) {
       if (ch === '"') {
-        if (text[i + 1] === '"') { cell += '"'; i++; }   // "" inside quotes = one quote character
+        if (text[i + 1] === '"') { cell += '"'; i++; }
         else { inQuotes = false; }
       } else {
         cell += ch;
@@ -1245,7 +1247,7 @@ function parseCsv(text, delimiter) {
           cell = "";
           break;
         case "\r":
-          break;   // ignored: the "\n" ends the row
+          break;
         default:
           cell += ch;
           break;
@@ -1289,7 +1291,7 @@ function csvToObjects(text) {
 }
 
 function jsonToObjects(text) {
-  const data = JSON.parse(text);   // throws an error if the file is not valid JSON
+  const data = JSON.parse(text);
   if (!Array.isArray(data)) { throw new Error("JSON-filen skal være en liste af krav."); }
 
   const objects = [];
@@ -1311,7 +1313,6 @@ function jsonToObjects(text) {
 }
 
 function textToObjects(text) {
-  // One requirement per line. Leading bullets like "- ", "* " or "1. " are removed.
   const lines = text.split(/\r?\n/);
   const objects = [];
   for (let i = 0; i < lines.length; i++) {
@@ -1321,7 +1322,6 @@ function textToObjects(text) {
   return objects;
 }
 
-// The clean functions return the allowed value, or "" if the text is not recognised.
 function cleanFurps(value) {
   switch (value.trim().toUpperCase()) {
     case "F": case "FUNCTIONALITY": return "F";
@@ -1346,10 +1346,14 @@ function cleanMoscow(value) {
 }
 
 function cleanStatus(value) {
+  // Translates both old status names, the Danish labels, and PYT variants.
   switch (value.trim().toLowerCase()) {
     case "proposed": case "under review": case "draft": case "foreslået": return "Proposed";
     case "agreed": case "approved": case "aftalt": return "Agreed";
     case "done": case "implemented": case "verified": case "færdig": return "Done";
+    // NEW: PYT synonyms
+    case "parked": case "parkeret": case "pyt":
+    case "park your treasures": case "parkeret (pyt)": return "Parked";
     case "dropped": case "rejected": case "droppet": return "Dropped";
     default: return "";
   }
@@ -1504,6 +1508,7 @@ $("btnJson").addEventListener("click", exportJson);
 $("btnMd").addEventListener("click", exportMarkdown);
 $("btnShare").addEventListener("click", copyShareLink);
 $("btnLeave").addEventListener("click", leaveProject);
+$("btnPyt").addEventListener("click", onPytToggle);
 $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
 $("memberList").addEventListener("click", onMemberListClick);
@@ -1511,7 +1516,6 @@ $("tbody").addEventListener("change", onCellChange);
 $("tbody").addEventListener("click", onTableClick);
 $("tbody").addEventListener("focusout", onTableFocusOut);
 
-// Column-preference UI.
 $("btnCols").addEventListener("click", function (e) {
   e.stopPropagation();
   $("colsPanel").classList.toggle("hidden");
@@ -1539,7 +1543,6 @@ for (let i = 0; i < colBoxes.length; i++) {
   });
 }
 
-// NEW: side-panel wiring.
 $("btnInfo").addEventListener("click", openPanel);
 $("btnClosePanel").addEventListener("click", closePanel);
 $("panelBackdrop").addEventListener("click", closePanel);
@@ -1547,10 +1550,8 @@ document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && $("sidePanel").classList.contains("open")) { closePanel(); }
 });
 
-// Apply the loaded (or default) column prefs before the first render.
 applyColumnPrefs();
 
-// Start: Firebase tells us if someone is already logged in.
 onAuthStateChanged(auth, onAuthChanged);
 </script>
 </body>
