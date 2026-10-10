@@ -133,8 +133,7 @@
     z-index: 200;
     display: flex; align-items: center; justify-content: center;
   }
-  /* Ensure .hidden still wins over .modal's display:flex (same specificity rule,
-     but .hidden appears earlier in the sheet — so we need this explicit override). */
+  /* Ensure .hidden still wins over .modal's display:flex. */
   .modal.hidden { display: none; }
   .modal-content {
     background: #fff; border-radius: 8px;
@@ -178,7 +177,7 @@
     <h2>Log ind</h2>
     <p>Log ind for at se og redigere jeres krav.</p>
     <button id="btnGoogle" class="primary">Log ind med Google</button>
-    <button id="btnGithub">Log ind med GitHub</button>
+    <button id="btnGithubLogin">Log ind med GitHub</button>
     <p class="small">Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte
        den anden metode (knappen øverst til højre), så begge virker.</p>
   </div>
@@ -248,7 +247,7 @@
         </div>
       </div>
 
-      <button id="btnGithub" title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
+      <button id="btnGithubSettings" title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
       <button id="btnOpenBoard" class="hidden" title="Åbn Scrum board i ny fane">Scrum board ↗</button>
       <button id="btnInfo" title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
     </div>
@@ -1912,7 +1911,7 @@ $("sortSelect").value = sortMode;
 $("filterSelect").value = filterMoscow;
 
 $("btnGoogle").addEventListener("click", function () { loginWith("google"); });
-$("btnGithub").addEventListener("click", function () { loginWith("github"); });
+$("btnGithubLogin").addEventListener("click", function () { loginWith("github"); });
 $("btnLink").addEventListener("click", linkLogin);
 $("btnLogout").addEventListener("click", function () { signOut(auth); });
 $("btnCreate").addEventListener("click", createProject);
@@ -1966,7 +1965,7 @@ for (let i = 0; i < colBoxes.length; i++) {
   });
 }
 
-$("btnGithub").addEventListener("click", openGithubDialog);
+$("btnGithubSettings").addEventListener("click", openGithubDialog);
 $("btnOpenBoard").addEventListener("click", openBoard);
 $("btnGithubCancel").addEventListener("click", closeGithubDialog);
 $("btnGithubSave").addEventListener("click", saveGithubSettings);
