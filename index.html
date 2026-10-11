@@ -14,9 +14,27 @@
   .header-right { display: flex; align-items: center; gap: 16px; }
   #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
                transition: opacity 0.2s ease; }
-  #btnLang { background: transparent; color: #fff; border-color: rgba(255,255,255,0.45);
-             font-weight: 600; min-width: 46px; padding: 5px 10px; }
-  #btnLang:hover { background: rgba(255,255,255,0.14); }
+  /* Floating language toggle — always visible, bottom-right. */
+  #btnLang {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 500;
+    background: #2563eb;
+    color: #fff;
+    border: 2px solid #fff;
+    font-weight: 700;
+    min-width: 62px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+    cursor: pointer;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    transition: background 0.12s ease, transform 0.12s ease;
+  }
+  #btnLang:hover { background: #1d4ed8; transform: translateY(-1px); }
+  #btnLang:active { transform: translateY(0); }
   main { padding: 8px 16px 16px; }
   .hidden { display: none; }
   .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
@@ -64,7 +82,6 @@
   tr.prio-4 { background: #f3f4f6; } tr.prio-4 td:first-child { border-left: 6px solid #9ca3af; }
   tr.row-resolved { opacity: 0.5; transition: opacity 0.12s ease; }
   tr.row-resolved:hover { opacity: 1; }
-  /* When arriving from a deep link, the targeted row flashes briefly. */
   tr.row-flash td { background: #fef3c7; }
   tr.row-flash td:first-child { border-left-color: #f59e0b; }
   tr.group-header td { color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
@@ -73,14 +90,12 @@
   tr.group-2 td { background: #b45309; }
   tr.group-3 td { background: #1d4ed8; }
   tr.group-4 td { background: #4b5563; }
-  /* Group headers for the other sort modes. */
   tr.group-furps td { background: #334155; }
   tr.group-status-proposed td { background: #a16207; }
   tr.group-status-agreed   td { background: #6d28d9; }
   tr.group-status-done     td { background: #15803d; }
   tr.group-status-parked   td { background: #c2410c; }
   tr.group-status-dropped  td { background: #4b5563; }
-  /* Highlight the column that the current sort mode orders by. */
   th.sort-active {
     background: #dbeafe;
     border-bottom: 3px solid #2563eb;
@@ -215,9 +230,10 @@
       <button id="btnLink" class="hidden"></button>
       <button id="btnLogout" data-i18n="logout">Log ud</button>
     </div>
-    <button id="btnLang" data-i18n="langButton" data-i18n-title="langTitle" title="Skift sprog">EN</button>
   </div>
 </header>
+
+<button id="btnLang" data-i18n="langButton" data-i18n-title="langTitle" title="Skift sprog">EN</button>
 
 <main>
   <div id="msg"></div>
@@ -524,9 +540,6 @@ const AUTOSAVE_DELAY_MS = 800;
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
                  "status", "notes", "refs", "updatedBy", "age"];
 
-// ============================================================
-// i18n
-// ============================================================
 const I18N = {
   da: {
     appTitle: "Kravmatrix · FURPS+ × MoSCoW",
@@ -756,12 +769,10 @@ const I18N = {
     mdColGrandTotal: "I alt",
     mdParkedHeading: "PYT — Parkerede ({n})",
     mdParkedIntro: "Idéer der er bevidst parkeret. Tag dem frem ved sprint-review, og beslut om de skal opgraderes eller droppes.",
-    mdColOriginalPriority: "Oprindelig prioritet",
     mdWontHeading: "Won't — bevidst fravalgt ({n})",
-    mdWontIntro: "Krav der er bevidst valgt fra i denne version. Begrundelsen står under \"Begrundelse\".",
-    mdColReason: "Begrundelse",
+    mdWontIntro: "Krav der er bevidst valgt fra i denne version. Begrundelsen står under \"Noter\".",
     mdDroppedHeading: "Droppede ({n})",
-    mdDroppedIntro: "Krav der ikke længere er relevante. Begrundelsen står under \"Begrundelse\".",
+    mdDroppedIntro: "Krav der ikke længere er relevante. Begrundelsen står under \"Noter\".",
 
     csvId: "Krav-ID",
     csvDescription: "Kravbeskrivelse",
@@ -1002,12 +1013,10 @@ const I18N = {
     mdColGrandTotal: "Total",
     mdParkedHeading: "PYT — Parked ({n})",
     mdParkedIntro: "Ideas that have been deliberately parked. Bring them up at sprint review and decide whether to promote or drop them.",
-    mdColOriginalPriority: "Original priority",
     mdWontHeading: "Won't — deliberately excluded ({n})",
-    mdWontIntro: "Requirements deliberately left out of this release. The reason is under \"Reason\".",
-    mdColReason: "Reason",
+    mdWontIntro: "Requirements deliberately left out of this release. The reason is under \"Notes\".",
     mdDroppedHeading: "Dropped ({n})",
-    mdDroppedIntro: "Requirements that are no longer relevant. The reason is under \"Reason\".",
+    mdDroppedIntro: "Requirements that are no longer relevant. The reason is under \"Notes\".",
 
     csvId: "Req ID",
     csvDescription: "Requirement",
@@ -1056,9 +1065,6 @@ let unsubMembers = null;
 let visibleColumns = loadColumns();
 
 let projectData = {};
-
-// When the page is opened via a deep link (#pid&req=xyz), this holds the
-// requirement id that should be scrolled to and flashed once the table renders.
 let pendingScrollToReq = null;
 
 const saveTimers = new Map();
@@ -1070,7 +1076,6 @@ function showMessage(text, isGood) {
   $("msg").style.color = isGood ? "#15803d" : "#b91c1c";
 }
 
-// ---------- Language ----------
 function applyLanguage() {
   document.documentElement.lang = lang;
 
@@ -1154,9 +1159,6 @@ function staleness(req) {
   return 0;
 }
 
-// ---------- Hash parsing for deep links ----------
-// Format: "#<pid>" or "#<pid>&req=<reqid>"
-// Anything else after "&" is ignored, so we can add new params later.
 function parseHash() {
   const raw = location.hash.slice(1);
   if (!raw) { return { pid: "", reqid: "" }; }
@@ -1173,8 +1175,6 @@ function parseHash() {
   return { pid: pid, reqid: reqid };
 }
 
-// Scrolls to and flashes the row that matches pendingScrollToReq.
-// Called after every table render; does nothing until the row exists.
 function tryScrollToPendingReq() {
   if (!pendingScrollToReq) { return; }
   const tr = document.querySelector('#tbody tr[data-req-id="' + pendingScrollToReq + '"]');
@@ -1281,7 +1281,6 @@ function onListenError(err) {
   showMessage(t("errRealtime", { code: err.code }));
 }
 
-// ---------- Autosave with debounce ----------
 function scheduleSave(el, field, id) {
   const key = id + "|" + field;
   if (saveTimers.has(key)) { clearTimeout(saveTimers.get(key)); }
@@ -1324,8 +1323,6 @@ async function saveCell(el, field, id) {
   try {
     await updateDoc(doc(db, "projects", currentPid, "requirements", id), changes);
     flashSaved(el);
-    // Keep the local cache in sync so the References column can update
-    // immediately, instead of waiting for the next Firestore snapshot.
     for (let i = 0; i < allReqs.length; i++) {
       if (allReqs[i].id === id) { allReqs[i][field] = el.value; break; }
     }
@@ -1376,7 +1373,6 @@ function onCellFocusOut(event) {
   if (renderPending) { setTimeout(safeRender, 0); }
 }
 
-// ---------- GitHub integration ----------
 function updateGithubUi() {
   const url = String(projectData.githubBoardUrl || "").trim();
   const btn = $("btnOpenBoard");
@@ -1500,9 +1496,6 @@ function buildRefsCell(r) {
   return td;
 }
 
-// Rebuild the References cell for a single row in place. Called right after
-// a save finishes, so a freshly typed "#123" turns into a link the moment the
-// textarea loses focus — without waiting for a full Firestore round-trip.
 function updateRefsCellFor(id) {
   const tr = document.querySelector('#tbody tr[data-req-id="' + id + '"]');
   if (!tr) { return; }
@@ -1519,9 +1512,6 @@ function updateRefsCellFor(id) {
   oldCell.replaceWith(newCell);
 }
 
-// ---------- Deep link to a requirement (reverse of GitHub refs) ----------
-// Copies a shareable URL that will open this project and flash this specific
-// requirement. Meant to be pasted into a GitHub issue comment or wherever.
 async function copyReqLink(rid) {
   if (!currentPid) { return; }
   const link = location.origin + location.pathname + "#" + currentPid + "&req=" + rid;
@@ -1533,7 +1523,6 @@ async function copyReqLink(rid) {
   }
 }
 
-// ---------- Projects ----------
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -1720,7 +1709,6 @@ async function joinFromInput() {
   let code = $("joinCode").value.trim();
   const hashPos = code.indexOf("#");
   if (hashPos >= 0) {
-    // Support pasting a whole share link, including the req=... part.
     code = code.slice(hashPos + 1);
     const ampPos = code.indexOf("&");
     if (ampPos >= 0) { code = code.slice(0, ampPos); }
@@ -1835,7 +1823,6 @@ async function onMemberListClick(event) {
   }
 }
 
-// ---------- Remove project from my list (and delete if last member) ----------
 async function removeProjectFromMyList() {
   if (!currentPid || !currentUser) { return; }
   const pid = currentPid;
@@ -1846,7 +1833,6 @@ async function removeProjectFromMyList() {
   const question = lastOne ? t("leaveConfirmLast") : t("leaveConfirm");
   if (!confirm(question)) { return; }
 
-  // Stop any pending autosaves so we don't write into a project we are leaving.
   cancelPendingSaves();
 
   try {
@@ -1954,8 +1940,6 @@ function compareReqs(a, b) {
   return a.seq - b.seq;
 }
 
-// Which column does the current sort mode order by? Used both for the
-// column highlight and for deciding which rows become group headers.
 function activeSortColumn() {
   switch (sortMode) {
     case "priority": return "moscow";
@@ -1966,8 +1950,6 @@ function activeSortColumn() {
   }
 }
 
-// Returns the group key for a requirement under the current sort mode,
-// or null for modes that don't group ("original").
 function groupKeyForSortMode(req) {
   switch (sortMode) {
     case "priority": return req.moscow;
@@ -1981,7 +1963,6 @@ function renderTable() {
   const tbody = $("tbody");
   tbody.innerHTML = "";
 
-  // Highlight the column we sort by — in the header and in every row.
   const activeCol = activeSortColumn();
   const ths = document.querySelectorAll("#matrixTable thead th[data-col]");
   for (let i = 0; i < ths.length; i++) {
@@ -2011,7 +1992,6 @@ function renderTable() {
     return;
   }
 
-  // How many rows fall into each group for the current sort mode?
   const groupCounts = {};
   for (let i = 0; i < visible.length; i++) {
     const key = groupKeyForSortMode(visible[i]);
@@ -2064,7 +2044,7 @@ function buildGroupHeader(key, count) {
 function buildRow(r, activeCol) {
   const tr = document.createElement("tr");
   tr.className = "prio-" + rankOf(r.moscow);
-  tr.dataset.reqId = r.id;   // used by tryScrollToPendingReq
+  tr.dataset.reqId = r.id;
   if (r.status === "Done" || r.status === "Parked" || r.status === "Dropped") {
     tr.classList.add("row-resolved");
   }
@@ -2121,7 +2101,6 @@ function buildRow(r, activeCol) {
   maybeHidden(ageCell, "age");
   tr.appendChild(ageCell);
 
-  // Actions: copy deep link + delete.
   const actionsCell = document.createElement("td");
   actionsCell.className = "actions";
 
@@ -2141,7 +2120,6 @@ function buildRow(r, activeCol) {
 
   tr.appendChild(actionsCell);
 
-  // Highlight the cell that the current sort mode orders by.
   if (activeCol) {
     const cell = tr.querySelector("td.col-" + activeCol);
     if (cell) { cell.classList.add("sort-active"); }
@@ -2267,15 +2245,7 @@ function exportMarkdown() {
   const rows = sortedBySeq();
   const today = new Date().toISOString().slice(0, 10);
   const projName = $("projectName").textContent;
-
-  let anySource = false, anyNotes = false, anyUpdatedBy = false, anyRefs = false;
   const defaultRepo = String(projectData.defaultRepo || "").trim();
-  for (let i = 0; i < rows.length; i++) {
-    if ((rows[i].source || "").trim() !== "") { anySource = true; }
-    if ((rows[i].notes || "").trim() !== "") { anyNotes = true; }
-    if ((rows[i].updatedBy || "").trim() !== "") { anyUpdatedBy = true; }
-    if (extractGithubRefs(rows[i], defaultRepo).length > 0) { anyRefs = true; }
-  }
 
   let md = "# " + projName + " — " + t("mdTitleSuffix") + "\n\n";
   md += t("mdExported", { date: today }) + "\n\n";
@@ -2289,6 +2259,7 @@ function exportMarkdown() {
     md += t("mdRefsNote", { repo: defaultRepo }) + "\n\n";
   }
 
+  // ---------- Summary table ----------
   const moscowOrder = ["Must", "Should", "Could", "Won't"];
   const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
   let grandTotal = 0;
@@ -2320,6 +2291,16 @@ function exportMarkdown() {
         "** | **" + totals.agreed + "** | **" + totals.proposed + "** | **" +
         totals.parked + "** | **" + totals.dropped + "** |\n\n";
 
+  // ---------- Full-fledged table helpers ----------
+  // Every section uses the same complete set of columns, so the export reads
+  // like the on-screen matrix and stays consistent regardless of which fields
+  // happen to be filled in.
+  const FULL_HEADER = "| " + t("thId") + " | " + t("thDescription") + " | " +
+    t("thFurps") + " | " + t("thMoscow") + " | " + t("thSource") + " | " +
+    t("thStatus") + " | " + t("thNotes") + " | " + t("thRefs") + " | " +
+    t("thUpdatedBy") + " |";
+  const FULL_SEP = "| --- | --- | --- | --- | --- | --- | --- | --- | --- |";
+
   function refsCellFor(r) {
     const refs = extractGithubRefs(r, defaultRepo);
     if (refs.length === 0) { return "–"; }
@@ -2332,36 +2313,27 @@ function exportMarkdown() {
     return parts.join("<br>");
   }
 
-  function buildActiveTable(group) {
-    let head = "| " + t("thId") + " | " + t("thDescription") + " | " + t("thFurps") + " |";
-    if (anySource) { head += " " + t("colSource") + " |"; }
-    head += " " + t("thStatus") + " |";
-    if (anyNotes) { head += " " + t("thNotes") + " |"; }
-    if (anyRefs) { head += " " + t("thRefs") + " |"; }
-    if (anyUpdatedBy) { head += " " + t("thUpdatedBy") + " |"; }
-    head += "\n| --- | --- | --- |";
-    if (anySource) { head += " --- |"; }
-    head += " --- |";
-    if (anyNotes) { head += " --- |"; }
-    if (anyRefs) { head += " --- |"; }
-    if (anyUpdatedBy) { head += " --- |"; }
-    head += "\n";
-
-    let body = "";
-    for (let i = 0; i < group.length; i++) {
-      const r = group[i];
-      body += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) +
-              " | " + mdCell(r.furps) + " |";
-      if (anySource) { body += " " + mdCell(r.source) + " |"; }
-      body += " " + mdCell(statusLabel(r.status)) + " |";
-      if (anyNotes) { body += " " + mdCell(r.notes) + " |"; }
-      if (anyRefs) { body += " " + refsCellFor(r) + " |"; }
-      if (anyUpdatedBy) { body += " " + mdCell(r.updatedBy) + " |"; }
-      body += "\n";
-    }
-    return head + body;
+  function fullRow(r) {
+    return "| " + mdCell(reqLabel(r.seq)) +
+           " | " + mdCell(r.description) +
+           " | " + mdCell(r.furps) +
+           " | " + mdCell(r.moscow) +
+           " | " + mdCell(r.source) +
+           " | " + mdCell(statusLabel(r.status)) +
+           " | " + mdCell(r.notes) +
+           " | " + refsCellFor(r) +
+           " | " + mdCell(r.updatedBy) + " |";
   }
 
+  function fullTable(group) {
+    let out = FULL_HEADER + "\n" + FULL_SEP + "\n";
+    for (let i = 0; i < group.length; i++) {
+      out += fullRow(group[i]) + "\n";
+    }
+    return out;
+  }
+
+  // ---------- Active sections grouped by priority ----------
   const activePriorities = ["Must", "Should", "Could"];
   for (let p = 0; p < activePriorities.length; p++) {
     const group = [];
@@ -2373,10 +2345,11 @@ function exportMarkdown() {
     }
     if (group.length === 0) { continue; }
     md += "## " + activePriorities[p] + " (" + group.length + ")\n\n";
-    md += buildActiveTable(group);
+    md += fullTable(group);
     md += "\n";
   }
 
+  // ---------- Parked (PYT) ----------
   const parked = [];
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].status === "Parked") { parked.push(rows[i]); }
@@ -2384,26 +2357,11 @@ function exportMarkdown() {
   if (parked.length > 0) {
     md += "## " + t("mdParkedHeading", { n: parked.length }) + "\n\n";
     md += t("mdParkedIntro") + "\n\n";
-    let h = "| " + t("thId") + " | " + t("thDescription") + " | " + t("mdColOriginalPriority") +
-            " | " + t("thFurps") + " |";
-    if (anyNotes) { h += " " + t("thNotes") + " |"; }
-    if (anyRefs) { h += " " + t("thRefs") + " |"; }
-    h += "\n| --- | --- | --- | --- |";
-    if (anyNotes) { h += " --- |"; }
-    if (anyRefs) { h += " --- |"; }
-    h += "\n";
-    md += h;
-    for (let i = 0; i < parked.length; i++) {
-      const r = parked[i];
-      md += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) + " | " +
-            mdCell(r.moscow) + " | " + mdCell(r.furps) + " |";
-      if (anyNotes) { md += " " + mdCell(r.notes) + " |"; }
-      if (anyRefs) { md += " " + refsCellFor(r) + " |"; }
-      md += "\n";
-    }
+    md += fullTable(parked);
     md += "\n";
   }
 
+  // ---------- Won't ----------
   const wonts = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -2414,17 +2372,11 @@ function exportMarkdown() {
   if (wonts.length > 0) {
     md += "## " + t("mdWontHeading", { n: wonts.length }) + "\n\n";
     md += t("mdWontIntro") + "\n\n";
-    md += "| " + t("thId") + " | " + t("thDescription") + " | " + t("thFurps") +
-          " | " + t("mdColReason") + " |\n";
-    md += "| --- | --- | --- | --- |\n";
-    for (let i = 0; i < wonts.length; i++) {
-      const r = wonts[i];
-      md += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) + " | " +
-            mdCell(r.furps) + " | " + mdCell(r.notes) + " |\n";
-    }
+    md += fullTable(wonts);
     md += "\n";
   }
 
+  // ---------- Dropped ----------
   const dropped = [];
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].status === "Dropped") { dropped.push(rows[i]); }
@@ -2432,14 +2384,7 @@ function exportMarkdown() {
   if (dropped.length > 0) {
     md += "## " + t("mdDroppedHeading", { n: dropped.length }) + "\n\n";
     md += t("mdDroppedIntro") + "\n\n";
-    md += "| " + t("thId") + " | " + t("thDescription") + " | " + t("mdColOriginalPriority") +
-          " | " + t("thFurps") + " | " + t("mdColReason") + " |\n";
-    md += "| --- | --- | --- | --- | --- |\n";
-    for (let i = 0; i < dropped.length; i++) {
-      const r = dropped[i];
-      md += "| " + mdCell(reqLabel(r.seq)) + " | " + mdCell(r.description) + " | " +
-            mdCell(r.moscow) + " | " + mdCell(r.furps) + " | " + mdCell(r.notes) + " |\n";
-    }
+    md += fullTable(dropped);
     md += "\n";
   }
 
@@ -2457,7 +2402,6 @@ async function copyShareLink() {
   }
 }
 
-// ---------- Import ----------
 function normalizeKey(text) {
   return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
@@ -2871,7 +2815,6 @@ $("tbody").addEventListener("input", onCellInput);
 $("tbody").addEventListener("focusout", onCellFocusOut);
 $("tbody").addEventListener("click", onTableClick);
 
-// Project name acts as a link back to the chooser.
 $("projectName").addEventListener("click", leaveProject);
 
 document.addEventListener("visibilitychange", function () {
