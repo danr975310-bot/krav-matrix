@@ -14,6 +14,9 @@
   .header-right { display: flex; align-items: center; gap: 16px; }
   #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
                transition: opacity 0.2s ease; }
+  #btnLang { background: transparent; color: #fff; border-color: rgba(255,255,255,0.45);
+             font-weight: 600; min-width: 46px; padding: 5px 10px; }
+  #btnLang:hover { background: rgba(255,255,255,0.14); }
   main { padding: 8px 16px 16px; }
   .hidden { display: none; }
   .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
@@ -22,6 +25,8 @@
   button { cursor: pointer; padding: 6px 12px; border-radius: 6px;
            border: 1px solid #9aa3af; background: #fff; }
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  button.danger { border-color: #dc2626; color: #b91c1c; background: #fff; }
+  button.danger:hover { background: #fef2f2; }
   input[type=text], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
   #msg { color: #b91c1c; margin: 8px 0; }
@@ -68,6 +73,26 @@
   tr.group-2 td { background: #b45309; }
   tr.group-3 td { background: #1d4ed8; }
   tr.group-4 td { background: #4b5563; }
+  /* Group headers for the other sort modes. */
+  tr.group-furps td { background: #334155; }
+  tr.group-status-proposed td { background: #a16207; }
+  tr.group-status-agreed   td { background: #6d28d9; }
+  tr.group-status-done     td { background: #15803d; }
+  tr.group-status-parked   td { background: #c2410c; }
+  tr.group-status-dropped  td { background: #4b5563; }
+  /* Highlight the column that the current sort mode orders by. */
+  th.sort-active {
+    background: #dbeafe;
+    border-bottom: 3px solid #2563eb;
+    font-weight: 700;
+  }
+  td.sort-active {
+    box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.08);
+  }
+  td.sort-active textarea,
+  td.sort-active select {
+    background: rgba(255, 255, 255, 0.65);
+  }
   select.status-proposed { background: #fef9c3; }
   select.status-agreed { background: #ddd6fe; }
   select.status-done { background: #bbf7d0; }
@@ -182,14 +207,15 @@
 <body>
 
 <header>
-  <strong>Kravmatrix · FURPS+ × MoSCoW</strong>
+  <strong data-i18n="appTitle">Kravmatrix · FURPS+ × MoSCoW</strong>
   <div class="header-right">
     <span id="lastSaved" class="hidden"></span>
     <div id="userInfo" class="hidden">
       <span id="userName"></span>
       <button id="btnLink" class="hidden"></button>
-      <button id="btnLogout">Log ud</button>
+      <button id="btnLogout" data-i18n="logout">Log ud</button>
     </div>
+    <button id="btnLang" data-i18n="langButton" data-i18n-title="langTitle" title="Skift sprog">EN</button>
   </div>
 </header>
 
@@ -197,100 +223,110 @@
   <div id="msg"></div>
 
   <div id="screenLogin" class="card hidden">
-    <h2>Log ind</h2>
-    <p>Log ind for at se og redigere jeres krav.</p>
-    <button id="btnGoogle" class="primary">Log ind med Google</button>
-    <button id="btnGithubLogin">Log ind med GitHub</button>
-    <p class="small">Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte
+    <h2 data-i18n="loginTitle">Log ind</h2>
+    <p data-i18n="loginIntro">Log ind for at se og redigere jeres krav.</p>
+    <button id="btnGoogle" class="primary" data-i18n="loginGoogle">Log ind med Google</button>
+    <button id="btnGithubLogin" data-i18n="loginGithub">Log ind med GitHub</button>
+    <p class="small" data-i18n="loginHint">Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte
        den anden metode (knappen øverst til højre), så begge virker.</p>
   </div>
 
   <div id="screenChooser" class="card hidden">
     <section id="myProjectsSection">
-      <h2>Dine projekter</h2>
-      <p class="small">Projekter du allerede er medlem af. Klik for at åbne.</p>
+      <h2 data-i18n="yourProjects">Dine projekter</h2>
+      <p class="small" data-i18n="yourProjectsHint">Projekter du allerede er medlem af. Klik for at åbne.</p>
       <ul id="myProjectsList"></ul>
-      <p id="myProjectsEmpty" class="small hidden">Du er ikke medlem af nogen projekter endnu.</p>
+      <p id="myProjectsEmpty" class="small hidden" data-i18n="noProjects">Du er ikke medlem af nogen projekter endnu.</p>
       <hr>
     </section>
 
-    <h2>Opret nyt projekt</h2>
-    <input type="text" id="newProjectName" placeholder="Projektnavn, fx Reolmarked">
-    <button id="btnCreate" class="primary">Opret projekt</button>
+    <h2 data-i18n="createProjectTitle">Opret nyt projekt</h2>
+    <input type="text" id="newProjectName" data-i18n-placeholder="newProjectPlaceholder" placeholder="Projektnavn, fx Reolmarked">
+    <button id="btnCreate" class="primary" data-i18n="createProjectBtn">Opret projekt</button>
     <hr>
-    <h2>Deltag i projekt</h2>
-    <input type="text" id="joinCode" placeholder="Projektkode eller delt link">
-    <button id="btnJoin">Deltag</button>
+    <h2 data-i18n="joinProjectTitle">Deltag i projekt</h2>
+    <input type="text" id="joinCode" data-i18n-placeholder="joinPlaceholder" placeholder="Projektkode eller delt link">
+    <button id="btnJoin" data-i18n="joinBtn">Deltag</button>
   </div>
 
   <div id="screenApp" class="hidden">
     <h2 id="projectName" title="Tilbage til projektlisten"></h2>
 
     <div class="toolbar">
-      <label>Sortér:
+      <label><span data-i18n="sortLabel">Sortér:</span>
         <select id="sortSelect">
-          <option value="priority">Prioritet M &gt; S &gt; C &gt; W</option>
-          <option value="original">Som de dukker op (oprettet)</option>
-          <option value="category">FURPS+ kategori</option>
-          <option value="status">Status</option>
+          <option value="priority" data-i18n="sortPriority">Prioritet M &gt; S &gt; C &gt; W</option>
+          <option value="original" data-i18n="sortOriginal">Som de dukker op (oprettet)</option>
+          <option value="category" data-i18n="sortCategory">FURPS+ kategori</option>
+          <option value="status" data-i18n="sortStatus">Status</option>
         </select>
       </label>
-      <label>Vis:
+      <label><span data-i18n="filterLabel">Vis:</span>
         <select id="filterSelect">
-          <option value="all">Alle prioriteter</option>
+          <option value="all" data-i18n="filterAll">Alle prioriteter</option>
           <option value="Must">Must</option>
           <option value="Should">Should</option>
           <option value="Could">Could</option>
           <option value="Won't">Won't</option>
         </select>
       </label>
-      <button id="btnPyt" title="Vis kun parkerede (PYT) krav — idéer der venter på review">PYT</button>
-      <button id="btnAdd" class="primary">+ Nyt krav</button>
-      <button id="btnImport">Importér</button>
+      <button id="btnPyt" data-i18n-title="pytTitle" title="Vis kun parkerede (PYT) krav — idéer der venter på review">PYT</button>
+      <button id="btnAdd" class="primary" data-i18n="addReq">+ Nyt krav</button>
+      <button id="btnImport" data-i18n="importBtn">Importér</button>
       <input type="file" id="importFile" accept=".json,.csv,.txt,.md,text/markdown,text/plain" class="hidden">
-      <button id="btnCsv">Eksportér CSV</button>
-      <button id="btnJson">Eksportér JSON</button>
-      <button id="btnMd">Eksportér Markdown</button>
-      <button id="btnShare">Kopiér delingslink</button>
-      <button id="btnLeave">Skift projekt</button>
+      <button id="btnCsv" data-i18n="exportCsv">Eksportér CSV</button>
+      <button id="btnJson" data-i18n="exportJson">Eksportér JSON</button>
+      <button id="btnMd" data-i18n="exportMd">Eksportér Markdown</button>
+      <button id="btnShare" data-i18n="shareBtn">Kopiér delingslink</button>
+      <button id="btnLeave" data-i18n="switchProject">Skift projekt</button>
+      <button id="btnRemoveProject" class="danger" data-i18n="leaveProjectBtn"
+              data-i18n-title="leaveProjectTitle"
+              title="Fjern projektet fra din liste (sletter kun for dig)">Forlad projekt</button>
 
       <div class="colprefs">
-        <button id="btnCols" title="Vælg hvilke kolonner du vil se. Gemmes kun i din browser.">Vis kolonner ▾</button>
+        <button id="btnCols" data-i18n="columnsBtn"
+                data-i18n-title="columnsBtnTitle"
+                title="Vælg hvilke kolonner du vil se. Gemmes kun i din browser.">Vis kolonner ▾</button>
         <div id="colsPanel" class="colprefs-panel hidden">
-          <label><input type="checkbox" data-col="id"> Krav-ID</label>
-          <label><input type="checkbox" data-col="description"> Kravbeskrivelse</label>
-          <label><input type="checkbox" data-col="furps"> FURPS+</label>
-          <label><input type="checkbox" data-col="moscow"> MoSCoW</label>
-          <label><input type="checkbox" data-col="source"> Kilde</label>
-          <label><input type="checkbox" data-col="status"> Status</label>
-          <label><input type="checkbox" data-col="notes"> Noter</label>
-          <label><input type="checkbox" data-col="refs"> Referencer (GitHub)</label>
-          <label><input type="checkbox" data-col="updatedBy"> Sidst rettet af</label>
-          <label><input type="checkbox" data-col="age"> Alder</label>
-          <p class="small">Gemmes kun i din browser. Påvirker ikke andre i gruppen.</p>
+          <label><input type="checkbox" data-col="id"> <span data-i18n="colId">Krav-ID</span></label>
+          <label><input type="checkbox" data-col="description"> <span data-i18n="colDescription">Kravbeskrivelse</span></label>
+          <label><input type="checkbox" data-col="furps"> <span data-i18n="colFurps">FURPS+</span></label>
+          <label><input type="checkbox" data-col="moscow"> <span data-i18n="colMoscow">MoSCoW</span></label>
+          <label><input type="checkbox" data-col="source"> <span data-i18n="colSource">Kilde</span></label>
+          <label><input type="checkbox" data-col="status"> <span data-i18n="colStatus">Status</span></label>
+          <label><input type="checkbox" data-col="notes"> <span data-i18n="colNotes">Noter</span></label>
+          <label><input type="checkbox" data-col="refs"> <span data-i18n="colRefs">Referencer (GitHub)</span></label>
+          <label><input type="checkbox" data-col="updatedBy"> <span data-i18n="colUpdatedBy">Sidst rettet af</span></label>
+          <label><input type="checkbox" data-col="age"> <span data-i18n="colAge">Alder</span></label>
+          <p class="small" data-i18n="colsHint">Gemmes kun i din browser. Påvirker ikke andre i gruppen.</p>
         </div>
       </div>
 
-      <button id="btnGithubSettings" title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
-      <button id="btnOpenBoard" class="hidden" title="Åbn Scrum board i ny fane">Scrum board ↗</button>
-      <button id="btnInfo" title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
+      <button id="btnGithubSettings" data-i18n-title="githubBtnTitle"
+              title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
+      <button id="btnOpenBoard" class="hidden" data-i18n-title="boardBtnTitle"
+              title="Åbn Scrum board i ny fane">Scrum board ↗</button>
+      <button id="btnInfo" data-i18n-title="infoBtnTitle"
+              title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
     </div>
 
     <div class="table-wrap">
       <table id="matrixTable">
         <thead>
           <tr>
-            <th data-col="id" style="width:70px">Krav-ID</th>
-            <th data-col="description" style="width:300px">Kravbeskrivelse</th>
-            <th data-col="furps" style="width:60px">FURPS+</th>
-            <th data-col="moscow" style="width:90px">MoSCoW</th>
-            <th data-col="source" style="width:240px">Kilde (citat, dokument, side)</th>
-            <th data-col="status" style="width:110px">Status</th>
-            <th data-col="notes" style="width:200px">Noter</th>
+            <th data-col="id" style="width:70px" data-i18n="thId">Krav-ID</th>
+            <th data-col="description" style="width:300px" data-i18n="thDescription">Kravbeskrivelse</th>
+            <th data-col="furps" style="width:60px" data-i18n="thFurps">FURPS+</th>
+            <th data-col="moscow" style="width:90px" data-i18n="thMoscow">MoSCoW</th>
+            <th data-col="source" style="width:240px" data-i18n="thSource">Kilde (citat, dokument, side)</th>
+            <th data-col="status" style="width:110px" data-i18n="thStatus">Status</th>
+            <th data-col="notes" style="width:200px" data-i18n="thNotes">Noter</th>
             <th data-col="refs" style="width:130px"
+                data-i18n="thRefs" data-i18n-title="thRefsTitle"
                 title="GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter. Skriv #123 eller ejer/repo#123.">Referencer</th>
-            <th data-col="updatedBy" style="width:100px">Sidst rettet af</th>
+            <th data-col="updatedBy" style="width:100px" data-i18n="thUpdatedBy">Sidst rettet af</th>
             <th data-col="age" style="width:60px"
+                data-i18n="thAge" data-i18n-title="thAgeTitle"
                 title="Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter 14 og 28 dage.">Alder</th>
             <th style="width:70px"></th>
           </tr>
@@ -303,130 +339,126 @@
 
 <div id="sidePanel" class="side-panel" aria-hidden="true">
   <div class="side-panel-header">
-    <strong>Information</strong>
-    <button id="btnClosePanel" title="Luk">✕</button>
+    <strong data-i18n="panelTitle">Information</strong>
+    <button id="btnClosePanel" data-i18n-title="panelCloseTitle" title="Luk">✕</button>
   </div>
   <div class="side-panel-body">
     <section>
-      <h3>FURPS+ (kravtype)</h3>
+      <h3 data-i18n="panelFurpsTitle">FURPS+ (kravtype)</h3>
       <ul>
-        <li><strong>F</strong> Funktionalitet: funktioner, muligheder og adfærd.</li>
-        <li><strong>U</strong> Brugbarhed (Usability): lethed i brug, tilgængelighed, brugeroplevelse.</li>
-        <li><strong>R</strong> Pålidelighed (Reliability): tilgængelighed, nøjagtighed, genopretning.</li>
-        <li><strong>P</strong> Ydeevne (Performance): svartid, kapacitet, ressourceforbrug.</li>
-        <li><strong>S</strong> Vedligeholdelse (Supportability): vedligeholdbarhed, testbarhed, tilpasningsevne.</li>
-        <li><strong>+</strong> Begrænsninger: design, implementering, grænseflader, jura (fx GDPR), fysiske krav.</li>
+        <li data-i18n-html="furpsF"><strong>F</strong> Funktionalitet: funktioner, muligheder og adfærd.</li>
+        <li data-i18n-html="furpsU"><strong>U</strong> Brugbarhed (Usability): lethed i brug, tilgængelighed, brugeroplevelse.</li>
+        <li data-i18n-html="furpsR"><strong>R</strong> Pålidelighed (Reliability): tilgængelighed, nøjagtighed, genopretning.</li>
+        <li data-i18n-html="furpsP"><strong>P</strong> Ydeevne (Performance): svartid, kapacitet, ressourceforbrug.</li>
+        <li data-i18n-html="furpsS"><strong>S</strong> Vedligeholdelse (Supportability): vedligeholdbarhed, testbarhed, tilpasningsevne.</li>
+        <li data-i18n-html="furpsPlus"><strong>+</strong> Begrænsninger: design, implementering, grænseflader, jura (fx GDPR), fysiske krav.</li>
       </ul>
 
-      <h3>MoSCoW (prioritet)</h3>
+      <h3 data-i18n="panelMoscowTitle">MoSCoW (prioritet)</h3>
       <ul>
-        <li><strong>Must</strong> Uundværlig for den aftalte løsning eller version.</li>
-        <li><strong>Should</strong> Vigtig, men en brugbar løsning findes uden.</li>
-        <li><strong>Could</strong> Ønskeligt, hvis tid og ressourcer rækker.</li>
-        <li><strong>Won't</strong> Bevidst fravalgt i denne version (skriv begrundelsen i Noter).</li>
+        <li data-i18n-html="moscowMust"><strong>Must</strong> Uundværlig for den aftalte løsning eller version.</li>
+        <li data-i18n-html="moscowShould"><strong>Should</strong> Vigtig, men en brugbar løsning findes uden.</li>
+        <li data-i18n-html="moscowCould"><strong>Could</strong> Ønskeligt, hvis tid og ressourcer rækker.</li>
+        <li data-i18n-html="moscowWont"><strong>Won't</strong> Bevidst fravalgt i denne version (skriv begrundelsen i Noter).</li>
       </ul>
 
-      <h3>Status</h3>
+      <h3 data-i18n="panelStatusTitle">Status</h3>
       <ul>
-        <li><strong>Foreslået</strong> Registreret, men endnu ikke bekræftet.</li>
-        <li><strong>Aftalt</strong> Bekræftet af gruppen eller kunden.</li>
-        <li><strong>Færdig</strong> Gennemført i løsningen.</li>
-        <li><strong>Parkeret (PYT)</strong> Idé der ikke besluttes nu — se nedenfor.</li>
-        <li><strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).</li>
+        <li data-i18n-html="stProposed"><strong>Foreslået</strong> Registreret, men endnu ikke bekræftet.</li>
+        <li data-i18n-html="stAgreed"><strong>Aftalt</strong> Bekræftet af gruppen eller kunden.</li>
+        <li data-i18n-html="stDone"><strong>Færdig</strong> Gennemført i løsningen.</li>
+        <li data-i18n-html="stParked"><strong>Parkeret (PYT)</strong> Idé der ikke besluttes nu — se nedenfor.</li>
+        <li data-i18n-html="stDropped"><strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).</li>
       </ul>
 
-      <h3>PYT — Park Your Treasures</h3>
-      <p>Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget
+      <h3 data-i18n="panelPytTitle">PYT — Park Your Treasures</h3>
+      <p data-i18n-html="pytIntro">Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget
          i denne omgang — eller kun hvis der bliver tid. Sæt status til
          <strong>Parkeret (PYT)</strong>, så forsvinder de ikke, men fylder heller
          ikke i den aktive liste.</p>
       <ul>
-        <li>PYT-krav tæller <em>ikke</em> med i alders-advarsler. De er bevidst parkeret.</li>
-        <li>Brug <strong>PYT</strong>-knappen i værktøjslinjen for at se dem isoleret.</li>
-        <li>Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret
+        <li data-i18n-html="pytLi1">PYT-krav tæller <em>ikke</em> med i alders-advarsler. De er bevidst parkeret.</li>
+        <li data-i18n-html="pytLi2">Brug <strong>PYT</strong>-knappen i værktøjslinjen for at se dem isoleret.</li>
+        <li data-i18n-html="pytLi3">Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret
             — eller om de skal opgraderes til et rigtigt krav.</li>
       </ul>
-      <p class="small">Forskellen fra "Droppet": Droppet betyder "vi har besluttet ikke at gøre det".
+      <p class="small" data-i18n="pytNote">Forskellen fra "Droppet": Droppet betyder "vi har besluttet ikke at gøre det".
          Parkeret betyder "vi beslutter det ikke nu".</p>
 
-      <h3>Alder</h3>
+      <h3 data-i18n="panelAgeTitle">Alder</h3>
       <ul>
-        <li>Antal dage siden kravet sidst blev rettet.</li>
-        <li>Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres:
+        <li data-i18n="ageLi1">Antal dage siden kravet sidst blev rettet.</li>
+        <li data-i18n-html="ageLi2">Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres:
             gul efter 14 dage, rød efter 28 dage.</li>
-        <li>Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
-        <li>Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.</li>
+        <li data-i18n="ageLi3">Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
+        <li data-i18n="ageLi4">Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.</li>
       </ul>
-      <p class="small">Færdige, parkerede og droppede rækker vises dæmpet, så de ikke
+      <p class="small" data-i18n="ageNote">Færdige, parkerede og droppede rækker vises dæmpet, så de ikke
          konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.</p>
 
-      <h3>Lagring</h3>
+      <h3 data-i18n="panelStorageTitle">Lagring</h3>
       <ul>
-        <li>Ændringer gemmes automatisk — der er ingen gem-knap.</li>
-        <li>Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast.
+        <li data-i18n="storageLi1">Ændringer gemmes automatisk — der er ingen gem-knap.</li>
+        <li data-i18n="storageLi2">Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast.
             Forlader du feltet, gemmes med det samme.</li>
-        <li>Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.</li>
-        <li>Et grønt blink på feltet og en lille "Gemt"-kvittering øverst bekræfter
+        <li data-i18n="storageLi3">Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.</li>
+        <li data-i18n="storageLi4">Et grønt blink på feltet og en lille "Gemt"-kvittering øverst bekræfter
             at ændringen er nået frem.</li>
       </ul>
-      <p class="small">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
+      <p class="small" data-i18n="storageNote">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
          Vælg én konvention, og brug den konsekvent.</p>
     </section>
 
     <section>
-      <h3>Referencer (GitHub)</h3>
-      <p>Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i
+      <h3 data-i18n="panelRefsTitle">Referencer (GitHub)</h3>
+      <p data-i18n-html="refsIntro">Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i
          Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.</p>
       <ul>
-        <li><code>#123</code> → linker til standard-repo'et sat under ⚙️ GitHub.</li>
-        <li><code>ejer/repo#123</code> → linker til det angivne repo, uanset standard.</li>
-        <li>Står der flere referencer i samme krav, vises de under hinanden.</li>
-        <li>Er standard-repo ikke sat, vises <code>#123</code> som grå tekst
-            med et hint om at sætte det.</li>
+        <li data-i18n-html="refsLi1"><code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ GitHub. Ellers vises det som tekst.</li>
+        <li data-i18n-html="refsLi2"><code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.</li>
+        <li data-i18n="refsLi3">Står der flere referencer i samme krav, vises de under hinanden.</li>
+        <li data-i18n-html="refsLi4">Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.</li>
       </ul>
     </section>
 
     <section>
-      <h3>Del et krav via link 🔗</h3>
-      <p>Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til
+      <h3 data-i18n="panelShareTitle">Del et krav via link 🔗</h3>
+      <p data-i18n-html="shareIntro1">Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til
          det pågældende krav, fx:</p>
-      <p><code>https://…/#reolmarked-abc123&req=xyz789</code></p>
-      <p>Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når
+      <p><code>https://…/#reolmarked-abc123&amp;req=xyz789</code></p>
+      <p data-i18n="shareIntro2">Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når
          nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver
          rækken et kort gult blink.</p>
-      <p class="small">Bemærk: kun medlemmer af projektet kan åbne linket.
+      <p class="small" data-i18n="shareNote">Bemærk: kun medlemmer af projektet kan åbne linket.
          Ikke-medlemmer får besked om at projektet ikke findes.</p>
     </section>
 
     <section>
-      <h3>GitHub-integration</h3>
-      <p>Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
+      <h3 data-i18n="panelGithubTitle">GitHub-integration</h3>
+      <p data-i18n-html="githubIntro">Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
       <ul>
-        <li><strong>Scrum board URL</strong> — fx
-            <code>https://github.com/users/DGARosendal/projects/4</code>.</li>
-        <li><strong>Standard repository</strong> — fx
-            <code>DGARosendal/reolmarked</code>. Bruges til at udvide
-            <code>#123</code>.</li>
+        <li data-i18n-html="githubLi1"><strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/githubuser/projects/1</code>.</li>
+        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> (valgfrit) — fx <code>githubuser/projectname</code>. Bruges kun til at gøre <code>#123</code> til links. Uden den vises <code>#123</code> blot som tekst.</li>
       </ul>
     </section>
 
     <section>
-      <h3>Import: filformater</h3>
+      <h3 data-i18n="panelImportTitle">Import: filformater</h3>
       <ul>
-        <li><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten
+        <li data-i18n-html="importLi1"><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten
             (danske eller engelske). Semikolon, komma og tab virker.</li>
-        <li><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
-        <li><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps
+        <li data-i18n-html="importLi2"><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
+        <li data-i18n-html="importLi3"><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps
             egen Markdown-eksport og med håndskrevne tabeller.</li>
-        <li><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
+        <li data-i18n-html="importLi4"><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
-      <p class="small">Import tilføjer nye krav og overskriver aldrig eksisterende.</p>
+      <p class="small" data-i18n="importNote">Import tilføjer nye krav og overskriver aldrig eksisterende.</p>
     </section>
 
     <section>
-      <h3>Medlemmer</h3>
+      <h3 data-i18n="panelMembersTitle">Medlemmer</h3>
       <ul id="memberList"></ul>
-      <p class="small">Projektkoden fungerer som en adgangskode. Del den kun med gruppen.</p>
+      <p class="small" data-i18n="membersNote">Projektkoden fungerer som en adgangskode. Del den kun med gruppen.</p>
     </section>
   </div>
 </div>
@@ -434,26 +466,27 @@
 
 <div id="githubDialog" class="modal hidden">
   <div class="modal-content">
-    <h3>GitHub-integration</h3>
+    <h3 data-i18n="ghDialogTitle">GitHub-integration</h3>
     <label>
-      Scrum board URL
+      <span data-i18n="ghBoardLabel">Scrum board URL (valgfrit)</span>
       <input type="text" id="githubBoardUrlInput"
-             placeholder="https://github.com/users/DGARosendal/projects/4">
+             placeholder="https://github.com/users/githubuser/projects/1">
     </label>
     <label>
-      Standard repository
+      <span data-i18n="ghRepoLabel">Standard repository (valgfrit)</span>
       <input type="text" id="defaultRepoInput"
-             placeholder="DGARosendal/reolmarked">
+             placeholder="githubuser/projectname">
     </label>
-    <p class="small">
+    <p class="small" data-i18n-html="ghHint">
       Scrum board URL vises som en "Scrum board"-knap i værktøjslinjen.<br>
-      Standard repository bruges til at udvide <code>#123</code> til et klikbart
-      link. Du kan altid skrive <code>ejer/repo#123</code> for at pege på et
-      andet repo.
+      Standard repository er <strong>valgfrit</strong> og bruges kun til at gøre
+      <code>#123</code> til klikbare links. Du kan altid skrive
+      <code>ejer/repo#123</code> direkte for at pege på et bestemt repo — det
+      virker helt uden at sætte noget her.
     </p>
     <div class="modal-actions">
-      <button id="btnGithubCancel">Annullér</button>
-      <button id="btnGithubSave" class="primary">Gem</button>
+      <button id="btnGithubCancel" data-i18n="cancelBtn">Annullér</button>
+      <button id="btnGithubSave" class="primary" data-i18n="saveBtn">Gem</button>
     </div>
   </div>
 </div>
@@ -491,6 +524,523 @@ const AUTOSAVE_DELAY_MS = 800;
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
                  "status", "notes", "refs", "updatedBy", "age"];
 
+// ============================================================
+// i18n
+// ============================================================
+const I18N = {
+  da: {
+    appTitle: "Kravmatrix · FURPS+ × MoSCoW",
+    langButton: "EN",
+    langTitle: "Skift til engelsk",
+    logout: "Log ud",
+
+    loginTitle: "Log ind",
+    loginIntro: "Log ind for at se og redigere jeres krav.",
+    loginGoogle: "Log ind med Google",
+    loginGithub: "Log ind med GitHub",
+    loginHint: "Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte den anden metode (knappen øverst til højre), så begge virker.",
+
+    yourProjects: "Dine projekter",
+    yourProjectsHint: "Projekter du allerede er medlem af. Klik for at åbne.",
+    noProjects: "Du er ikke medlem af nogen projekter endnu.",
+    createProjectTitle: "Opret nyt projekt",
+    newProjectPlaceholder: "Projektnavn, fx Reolmarked",
+    createProjectBtn: "Opret projekt",
+    joinProjectTitle: "Deltag i projekt",
+    joinPlaceholder: "Projektkode eller delt link",
+    joinBtn: "Deltag",
+
+    sortLabel: "Sortér:",
+    sortPriority: "Prioritet M > S > C > W",
+    sortOriginal: "Som de dukker op (oprettet)",
+    sortCategory: "FURPS+ kategori",
+    sortStatus: "Status",
+    filterLabel: "Vis:",
+    filterAll: "Alle prioriteter",
+    pytTitle: "Vis kun parkerede (PYT) krav — idéer der venter på review",
+    addReq: "+ Nyt krav",
+    importBtn: "Importér",
+    exportCsv: "Eksportér CSV",
+    exportJson: "Eksportér JSON",
+    exportMd: "Eksportér Markdown",
+    shareBtn: "Kopiér delingslink",
+    switchProject: "Skift projekt",
+    leaveProjectBtn: "Forlad projekt",
+    leaveProjectTitle: "Fjern projektet fra din liste (sletter kun for dig)",
+    columnsBtn: "Vis kolonner ▾",
+    columnsBtnTitle: "Vælg hvilke kolonner du vil se. Gemmes kun i din browser.",
+    colId: "Krav-ID",
+    colDescription: "Kravbeskrivelse",
+    colFurps: "FURPS+",
+    colMoscow: "MoSCoW",
+    colSource: "Kilde",
+    colStatus: "Status",
+    colNotes: "Noter",
+    colRefs: "Referencer (GitHub)",
+    colUpdatedBy: "Sidst rettet af",
+    colAge: "Alder",
+    colsHint: "Gemmes kun i din browser. Påvirker ikke andre i gruppen.",
+    githubBtnTitle: "Indstil GitHub Scrum board og standard-repo",
+    boardBtnTitle: "Åbn Scrum board i ny fane",
+    infoBtnTitle: "Forklaring, PYT, import-info og medlemmer",
+
+    thId: "Krav-ID",
+    thDescription: "Kravbeskrivelse",
+    thFurps: "FURPS+",
+    thMoscow: "MoSCoW",
+    thSource: "Kilde (citat, dokument, side)",
+    thStatus: "Status",
+    thNotes: "Noter",
+    thRefs: "Referencer",
+    thRefsTitle: "GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter. Skriv #123 eller ejer/repo#123.",
+    thUpdatedBy: "Sidst rettet af",
+    thAge: "Alder",
+    thAgeTitle: "Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter 14 og 28 dage.",
+
+    panelTitle: "Information",
+    panelCloseTitle: "Luk",
+    panelFurpsTitle: "FURPS+ (kravtype)",
+    furpsF: "<strong>F</strong> Funktionalitet: funktioner, muligheder og adfærd.",
+    furpsU: "<strong>U</strong> Brugbarhed (Usability): lethed i brug, tilgængelighed, brugeroplevelse.",
+    furpsR: "<strong>R</strong> Pålidelighed (Reliability): tilgængelighed, nøjagtighed, genopretning.",
+    furpsP: "<strong>P</strong> Ydeevne (Performance): svartid, kapacitet, ressourceforbrug.",
+    furpsS: "<strong>S</strong> Vedligeholdelse (Supportability): vedligeholdbarhed, testbarhed, tilpasningsevne.",
+    furpsPlus: "<strong>+</strong> Begrænsninger: design, implementering, grænseflader, jura (fx GDPR), fysiske krav.",
+    panelMoscowTitle: "MoSCoW (prioritet)",
+    moscowMust: "<strong>Must</strong> Uundværlig for den aftalte løsning eller version.",
+    moscowShould: "<strong>Should</strong> Vigtig, men en brugbar løsning findes uden.",
+    moscowCould: "<strong>Could</strong> Ønskeligt, hvis tid og ressourcer rækker.",
+    moscowWont: "<strong>Won't</strong> Bevidst fravalgt i denne version (skriv begrundelsen i Noter).",
+    panelStatusTitle: "Status",
+    stProposed: "<strong>Foreslået</strong> Registreret, men endnu ikke bekræftet.",
+    stAgreed: "<strong>Aftalt</strong> Bekræftet af gruppen eller kunden.",
+    stDone: "<strong>Færdig</strong> Gennemført i løsningen.",
+    stParked: "<strong>Parkeret (PYT)</strong> Idé der ikke besluttes nu — se nedenfor.",
+    stDropped: "<strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).",
+    panelPytTitle: "PYT — Park Your Treasures",
+    pytIntro: "Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget i denne omgang — eller kun hvis der bliver tid. Sæt status til <strong>Parkeret (PYT)</strong>, så forsvinder de ikke, men fylder heller ikke i den aktive liste.",
+    pytLi1: "PYT-krav tæller <em>ikke</em> med i alders-advarsler. De er bevidst parkeret.",
+    pytLi2: "Brug <strong>PYT</strong>-knappen i værktøjslinjen for at se dem isoleret.",
+    pytLi3: "Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret — eller om de skal opgraderes til et rigtigt krav.",
+    pytNote: "Forskellen fra \"Droppet\": Droppet betyder \"vi har besluttet ikke at gøre det\". Parkeret betyder \"vi beslutter det ikke nu\".",
+    panelAgeTitle: "Alder",
+    ageLi1: "Antal dage siden kravet sidst blev rettet.",
+    ageLi2: "Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres: gul efter 14 dage, rød efter 28 dage.",
+    ageLi3: "Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).",
+    ageLi4: "Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.",
+    ageNote: "Færdige, parkerede og droppede rækker vises dæmpet, så de ikke konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.",
+    panelStorageTitle: "Lagring",
+    storageLi1: "Ændringer gemmes automatisk — der er ingen gem-knap.",
+    storageLi2: "Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast. Forlader du feltet, gemmes med det samme.",
+    storageLi3: "Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.",
+    storageLi4: "Et grønt blink på feltet og en lille \"Gemt\"-kvittering øverst bekræfter at ændringen er nået frem.",
+    storageNote: "Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +. Vælg én konvention, og brug den konsekvent.",
+    panelRefsTitle: "Referencer (GitHub)",
+    refsIntro: "Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.",
+    refsLi1: "<code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ GitHub. Ellers vises det som tekst.",
+    refsLi2: "<code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.",
+    refsLi3: "Står der flere referencer i samme krav, vises de under hinanden.",
+    refsLi4: "Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.",
+    panelShareTitle: "Del et krav via link 🔗",
+    shareIntro1: "Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til det pågældende krav, fx:",
+    shareIntro2: "Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver rækken et kort gult blink.",
+    shareNote: "Bemærk: kun medlemmer af projektet kan åbne linket. Ikke-medlemmer får besked om at projektet ikke findes.",
+    panelGithubTitle: "GitHub-integration",
+    githubIntro: "Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:",
+    githubLi1: "<strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/githubuser/projects/1</code>.",
+    githubLi2: "<strong>Standard repository</strong> (valgfrit) — fx <code>githubuser/projectname</code>. Bruges kun til at gøre <code>#123</code> til links. Uden den vises <code>#123</code> blot som tekst.",
+    panelImportTitle: "Import: filformater",
+    importLi1: "<strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten (danske eller engelske). Semikolon, komma og tab virker.",
+    importLi2: "<strong>.json</strong>: en liste af objekter, som i JSON-eksporten.",
+    importLi3: "<strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps egen Markdown-eksport og med håndskrevne tabeller.",
+    importLi4: "<strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.",
+    importNote: "Import tilføjer nye krav og overskriver aldrig eksisterende.",
+    panelMembersTitle: "Medlemmer",
+    membersNote: "Projektkoden fungerer som en adgangskode. Del den kun med gruppen.",
+
+    ghDialogTitle: "GitHub-integration",
+    ghBoardLabel: "Scrum board URL (valgfrit)",
+    ghRepoLabel: "Standard repository (valgfrit)",
+    ghHint: "Scrum board URL vises som en \"Scrum board\"-knap i værktøjslinjen.<br>Standard repository er <strong>valgfrit</strong> og bruges kun til at gøre <code>#123</code> til klikbare links. Du kan altid skrive <code>ejer/repo#123</code> direkte for at pege på et bestemt repo — det virker helt uden at sætte noget her.",
+    cancelBtn: "Annullér",
+    saveBtn: "Gem",
+
+    statusProposed: "Foreslået",
+    statusAgreed: "Aftalt",
+    statusDone: "Færdig",
+    statusParked: "Parkeret (PYT)",
+    statusDropped: "Droppet",
+
+    savedAt: "✓ Gemt {time}",
+    errRealtime: "Fejl ved realtidsopdatering: {code}",
+    errSave: "Kunne ikke gemme: {code}",
+    errProjects: "Kunne ikke hente dine projekter: {code}",
+    errProjectRead: "Kunne ikke læse projektet: {code}",
+    errMember: "Kunne ikke registrere medlemskab: {code}",
+    errCreate: "Kunne ikke oprette projektet: {code}",
+    errAddReq: "Kunne ikke tilføje kravet: {code}",
+    errDeleteReq: "Kunne ikke slette: {code}",
+    errDeleteMember: "Kunne ikke fjerne medlemmet: {code}",
+    errRemoveProject: "Kunne ikke fjerne projektet: {code}",
+    errGithubSettings: "Kunne ikke gemme GitHub-indstillinger: {code}",
+
+    removeMemberBtn: "Fjern",
+    removeMemberConfirm: "Fjern dette medlem?",
+    delReqConfirm: "Slet dette krav? ID'et bliver ikke genbrugt.",
+    refUnlinkedTitle: "Standard repository er ikke sat — #123 vises som tekst. Sæt det under ⚙️ GitHub, hvis du vil have automatiske links, eller skriv ejer/repo#123.",
+    copyLinkTitle: "Kopiér et link til dette krav — klar til at sætte i GitHub",
+    deleteReqTitle: "Slet krav",
+    linkCopiedMsg: "Link til kravet kopieret — klar til at sætte ind i GitHub.",
+    copyLinkPrompt: "Kopiér linket:",
+
+    emptyPyt: "Ingen parkerede (PYT) krav endnu. Sæt status til \"Parkeret (PYT)\" på et krav for at se det her.",
+    emptyAll: "Ingen krav at vise.",
+
+    ageTitleDone: "Afsluttet – tæller ikke",
+    ageTitleNoTs: "Ingen tidsstempel",
+    ageTitleParked: "Parkeret (PYT) i {days} dage — venter på review",
+    ageTitleUpdated: "Sidst rettet: {date}",
+
+    addReqNameRequired: "Skriv et projektnavn.",
+    joinCodeRequired: "Indsæt en projektkode.",
+    projectNotExist: "Projektet findes ikke. Tjek koden.",
+    loginInterrupted: "Login blev afbrudt.",
+    loginFailed: "Login fejlede: {code}",
+    emailUsedGoogle: "Din e-mail er allerede brugt med Google. Log ind med Google, og tryk så på 'Tilknyt GitHub' øverst til højre. Bagefter virker begge.",
+    emailUsedGithub: "Din e-mail er allerede brugt med GitHub. Log ind med GitHub, og tryk så på 'Tilknyt Google' øverst til højre. Bagefter virker begge.",
+    linkGoogle: "Tilknyt Google",
+    linkGithub: "Tilknyt GitHub",
+    linkInUse: "Den login-konto bruges allerede af en anden bruger i appen, så den kan ikke tilknyttes. Brug i stedet den metode, du er logget ind med nu.",
+    linkAlready: "Den login-metode er allerede tilknyttet.",
+    linkInterrupted: "Tilknytningen blev afbrudt.",
+    linkFailed: "Kunne ikke tilknytte login: {code}",
+    linkSuccess: "Login tilknyttet. Nu kan du logge ind med begge metoder.",
+
+    shareLinkCopied: "Link kopieret. Del det kun med gruppen.",
+    shareLinkPrompt: "Kopiér linket:",
+
+    githubRepoFormat: "Standard repository skal være på formen \"ejer/repo\".",
+    githubSaved: "GitHub-indstillinger gemt.",
+
+    importUnknownType: "Ukendt filtype. Brug .json, .csv, .txt eller .md.",
+    importReadError: "Kunne ikke læse filen: {msg}",
+    importOpenError: "Kunne ikke åbne filen.",
+    importEmpty: "Fandt ingen krav i filen.",
+    importTooMany: "Filen har {n} krav. Maks. er {max} pr. import.",
+    importConfirmHead: "Importér {n} krav i dette projekt?\n\nDe får nye ID'er efter de eksisterende krav.",
+    importConfirmSkipped: "\n\n{n} rækker uden beskrivelse springes over.",
+    importConfirmUnrecognised: "\n\n{n} værdier i FURPS+, MoSCoW eller Status blev ikke genkendt og er sat til standardværdien (F / Should / Foreslået).",
+    importConfirmEncoding: "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt.",
+    importProgress: "Importerer... {done} af {total}",
+    importDone: "Importerede {n} krav.",
+    importStopped: "Importen stoppede efter {done} af {total} krav: {code}",
+
+    leaveConfirm: "Forlad projektet?\n\nProjektet fjernes fra din liste, og du mister adgangen til at se og redigere krav.\n\nProjektet og alle krav bliver liggende — de andre deltagere kan stadig se det.",
+    leaveConfirmLast: "Du er den sidste deltager i dette projekt.\n\nHvis du fortsætter, slettes projektet og alle krav permanent. Det kan ikke fortrydes.\n\nEr du sikker?",
+    projectRemoved: "Projektet er fjernet fra din liste.",
+    projectDeleted: "Projektet og alle krav er slettet.",
+
+    mdTitleSuffix: "Kravmatrix",
+    mdExported: "Eksporteret: {date}",
+    mdIntro: "FURPS+ angiver kravets type, MoSCoW angiver prioriteten. Aktive krav er grupperet efter prioritet. Parkerede (PYT), \"Won't\" og droppede vises i særskilte afsnit, fordi de ikke længere er aktive.",
+    mdScrumBoard: "Scrum board: {url}",
+    mdRefsNote: "Referencer på formen `#123` linker til `https://github.com/{repo}/issues/123`.",
+    mdSummary: "Oversigt",
+    mdColPriority: "Prioritet",
+    mdColTotal: "Krav i alt",
+    mdColDone: "Færdige",
+    mdColAgreed: "Aftalte",
+    mdColProposed: "Foreslåede",
+    mdColParked: "Parkerede",
+    mdColDropped: "Droppede",
+    mdColGrandTotal: "I alt",
+    mdParkedHeading: "PYT — Parkerede ({n})",
+    mdParkedIntro: "Idéer der er bevidst parkeret. Tag dem frem ved sprint-review, og beslut om de skal opgraderes eller droppes.",
+    mdColOriginalPriority: "Oprindelig prioritet",
+    mdWontHeading: "Won't — bevidst fravalgt ({n})",
+    mdWontIntro: "Krav der er bevidst valgt fra i denne version. Begrundelsen står under \"Begrundelse\".",
+    mdColReason: "Begrundelse",
+    mdDroppedHeading: "Droppede ({n})",
+    mdDroppedIntro: "Krav der ikke længere er relevante. Begrundelsen står under \"Begrundelse\".",
+
+    csvId: "Krav-ID",
+    csvDescription: "Kravbeskrivelse",
+    csvFurps: "FURPS+",
+    csvMoscow: "MoSCoW",
+    csvSource: "Kilde",
+    csvStatus: "Status",
+    csvNotes: "Noter",
+    csvRefs: "Referencer",
+    csvUpdatedBy: "Sidst rettet af"
+  },
+
+  en: {
+    appTitle: "Requirements matrix · FURPS+ × MoSCoW",
+    langButton: "DA",
+    langTitle: "Switch to Danish",
+    logout: "Log out",
+
+    loginTitle: "Sign in",
+    loginIntro: "Sign in to view and edit your requirements.",
+    loginGoogle: "Sign in with Google",
+    loginGithub: "Sign in with GitHub",
+    loginHint: "Sign in with the method you used the first time. Afterwards you can link the other method (button in the top right) so both work.",
+
+    yourProjects: "Your projects",
+    yourProjectsHint: "Projects you are already a member of. Click to open.",
+    noProjects: "You are not a member of any projects yet.",
+    createProjectTitle: "Create a new project",
+    newProjectPlaceholder: "Project name, e.g. Reolmarket",
+    createProjectBtn: "Create project",
+    joinProjectTitle: "Join a project",
+    joinPlaceholder: "Project code or shared link",
+    joinBtn: "Join",
+
+    sortLabel: "Sort:",
+    sortPriority: "Priority M > S > C > W",
+    sortOriginal: "As they appear (created)",
+    sortCategory: "FURPS+ category",
+    sortStatus: "Status",
+    filterLabel: "Show:",
+    filterAll: "All priorities",
+    pytTitle: "Show only parked (PYT) requirements — ideas waiting for review",
+    addReq: "+ New requirement",
+    importBtn: "Import",
+    exportCsv: "Export CSV",
+    exportJson: "Export JSON",
+    exportMd: "Export Markdown",
+    shareBtn: "Copy share link",
+    switchProject: "Switch project",
+    leaveProjectBtn: "Leave project",
+    leaveProjectTitle: "Remove the project from your list (only affects you)",
+    columnsBtn: "Columns ▾",
+    columnsBtnTitle: "Choose which columns to show. Stored only in your browser.",
+    colId: "Req ID",
+    colDescription: "Requirement",
+    colFurps: "FURPS+",
+    colMoscow: "MoSCoW",
+    colSource: "Source",
+    colStatus: "Status",
+    colNotes: "Notes",
+    colRefs: "References (GitHub)",
+    colUpdatedBy: "Last edited by",
+    colAge: "Age",
+    colsHint: "Stored only in your browser. Does not affect the rest of the group.",
+    githubBtnTitle: "Set up GitHub Scrum board and default repo",
+    boardBtnTitle: "Open Scrum board in a new tab",
+    infoBtnTitle: "Explanation, PYT, import info and members",
+
+    thId: "Req ID",
+    thDescription: "Requirement",
+    thFurps: "FURPS+",
+    thMoscow: "MoSCoW",
+    thSource: "Source (quote, document, page)",
+    thStatus: "Status",
+    thNotes: "Notes",
+    thRefs: "References",
+    thRefsTitle: "GitHub issues mentioned in Requirement, Source or Notes. Write #123 or owner/repo#123.",
+    thUpdatedBy: "Last edited by",
+    thAge: "Age",
+    thAgeTitle: "Days since the requirement was last edited. Requirements that are not Done or Dropped are highlighted after 14 and 28 days.",
+
+    panelTitle: "Information",
+    panelCloseTitle: "Close",
+    panelFurpsTitle: "FURPS+ (requirement type)",
+    furpsF: "<strong>F</strong> Functionality: features, capabilities and behaviour.",
+    furpsU: "<strong>U</strong> Usability: ease of use, accessibility, user experience.",
+    furpsR: "<strong>R</strong> Reliability: availability, accuracy, recoverability.",
+    furpsP: "<strong>P</strong> Performance: response time, capacity, resource usage.",
+    furpsS: "<strong>S</strong> Supportability: maintainability, testability, adaptability.",
+    furpsPlus: "<strong>+</strong> Constraints: design, implementation, interfaces, legal (e.g. GDPR), physical requirements.",
+    panelMoscowTitle: "MoSCoW (priority)",
+    moscowMust: "<strong>Must</strong> Indispensable for the agreed solution or release.",
+    moscowShould: "<strong>Should</strong> Important, but a usable solution exists without it.",
+    moscowCould: "<strong>Could</strong> Desirable if time and resources allow.",
+    moscowWont: "<strong>Won't</strong> Deliberately excluded from this release (write the reason in Notes).",
+    panelStatusTitle: "Status",
+    stProposed: "<strong>Proposed</strong> Registered, but not yet confirmed.",
+    stAgreed: "<strong>Agreed</strong> Confirmed by the group or the customer.",
+    stDone: "<strong>Done</strong> Implemented in the solution.",
+    stParked: "<strong>Parked (PYT)</strong> Idea not decided now — see below.",
+    stDropped: "<strong>Dropped</strong> No longer relevant (write why in Notes).",
+    panelPytTitle: "PYT — Park Your Treasures",
+    pytIntro: "Ideas that come up along the way but probably won't happen this time — or only if there is time. Set the status to <strong>Parked (PYT)</strong> and they won't disappear, but they won't clutter the active list either.",
+    pytLi1: "PYT requirements are <em>not</em> counted in the age warnings. They are deliberately parked.",
+    pytLi2: "Use the <strong>PYT</strong> button in the toolbar to see them on their own.",
+    pytLi3: "Bring them up at sprint review and decide whether they should stay parked — or be promoted to a real requirement.",
+    pytNote: "The difference from \"Dropped\": Dropped means \"we have decided not to do it\". Parked means \"we are not deciding now\".",
+    panelAgeTitle: "Age",
+    ageLi1: "Number of days since the requirement was last edited.",
+    ageLi2: "Requirements that are <em>not</em> Done, Parked or Dropped are highlighted: yellow after 14 days, red after 28 days.",
+    ageLi3: "Parked and finished requirements are shown in a neutral colour (parked in italics).",
+    ageLi4: "The purpose is to make it visible when a Should/Could requirement is about to be forgotten.",
+    ageNote: "Done, parked and dropped rows are dimmed so they do not compete with the active requirements. Hover to see them at full strength.",
+    panelStorageTitle: "Saving",
+    storageLi1: "Changes are saved automatically — there is no save button.",
+    storageLi2: "When you type in a field it is saved about 1 second after the last keystroke. If you leave the field, it is saved immediately.",
+    storageLi3: "Dropdowns (FURPS+, MoSCoW, Status) are saved instantly on selection.",
+    storageLi4: "A green flash on the field and a small \"Saved\" confirmation at the top confirm that the change arrived.",
+    storageNote: "Security and other cross-cutting concerns can be classified under F or +. Pick one convention and use it consistently.",
+    panelRefsTitle: "References (GitHub)",
+    refsIntro: "The <strong>References</strong> column automatically finds GitHub issues mentioned in Requirement, Source or Notes and shows them as clickable links.",
+    refsLi1: "<code>#123</code> → links to the default repo, if one is set under ⚙️ GitHub. Otherwise it is shown as text.",
+    refsLi2: "<code>owner/repo#123</code> → links to the specified repo. Works without setting anything.",
+    refsLi3: "If a requirement has several references, they are shown one below the other.",
+    refsLi4: "The default repository is <strong>optional</strong> — set it only if you frequently refer to the same repo.",
+    panelShareTitle: "Share a requirement via link 🔗",
+    shareIntro1: "Each row has a <strong>🔗</strong> button. It copies a link straight to that requirement, e.g.:",
+    shareIntro2: "Paste the link into a GitHub issue comment (or anywhere else), and when someone clicks it, the requirements matrix opens, scrolls to the requirement and gives the row a short yellow flash.",
+    shareNote: "Note: only members of the project can open the link. Non-members are told that the project does not exist.",
+    panelGithubTitle: "GitHub integration",
+    githubIntro: "Click <strong>⚙️ GitHub</strong> in the toolbar to set:",
+    githubLi1: "<strong>Scrum board URL</strong> (optional) — e.g. <code>https://github.com/users/githubuser/projects/1</code>.",
+    githubLi2: "<strong>Default repository</strong> (optional) — e.g. <code>githubuser/projectname</code>. Only used to turn <code>#123</code> into links. Without it, <code>#123</code> is shown as plain text.",
+    panelImportTitle: "Import: file formats",
+    importLi1: "<strong>.csv</strong>: the first row is headers, the same as in the CSV export (Danish or English). Semicolon, comma and tab all work.",
+    importLi2: "<strong>.json</strong>: a list of objects, as in the JSON export.",
+    importLi3: "<strong>.md</strong>: a Markdown file with tables. Works with this app's own Markdown export as well as hand-written tables.",
+    importLi4: "<strong>.txt</strong>: one requirement per line. All get F / Should / Proposed, which you can correct afterwards.",
+    importNote: "Import adds new requirements and never overwrites existing ones.",
+    panelMembersTitle: "Members",
+    membersNote: "The project code works as a password. Share it only with the group.",
+
+    ghDialogTitle: "GitHub integration",
+    ghBoardLabel: "Scrum board URL (optional)",
+    ghRepoLabel: "Default repository (optional)",
+    ghHint: "The Scrum board URL appears as a \"Scrum board\" button in the toolbar.<br>The default repository is <strong>optional</strong> and is only used to turn <code>#123</code> into clickable links. You can always write <code>owner/repo#123</code> directly to point at a specific repo — this works without setting anything here.",
+    cancelBtn: "Cancel",
+    saveBtn: "Save",
+
+    statusProposed: "Proposed",
+    statusAgreed: "Agreed",
+    statusDone: "Done",
+    statusParked: "Parked (PYT)",
+    statusDropped: "Dropped",
+
+    savedAt: "✓ Saved {time}",
+    errRealtime: "Realtime update error: {code}",
+    errSave: "Could not save: {code}",
+    errProjects: "Could not load your projects: {code}",
+    errProjectRead: "Could not read the project: {code}",
+    errMember: "Could not register membership: {code}",
+    errCreate: "Could not create the project: {code}",
+    errAddReq: "Could not add the requirement: {code}",
+    errDeleteReq: "Could not delete: {code}",
+    errDeleteMember: "Could not remove the member: {code}",
+    errRemoveProject: "Could not remove the project: {code}",
+    errGithubSettings: "Could not save GitHub settings: {code}",
+
+    removeMemberBtn: "Remove",
+    removeMemberConfirm: "Remove this member?",
+    delReqConfirm: "Delete this requirement? The ID will not be reused.",
+    refUnlinkedTitle: "No default repository is set — #123 is shown as text. Set one under ⚙️ GitHub if you want automatic links, or write owner/repo#123.",
+    copyLinkTitle: "Copy a link to this requirement — ready to paste into GitHub",
+    deleteReqTitle: "Delete requirement",
+    linkCopiedMsg: "Link to the requirement copied — ready to paste into GitHub.",
+    copyLinkPrompt: "Copy the link:",
+
+    emptyPyt: "No parked (PYT) requirements yet. Set the status to \"Parked (PYT)\" on a requirement to see it here.",
+    emptyAll: "No requirements to show.",
+
+    ageTitleDone: "Finished – not counted",
+    ageTitleNoTs: "No timestamp",
+    ageTitleParked: "Parked (PYT) for {days} days — waiting for review",
+    ageTitleUpdated: "Last edited: {date}",
+
+    addReqNameRequired: "Enter a project name.",
+    joinCodeRequired: "Paste a project code.",
+    projectNotExist: "The project does not exist. Check the code.",
+    loginInterrupted: "Sign-in was interrupted.",
+    loginFailed: "Sign-in failed: {code}",
+    emailUsedGoogle: "Your email is already used with Google. Sign in with Google, then press 'Link GitHub' in the top right. After that both will work.",
+    emailUsedGithub: "Your email is already used with GitHub. Sign in with GitHub, then press 'Link Google' in the top right. After that both will work.",
+    linkGoogle: "Link Google",
+    linkGithub: "Link GitHub",
+    linkInUse: "That sign-in account is already used by another user in this app, so it cannot be linked. Use the method you are signed in with now instead.",
+    linkAlready: "That sign-in method is already linked.",
+    linkInterrupted: "Linking was interrupted.",
+    linkFailed: "Could not link sign-in: {code}",
+    linkSuccess: "Sign-in linked. You can now sign in with both methods.",
+
+    shareLinkCopied: "Link copied. Share it only with the group.",
+    shareLinkPrompt: "Copy the link:",
+
+    githubRepoFormat: "The default repository must be in the form \"owner/repo\".",
+    githubSaved: "GitHub settings saved.",
+
+    importUnknownType: "Unknown file type. Use .json, .csv, .txt or .md.",
+    importReadError: "Could not read the file: {msg}",
+    importOpenError: "Could not open the file.",
+    importEmpty: "No requirements found in the file.",
+    importTooMany: "The file contains {n} requirements. The maximum is {max} per import.",
+    importConfirmHead: "Import {n} requirements into this project?\n\nThey will get new IDs after the existing requirements.",
+    importConfirmSkipped: "\n\n{n} rows without a description will be skipped.",
+    importConfirmUnrecognised: "\n\n{n} values in FURPS+, MoSCoW or Status were not recognised and were set to the default (F / Should / Proposed).",
+    importConfirmEncoding: "\n\nNote: the file does not look like it was saved as UTF-8, so special characters may be broken.",
+    importProgress: "Importing... {done} of {total}",
+    importDone: "Imported {n} requirements.",
+    importStopped: "The import stopped after {done} of {total} requirements: {code}",
+
+    leaveConfirm: "Leave the project?\n\nThe project is removed from your list and you lose access to view and edit requirements.\n\nThe project and all requirements remain — the other members can still see them.",
+    leaveConfirmLast: "You are the last member of this project.\n\nIf you continue, the project and all its requirements are permanently deleted. This cannot be undone.\n\nAre you sure?",
+    projectRemoved: "The project has been removed from your list.",
+    projectDeleted: "The project and all requirements have been deleted.",
+
+    mdTitleSuffix: "Requirements matrix",
+    mdExported: "Exported: {date}",
+    mdIntro: "FURPS+ states the type of the requirement, MoSCoW states the priority. Active requirements are grouped by priority. Parked (PYT), \"Won't\" and dropped ones are shown in separate sections because they are no longer active.",
+    mdScrumBoard: "Scrum board: {url}",
+    mdRefsNote: "References in the form `#123` link to `https://github.com/{repo}/issues/123`.",
+    mdSummary: "Summary",
+    mdColPriority: "Priority",
+    mdColTotal: "Requirements",
+    mdColDone: "Done",
+    mdColAgreed: "Agreed",
+    mdColProposed: "Proposed",
+    mdColParked: "Parked",
+    mdColDropped: "Dropped",
+    mdColGrandTotal: "Total",
+    mdParkedHeading: "PYT — Parked ({n})",
+    mdParkedIntro: "Ideas that have been deliberately parked. Bring them up at sprint review and decide whether to promote or drop them.",
+    mdColOriginalPriority: "Original priority",
+    mdWontHeading: "Won't — deliberately excluded ({n})",
+    mdWontIntro: "Requirements deliberately left out of this release. The reason is under \"Reason\".",
+    mdColReason: "Reason",
+    mdDroppedHeading: "Dropped ({n})",
+    mdDroppedIntro: "Requirements that are no longer relevant. The reason is under \"Reason\".",
+
+    csvId: "Req ID",
+    csvDescription: "Requirement",
+    csvFurps: "FURPS+",
+    csvMoscow: "MoSCoW",
+    csvSource: "Source",
+    csvStatus: "Status",
+    csvNotes: "Notes",
+    csvRefs: "References",
+    csvUpdatedBy: "Last edited by"
+  }
+};
+
+let lang = "da";
+try {
+  const stored = localStorage.getItem("lang");
+  if (stored === "en" || stored === "da") { lang = stored; }
+} catch (err) { /* ignore */ }
+
+function t(key, vars) {
+  const table = I18N[lang] || I18N.da;
+  let s = table[key];
+  if (s === undefined) { s = I18N.da[key]; }
+  if (s === undefined) { s = key; }
+  if (vars) {
+    const names = Object.keys(vars);
+    for (let i = 0; i < names.length; i++) {
+      s = s.split("{" + names[i] + "}").join(String(vars[names[i]]));
+    }
+  }
+  return s;
+}
+
 let currentUser = null;
 let currentPid = null;
 let isOwner = false;
@@ -518,6 +1068,39 @@ function $(id) { return document.getElementById(id); }
 function showMessage(text, isGood) {
   $("msg").textContent = text;
   $("msg").style.color = isGood ? "#15803d" : "#b91c1c";
+}
+
+// ---------- Language ----------
+function applyLanguage() {
+  document.documentElement.lang = lang;
+
+  const plain = document.querySelectorAll("[data-i18n]");
+  for (let i = 0; i < plain.length; i++) {
+    plain[i].textContent = t(plain[i].dataset.i18n);
+  }
+  const html = document.querySelectorAll("[data-i18n-html]");
+  for (let i = 0; i < html.length; i++) {
+    html[i].innerHTML = t(html[i].dataset.i18nHtml);
+  }
+  const phs = document.querySelectorAll("[data-i18n-placeholder]");
+  for (let i = 0; i < phs.length; i++) {
+    phs[i].placeholder = t(phs[i].dataset.i18nPlaceholder);
+  }
+  const titles = document.querySelectorAll("[data-i18n-title]");
+  for (let i = 0; i < titles.length; i++) {
+    titles[i].title = t(titles[i].dataset.i18nTitle);
+  }
+
+  updateLinkButton();
+  updateGithubUi();
+  renderMembers();
+  renderTable();
+}
+
+function setLang(next) {
+  lang = (next === "en") ? "en" : "da";
+  try { localStorage.setItem("lang", lang); } catch (err) { /* ignore */ }
+  applyLanguage();
 }
 
 function showScreen(name) {
@@ -675,11 +1258,11 @@ function closePanel() {
 
 function statusLabel(value) {
   switch (value) {
-    case "Proposed": return "Foreslået";
-    case "Agreed": return "Aftalt";
-    case "Done": return "Færdig";
-    case "Parked": return "Parkeret (PYT)";
-    case "Dropped": return "Droppet";
+    case "Proposed": return t("statusProposed");
+    case "Agreed": return t("statusAgreed");
+    case "Done": return t("statusDone");
+    case "Parked": return t("statusParked");
+    case "Dropped": return t("statusDropped");
     default: return value;
   }
 }
@@ -695,7 +1278,7 @@ function stopListeners() {
 }
 
 function onListenError(err) {
-  showMessage("Fejl ved realtidsopdatering: " + err.code);
+  showMessage(t("errRealtime", { code: err.code }));
 }
 
 // ---------- Autosave with debounce ----------
@@ -725,6 +1308,14 @@ function flushAllPendingSaves() {
   for (let i = 0; i < keys.length; i++) { flushSave(keys[i]); }
 }
 
+function cancelPendingSaves() {
+  const keys = Array.from(saveTimers.keys());
+  for (let i = 0; i < keys.length; i++) {
+    clearTimeout(saveTimers.get(keys[i]));
+    saveTimers.delete(keys[i]);
+  }
+}
+
 async function saveCell(el, field, id) {
   const changes = {};
   changes[field] = el.value;
@@ -733,8 +1324,16 @@ async function saveCell(el, field, id) {
   try {
     await updateDoc(doc(db, "projects", currentPid, "requirements", id), changes);
     flashSaved(el);
+    // Keep the local cache in sync so the References column can update
+    // immediately, instead of waiting for the next Firestore snapshot.
+    for (let i = 0; i < allReqs.length; i++) {
+      if (allReqs[i].id === id) { allReqs[i][field] = el.value; break; }
+    }
+    if (field === "description" || field === "source" || field === "notes") {
+      updateRefsCellFor(id);
+    }
   } catch (err) {
-    showMessage("Kunne ikke gemme: " + err.code);
+    showMessage(t("errSave", { code: err.code }));
   }
 }
 
@@ -751,7 +1350,7 @@ function updateLastSaved() {
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
   const ss = String(now.getSeconds()).padStart(2, "0");
-  el.textContent = "✓ Gemt " + hh + ":" + mm + ":" + ss;
+  el.textContent = t("savedAt", { time: hh + ":" + mm + ":" + ss });
   el.classList.remove("hidden");
 }
 
@@ -783,7 +1382,7 @@ function updateGithubUi() {
   const btn = $("btnOpenBoard");
   if (url) {
     btn.classList.remove("hidden");
-    btn.title = "Åbn " + url;
+    btn.title = t("boardBtnTitle") + " — " + url;
   } else {
     btn.classList.add("hidden");
   }
@@ -804,7 +1403,7 @@ async function saveGithubSettings() {
   const url = $("githubBoardUrlInput").value.trim();
   const repo = $("defaultRepoInput").value.trim();
   if (repo !== "" && repo.indexOf("/") < 0) {
-    showMessage("Standard repository skal være på formen \"ejer/repo\".");
+    showMessage(t("githubRepoFormat"));
     return;
   }
   try {
@@ -817,9 +1416,9 @@ async function saveGithubSettings() {
     updateGithubUi();
     renderTable();
     closeGithubDialog();
-    showMessage("GitHub-indstillinger gemt.", true);
+    showMessage(t("githubSaved"), true);
   } catch (err) {
-    showMessage("Kunne ikke gemme GitHub-indstillinger: " + (err.code || err.message));
+    showMessage(t("errGithubSettings", { code: err.code || err.message }));
   }
 }
 
@@ -894,11 +1493,30 @@ function buildRefsCell(r) {
       const span = document.createElement("span");
       span.className = "unlinked";
       span.textContent = ref.raw;
-      span.title = "Sæt et standard repository under ⚙️ GitHub for at linke #numre";
+      span.title = t("refUnlinkedTitle");
       td.appendChild(span);
     }
   }
   return td;
+}
+
+// Rebuild the References cell for a single row in place. Called right after
+// a save finishes, so a freshly typed "#123" turns into a link the moment the
+// textarea loses focus — without waiting for a full Firestore round-trip.
+function updateRefsCellFor(id) {
+  const tr = document.querySelector('#tbody tr[data-req-id="' + id + '"]');
+  if (!tr) { return; }
+  const oldCell = tr.querySelector("td.refs");
+  if (!oldCell) { return; }
+  let req = null;
+  for (let i = 0; i < allReqs.length; i++) {
+    if (allReqs[i].id === id) { req = allReqs[i]; break; }
+  }
+  if (!req) { return; }
+  const newCell = buildRefsCell(req);
+  newCell.classList.add("col-refs");
+  if (!visibleColumns.refs) { newCell.classList.add("hidden-col"); }
+  oldCell.replaceWith(newCell);
 }
 
 // ---------- Deep link to a requirement (reverse of GitHub refs) ----------
@@ -909,9 +1527,9 @@ async function copyReqLink(rid) {
   const link = location.origin + location.pathname + "#" + currentPid + "&req=" + rid;
   try {
     await navigator.clipboard.writeText(link);
-    showMessage("Link til kravet kopieret — klar til at sætte ind i GitHub.", true);
+    showMessage(t("linkCopiedMsg"), true);
   } catch (err) {
-    prompt("Kopiér linket:", link);
+    prompt(t("copyLinkPrompt"), link);
   }
 }
 
@@ -936,7 +1554,7 @@ async function loadMyProjects() {
       const data = d.data();
       items.push({ pid: d.id, name: data.name || d.id });
     });
-    items.sort(function (a, b) { return a.name.localeCompare(b.name, "da"); });
+    items.sort(function (a, b) { return a.name.localeCompare(b.name, lang); });
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       const li = document.createElement("li");
@@ -948,7 +1566,7 @@ async function loadMyProjects() {
     }
   } catch (err) {
     console.error("loadMyProjects failed:", err);
-    showMessage("Kunne ikke hente dine projekter: " + (err.code || err.message));
+    showMessage(t("errProjects", { code: err.code || err.message }));
     empty.classList.remove("hidden");
   }
 }
@@ -972,19 +1590,13 @@ async function loginWith(providerName) {
   } catch (err) {
     switch (err.code) {
       case "auth/account-exists-with-different-credential":
-        if (providerName === "github") {
-          showMessage("Din e-mail er allerede brugt med Google. Log ind med Google, og tryk så på " +
-                      "'Tilknyt GitHub' øverst til højre. Bagefter virker begge.");
-        } else {
-          showMessage("Din e-mail er allerede brugt med GitHub. Log ind med GitHub, og tryk så på " +
-                      "'Tilknyt Google' øverst til højre. Bagefter virker begge.");
-        }
+        showMessage(providerName === "github" ? t("emailUsedGoogle") : t("emailUsedGithub"));
         break;
       case "auth/popup-closed-by-user":
-        showMessage("Login blev afbrudt.");
+        showMessage(t("loginInterrupted"));
         break;
       default:
-        showMessage("Login fejlede: " + err.code);
+        showMessage(t("loginFailed", { code: err.code }));
         break;
     }
   }
@@ -1001,11 +1613,11 @@ function updateLinkButton() {
   const btn = $("btnLink");
   if (!currentUser) { btn.classList.add("hidden"); return; }
   if (!hasProvider("google.com")) {
-    btn.textContent = "Tilknyt Google";
+    btn.textContent = t("linkGoogle");
     btn.dataset.provider = "google";
     btn.classList.remove("hidden");
   } else if (!hasProvider("github.com")) {
-    btn.textContent = "Tilknyt GitHub";
+    btn.textContent = t("linkGithub");
     btn.dataset.provider = "github";
     btn.classList.remove("hidden");
   } else {
@@ -1025,22 +1637,21 @@ async function linkLogin() {
     showMessage("");
     await linkWithPopup(currentUser, provider);
     updateLinkButton();
-    showMessage("Login tilknyttet. Nu kan du logge ind med begge metoder.", true);
+    showMessage(t("linkSuccess"), true);
   } catch (err) {
     switch (err.code) {
       case "auth/credential-already-in-use":
-        showMessage("Den login-konto bruges allerede af en anden bruger i appen, så den kan ikke " +
-                    "tilknyttes. Brug i stedet den metode, du er logget ind med nu.");
+        showMessage(t("linkInUse"));
         break;
       case "auth/provider-already-linked":
-        showMessage("Den login-metode er allerede tilknyttet.");
+        showMessage(t("linkAlready"));
         updateLinkButton();
         break;
       case "auth/popup-closed-by-user":
-        showMessage("Tilknytningen blev afbrudt.");
+        showMessage(t("linkInterrupted"));
         break;
       default:
-        showMessage("Kunne ikke tilknytte login: " + err.code);
+        showMessage(t("linkFailed", { code: err.code }));
         break;
     }
   }
@@ -1086,7 +1697,7 @@ function makeProjectId(name) {
 
 async function createProject() {
   const name = $("newProjectName").value.trim();
-  if (name === "") { showMessage("Skriv et projektnavn."); return; }
+  if (name === "") { showMessage(t("addReqNameRequired")); return; }
   const pid = makeProjectId(name);
   try {
     await setDoc(doc(db, "projects", pid), {
@@ -1099,7 +1710,7 @@ async function createProject() {
     });
   } catch (err) {
     console.error("createProject: setDoc project failed:", err);
-    showMessage("Kunne ikke oprette projektet: " + (err.code || err.message));
+    showMessage(t("errCreate", { code: err.code || err.message }));
     return;
   }
   await openProject(pid);
@@ -1114,7 +1725,7 @@ async function joinFromInput() {
     const ampPos = code.indexOf("&");
     if (ampPos >= 0) { code = code.slice(0, ampPos); }
   }
-  if (code === "") { showMessage("Indsæt en projektkode."); return; }
+  if (code === "") { showMessage(t("joinCodeRequired")); return; }
   await openProject(code);
 }
 
@@ -1128,12 +1739,12 @@ async function openProject(pid) {
     snap = await getDoc(doc(db, "projects", pid));
   } catch (err) {
     console.error("openProject: getDoc failed for", pid, err);
-    showMessage("Kunne ikke læse projektet: " + (err.code || err.message));
+    showMessage(t("errProjectRead", { code: err.code || err.message }));
     showScreen("chooser");
     return;
   }
   if (!snap.exists()) {
-    showMessage("Projektet findes ikke. Tjek koden.");
+    showMessage(t("projectNotExist"));
     showScreen("chooser");
     return;
   }
@@ -1143,7 +1754,7 @@ async function openProject(pid) {
                  { name: userLabel(), uid: currentUser.uid }, { merge: true });
   } catch (err) {
     console.error("openProject: setDoc member failed for", pid, err);
-    showMessage("Kunne ikke registrere medlemskab: " + (err.code || err.message));
+    showMessage(t("errMember", { code: err.code || err.message }));
     showScreen("chooser");
     return;
   }
@@ -1203,9 +1814,9 @@ function renderMembers() {
     const m = allMembers[i];
     const li = document.createElement("li");
     li.textContent = m.name + " ";
-    if (isOwner && m.uid !== currentUser.uid) {
+    if (isOwner && currentUser && m.uid !== currentUser.uid) {
       const btn = document.createElement("button");
-      btn.textContent = "Fjern";
+      btn.textContent = t("removeMemberBtn");
       btn.dataset.uid = m.uid;
       li.appendChild(btn);
     }
@@ -1216,12 +1827,54 @@ function renderMembers() {
 async function onMemberListClick(event) {
   const uid = event.target.dataset.uid;
   if (!uid) { return; }
-  if (!confirm("Fjern dette medlem?")) { return; }
+  if (!confirm(t("removeMemberConfirm"))) { return; }
   try {
     await deleteDoc(doc(db, "projects", currentPid, "members", uid));
   } catch (err) {
-    showMessage("Kunne ikke fjerne medlemmet: " + err.code);
+    showMessage(t("errDeleteMember", { code: err.code }));
   }
+}
+
+// ---------- Remove project from my list (and delete if last member) ----------
+async function removeProjectFromMyList() {
+  if (!currentPid || !currentUser) { return; }
+  const pid = currentPid;
+
+  const others = allMembers.filter(function (m) { return m.uid !== currentUser.uid; });
+  const lastOne = others.length === 0;
+
+  const question = lastOne ? t("leaveConfirmLast") : t("leaveConfirm");
+  if (!confirm(question)) { return; }
+
+  // Stop any pending autosaves so we don't write into a project we are leaving.
+  cancelPendingSaves();
+
+  try {
+    if (lastOne) {
+      const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
+      const reqDeletes = [];
+      reqSnap.forEach(function (d) { reqDeletes.push(deleteDoc(d.ref)); });
+      await Promise.all(reqDeletes);
+
+      const memSnap = await getDocs(collection(db, "projects", pid, "members"));
+      const memDeletes = [];
+      memSnap.forEach(function (d) { memDeletes.push(deleteDoc(d.ref)); });
+      await Promise.all(memDeletes);
+
+      await deleteDoc(doc(db, "projects", pid));
+    } else {
+      await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
+    }
+
+    await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
+  } catch (err) {
+    console.error("removeProjectFromMyList failed:", err);
+    showMessage(t("errRemoveProject", { code: err.code || err.message }));
+    return;
+  }
+
+  leaveProject();
+  showMessage(lastOne ? t("projectDeleted") : t("projectRemoved"), true);
 }
 
 function emptyRecord() {
@@ -1254,7 +1907,7 @@ async function writeRequirements(records) {
 
 async function addRequirement() {
   try { await writeRequirements([emptyRecord()]); }
-  catch (err) { showMessage("Kunne ikke tilføje kravet: " + err.code); }
+  catch (err) { showMessage(t("errAddReq", { code: err.code })); }
 }
 
 async function onTableClick(event) {
@@ -1264,11 +1917,11 @@ async function onTableClick(event) {
     return;
   }
   if (el.dataset.action !== "delete") { return; }
-  if (!confirm("Slet dette krav? ID'et bliver ikke genbrugt.")) { return; }
+  if (!confirm(t("delReqConfirm"))) { return; }
   try {
     await deleteDoc(doc(db, "projects", currentPid, "requirements", el.dataset.id));
   } catch (err) {
-    showMessage("Kunne ikke slette: " + err.code);
+    showMessage(t("errDeleteReq", { code: err.code }));
   }
 }
 
@@ -1301,18 +1954,46 @@ function compareReqs(a, b) {
   return a.seq - b.seq;
 }
 
+// Which column does the current sort mode order by? Used both for the
+// column highlight and for deciding which rows become group headers.
+function activeSortColumn() {
+  switch (sortMode) {
+    case "priority": return "moscow";
+    case "category": return "furps";
+    case "status":   return "status";
+    case "original": return "id";
+    default:         return "moscow";
+  }
+}
+
+// Returns the group key for a requirement under the current sort mode,
+// or null for modes that don't group ("original").
+function groupKeyForSortMode(req) {
+  switch (sortMode) {
+    case "priority": return req.moscow;
+    case "category": return req.furps;
+    case "status":   return req.status;
+    default:         return null;
+  }
+}
+
 function renderTable() {
   const tbody = $("tbody");
   tbody.innerHTML = "";
 
+  // Highlight the column we sort by — in the header and in every row.
+  const activeCol = activeSortColumn();
+  const ths = document.querySelectorAll("#matrixTable thead th[data-col]");
+  for (let i = 0; i < ths.length; i++) {
+    ths[i].classList.toggle("sort-active", ths[i].dataset.col === activeCol);
+  }
+
   const visible = [];
-  const counts = {};
   for (let i = 0; i < allReqs.length; i++) {
     const r = allReqs[i];
     if (onlyPyt && r.status !== "Parked") { continue; }
     if (filterMoscow === "all" || r.moscow === filterMoscow) {
       visible.push(r);
-      counts[r.moscow] = (counts[r.moscow] || 0) + 1;
     }
   }
   visible.sort(compareReqs);
@@ -1323,39 +2004,64 @@ function renderTable() {
     td.colSpan = visibleCount() + 1;
     td.className = "small";
     td.style.padding = "16px";
-    td.textContent = onlyPyt
-      ? "Ingen parkerede (PYT) krav endnu. Sæt status til \"Parkeret (PYT)\" på et krav for at se det her."
-      : "Ingen krav at vise.";
+    td.textContent = onlyPyt ? t("emptyPyt") : t("emptyAll");
     tr.appendChild(td);
     tbody.appendChild(tr);
     tryScrollToPendingReq();
     return;
   }
 
-  let lastRank = 0;
+  // How many rows fall into each group for the current sort mode?
+  const groupCounts = {};
+  for (let i = 0; i < visible.length; i++) {
+    const key = groupKeyForSortMode(visible[i]);
+    if (key === null) { continue; }
+    groupCounts[key] = (groupCounts[key] || 0) + 1;
+  }
+
+  let lastGroup = null;
   for (let i = 0; i < visible.length; i++) {
     const r = visible[i];
-    if (sortMode === "priority" && rankOf(r.moscow) !== lastRank) {
-      lastRank = rankOf(r.moscow);
-      tbody.appendChild(buildGroupHeader(r.moscow, counts[r.moscow]));
+    const key = groupKeyForSortMode(r);
+    if (key !== null && key !== lastGroup) {
+      lastGroup = key;
+      tbody.appendChild(buildGroupHeader(key, groupCounts[key]));
     }
-    tbody.appendChild(buildRow(r));
+    tbody.appendChild(buildRow(r, activeCol));
   }
 
   tryScrollToPendingReq();
 }
 
-function buildGroupHeader(moscow, count) {
+function buildGroupHeader(key, count) {
   const tr = document.createElement("tr");
-  tr.className = "group-header group-" + rankOf(moscow);
+  let label;
+  switch (sortMode) {
+    case "priority":
+      tr.className = "group-header group-" + rankOf(key);
+      label = key.toUpperCase() + " (" + count + ")";
+      break;
+    case "category":
+      tr.className = "group-header group-furps";
+      label = key + " (" + count + ")";
+      break;
+    case "status":
+      tr.className = "group-header group-status-" + key.toLowerCase();
+      label = statusLabel(key).toUpperCase() + " (" + count + ")";
+      break;
+    default:
+      tr.className = "group-header";
+      label = key + " (" + count + ")";
+      break;
+  }
   const td = document.createElement("td");
   td.colSpan = visibleCount() + 1;
-  td.textContent = moscow.toUpperCase() + " (" + count + ")";
+  td.textContent = label;
   tr.appendChild(td);
   return tr;
 }
 
-function buildRow(r) {
+function buildRow(r, activeCol) {
   const tr = document.createElement("tr");
   tr.className = "prio-" + rankOf(r.moscow);
   tr.dataset.reqId = r.id;   // used by tryScrollToPendingReq
@@ -1394,22 +2100,22 @@ function buildRow(r) {
   if (level === -1) {
     ageCell.textContent = "–";
     ageCell.classList.add("age-none");
-    ageCell.title = "Afsluttet – tæller ikke";
+    ageCell.title = t("ageTitleDone");
   } else if (days === null) {
     ageCell.textContent = "?";
     ageCell.classList.add("age-none");
-    ageCell.title = "Ingen tidsstempel";
+    ageCell.title = t("ageTitleNoTs");
   } else {
     ageCell.textContent = days + "d";
     if (level === 3) {
       ageCell.classList.add("age-parked");
-      ageCell.title = "Parkeret (PYT) i " + days + " dage — venter på review";
+      ageCell.title = t("ageTitleParked", { days: days });
     } else if (level === 2) { ageCell.classList.add("age-urgent"); }
     else if (level === 1) { ageCell.classList.add("age-warn"); }
     else { ageCell.classList.add("age-fresh"); }
     if (level !== 3) {
       const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
-      ageCell.title = "Sidst rettet: " + d.toISOString().slice(0, 10);
+      ageCell.title = t("ageTitleUpdated", { date: d.toISOString().slice(0, 10) });
     }
   }
   maybeHidden(ageCell, "age");
@@ -1421,19 +2127,26 @@ function buildRow(r) {
 
   const linkBtn = document.createElement("button");
   linkBtn.textContent = "🔗";
-  linkBtn.title = "Kopiér et link til dette krav — klar til at sætte i GitHub";
+  linkBtn.title = t("copyLinkTitle");
   linkBtn.dataset.action = "copy-link";
   linkBtn.dataset.id = r.id;
   actionsCell.appendChild(linkBtn);
 
   const delBtn = document.createElement("button");
   delBtn.textContent = "✕";
-  delBtn.title = "Slet krav";
+  delBtn.title = t("deleteReqTitle");
   delBtn.dataset.action = "delete";
   delBtn.dataset.id = r.id;
   actionsCell.appendChild(delBtn);
 
   tr.appendChild(actionsCell);
+
+  // Highlight the cell that the current sort mode orders by.
+  if (activeCol) {
+    const cell = tr.querySelector("td.col-" + activeCol);
+    if (cell) { cell.classList.add("sort-active"); }
+  }
+
   return tr;
 }
 
@@ -1498,7 +2211,10 @@ function csvCell(value) {
 }
 
 function exportCsv() {
-  let csv = "\uFEFF" + "Krav-ID;Kravbeskrivelse;FURPS+;MoSCoW;Kilde;Status;Noter;Referencer;Sidst rettet af\r\n";
+  let csv = "\uFEFF" + [
+    t("csvId"), t("csvDescription"), t("csvFurps"), t("csvMoscow"),
+    t("csvSource"), t("csvStatus"), t("csvNotes"), t("csvRefs"), t("csvUpdatedBy")
+  ].join(";") + "\r\n";
   const rows = sortedBySeq();
   const defaultRepo = String(projectData.defaultRepo || "").trim();
   for (let i = 0; i < rows.length; i++) {
@@ -1561,26 +2277,25 @@ function exportMarkdown() {
     if (extractGithubRefs(rows[i], defaultRepo).length > 0) { anyRefs = true; }
   }
 
-  let md = "# " + projName + " — Kravmatrix\n\n";
-  md += "Eksporteret: " + today + "\n\n";
-  md += "FURPS+ angiver kravets type, MoSCoW angiver prioriteten. " +
-        "Aktive krav er grupperet efter prioritet. Parkerede (PYT), \"Won't\" " +
-        "og droppede vises i særskilte afsnit, fordi de ikke længere er aktive.\n\n";
+  let md = "# " + projName + " — " + t("mdTitleSuffix") + "\n\n";
+  md += t("mdExported", { date: today }) + "\n\n";
+  md += t("mdIntro") + "\n\n";
 
   const boardUrl = String(projectData.githubBoardUrl || "").trim();
   if (boardUrl) {
-    md += "Scrum board: " + boardUrl + "\n\n";
+    md += t("mdScrumBoard", { url: boardUrl }) + "\n\n";
   }
   if (defaultRepo) {
-    md += "Referencer på formen `#123` linker til `https://github.com/" +
-          defaultRepo + "/issues/123`.\n\n";
+    md += t("mdRefsNote", { repo: defaultRepo }) + "\n\n";
   }
 
   const moscowOrder = ["Must", "Should", "Could", "Won't"];
   const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
   let grandTotal = 0;
-  md += "## Oversigt\n\n";
-  md += "| Prioritet | Krav i alt | Færdige | Aftalte | Foreslåede | Parkerede | Droppede |\n";
+  md += "## " + t("mdSummary") + "\n\n";
+  md += "| " + t("mdColPriority") + " | " + t("mdColTotal") + " | " + t("mdColDone") +
+        " | " + t("mdColAgreed") + " | " + t("mdColProposed") + " | " + t("mdColParked") +
+        " | " + t("mdColDropped") + " |\n";
   md += "| --- | --- | --- | --- | --- | --- | --- |\n";
   for (let p = 0; p < moscowOrder.length; p++) {
     let n = 0, done = 0, agreed = 0, proposed = 0, parked = 0, dropped = 0;
@@ -1601,9 +2316,9 @@ function exportMarkdown() {
     md += "| " + moscowOrder[p] + " | " + n + " | " + done + " | " + agreed +
           " | " + proposed + " | " + parked + " | " + dropped + " |\n";
   }
-  md += "| **I alt** | **" + grandTotal + "** | **" + totals.done + "** | **" +
-        totals.agreed + "** | **" + totals.proposed + "** | **" + totals.parked +
-        "** | **" + totals.dropped + "** |\n\n";
+  md += "| **" + t("mdColGrandTotal") + "** | **" + grandTotal + "** | **" + totals.done +
+        "** | **" + totals.agreed + "** | **" + totals.proposed + "** | **" +
+        totals.parked + "** | **" + totals.dropped + "** |\n\n";
 
   function refsCellFor(r) {
     const refs = extractGithubRefs(r, defaultRepo);
@@ -1618,12 +2333,12 @@ function exportMarkdown() {
   }
 
   function buildActiveTable(group) {
-    let head = "| Krav-ID | Kravbeskrivelse | FURPS+ |";
-    if (anySource) { head += " Kilde |"; }
-    head += " Status |";
-    if (anyNotes) { head += " Noter |"; }
-    if (anyRefs) { head += " Referencer |"; }
-    if (anyUpdatedBy) { head += " Sidst rettet af |"; }
+    let head = "| " + t("thId") + " | " + t("thDescription") + " | " + t("thFurps") + " |";
+    if (anySource) { head += " " + t("colSource") + " |"; }
+    head += " " + t("thStatus") + " |";
+    if (anyNotes) { head += " " + t("thNotes") + " |"; }
+    if (anyRefs) { head += " " + t("thRefs") + " |"; }
+    if (anyUpdatedBy) { head += " " + t("thUpdatedBy") + " |"; }
     head += "\n| --- | --- | --- |";
     if (anySource) { head += " --- |"; }
     head += " --- |";
@@ -1667,12 +2382,12 @@ function exportMarkdown() {
     if (rows[i].status === "Parked") { parked.push(rows[i]); }
   }
   if (parked.length > 0) {
-    md += "## PYT — Parkerede (" + parked.length + ")\n\n";
-    md += "Idéer der er bevidst parkeret. Tag dem frem ved sprint-review, og beslut " +
-          "om de skal opgraderes eller droppes.\n\n";
-    let h = "| Krav-ID | Kravbeskrivelse | Oprindelig prioritet | FURPS+ |";
-    if (anyNotes) { h += " Noter |"; }
-    if (anyRefs) { h += " Referencer |"; }
+    md += "## " + t("mdParkedHeading", { n: parked.length }) + "\n\n";
+    md += t("mdParkedIntro") + "\n\n";
+    let h = "| " + t("thId") + " | " + t("thDescription") + " | " + t("mdColOriginalPriority") +
+            " | " + t("thFurps") + " |";
+    if (anyNotes) { h += " " + t("thNotes") + " |"; }
+    if (anyRefs) { h += " " + t("thRefs") + " |"; }
     h += "\n| --- | --- | --- | --- |";
     if (anyNotes) { h += " --- |"; }
     if (anyRefs) { h += " --- |"; }
@@ -1697,9 +2412,10 @@ function exportMarkdown() {
     }
   }
   if (wonts.length > 0) {
-    md += "## Won't — bevidst fravalgt (" + wonts.length + ")\n\n";
-    md += "Krav der er bevidst valgt fra i denne version. Begrundelsen står under \"Begrundelse\".\n\n";
-    md += "| Krav-ID | Kravbeskrivelse | FURPS+ | Begrundelse |\n";
+    md += "## " + t("mdWontHeading", { n: wonts.length }) + "\n\n";
+    md += t("mdWontIntro") + "\n\n";
+    md += "| " + t("thId") + " | " + t("thDescription") + " | " + t("thFurps") +
+          " | " + t("mdColReason") + " |\n";
     md += "| --- | --- | --- | --- |\n";
     for (let i = 0; i < wonts.length; i++) {
       const r = wonts[i];
@@ -1714,9 +2430,10 @@ function exportMarkdown() {
     if (rows[i].status === "Dropped") { dropped.push(rows[i]); }
   }
   if (dropped.length > 0) {
-    md += "## Droppede (" + dropped.length + ")\n\n";
-    md += "Krav der ikke længere er relevante. Begrundelsen står under \"Begrundelse\".\n\n";
-    md += "| Krav-ID | Kravbeskrivelse | Oprindelig prioritet | FURPS+ | Begrundelse |\n";
+    md += "## " + t("mdDroppedHeading", { n: dropped.length }) + "\n\n";
+    md += t("mdDroppedIntro") + "\n\n";
+    md += "| " + t("thId") + " | " + t("thDescription") + " | " + t("mdColOriginalPriority") +
+          " | " + t("thFurps") + " | " + t("mdColReason") + " |\n";
     md += "| --- | --- | --- | --- | --- |\n";
     for (let i = 0; i < dropped.length; i++) {
       const r = dropped[i];
@@ -1734,9 +2451,9 @@ async function copyShareLink() {
   try {
     await navigator.clipboard.writeText(link);
     showMessage("");
-    alert("Link kopieret. Del det kun med gruppen.");
+    alert(t("shareLinkCopied"));
   } catch (err) {
-    prompt("Kopiér linket:", link);
+    prompt(t("shareLinkPrompt"), link);
   }
 }
 
@@ -1785,6 +2502,7 @@ function fieldFromHeader(header) {
     case "noter":
     case "evt":
     case "begrundelse":
+    case "reason":
       return "notes";
     case "referencer":
     case "references":
@@ -1911,7 +2629,7 @@ function markdownToObjects(text) {
     const headingMatch = line.match(/^##\s+(.+?)\s*$/);
     if (headingMatch) {
       const name = headingMatch[1].trim();
-      if (name === "Oversigt") { currentSection = "Oversigt"; }
+      if (name === "Oversigt" || name === "Summary") { currentSection = "Oversigt"; }
       else if (name.indexOf("Must") === 0) { currentSection = "Must"; }
       else if (name.indexOf("Should") === 0) { currentSection = "Should"; }
       else if (name.indexOf("Could") === 0) { currentSection = "Could"; }
@@ -2058,7 +2776,7 @@ async function onImportFileChosen(event) {
 
   let text;
   try { text = await file.text(); }
-  catch (err) { showMessage("Kunne ikke åbne filen."); return; }
+  catch (err) { showMessage(t("importOpenError")); return; }
   text = text.replace(/^\uFEFF/, "");
 
   const dotPos = file.name.lastIndexOf(".");
@@ -2072,35 +2790,33 @@ async function onImportFileChosen(event) {
       case "txt": objects = textToObjects(text); break;
       case "md": case "markdown": objects = markdownToObjects(text); break;
       default:
-        showMessage("Ukendt filtype. Brug .json, .csv, .txt eller .md.");
+        showMessage(t("importUnknownType"));
         return;
     }
   } catch (err) {
-    showMessage("Kunne ikke læse filen: " + err.message);
+    showMessage(t("importReadError", { msg: err.message }));
     return;
   }
 
   const built = buildImportRecords(objects);
   if (built.records.length === 0) {
-    showMessage("Fandt ingen krav i filen.");
+    showMessage(t("importEmpty"));
     return;
   }
   if (built.records.length > MAX_IMPORT_ROWS) {
-    showMessage("Filen har " + built.records.length + " krav. Maks. er " + MAX_IMPORT_ROWS + " pr. import.");
+    showMessage(t("importTooMany", { n: built.records.length, max: MAX_IMPORT_ROWS }));
     return;
   }
 
-  let question = "Importér " + built.records.length + " krav i dette projekt?\n\n" +
-                 "De får nye ID'er efter de eksisterende krav.";
+  let question = t("importConfirmHead", { n: built.records.length });
   if (built.skipped > 0) {
-    question += "\n\n" + built.skipped + " rækker uden beskrivelse springes over.";
+    question += t("importConfirmSkipped", { n: built.skipped });
   }
   if (built.unrecognised > 0) {
-    question += "\n\n" + built.unrecognised + " værdier i FURPS+, MoSCoW eller Status blev ikke genkendt " +
-                "og er sat til standardværdien (F / Should / Foreslået).";
+    question += t("importConfirmUnrecognised", { n: built.unrecognised });
   }
   if (text.indexOf("\uFFFD") >= 0) {
-    question += "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt.";
+    question += t("importConfirmEncoding");
   }
   if (!confirm(question)) { return; }
 
@@ -2114,11 +2830,13 @@ async function importRecords(records) {
       const chunk = records.slice(start, start + IMPORT_CHUNK_SIZE);
       await writeRequirements(chunk);
       done += chunk.length;
-      showMessage("Importerer... " + done + " af " + records.length, true);
+      showMessage(t("importProgress", { done: done, total: records.length }), true);
     }
-    showMessage("Importerede " + done + " krav.", true);
+    showMessage(t("importDone", { n: done }), true);
   } catch (err) {
-    showMessage("Importen stoppede efter " + done + " af " + records.length + " krav: " + (err.code || err.message));
+    showMessage(t("importStopped", {
+      done: done, total: records.length, code: (err.code || err.message)
+    }));
   }
 }
 
@@ -2130,6 +2848,9 @@ $("btnGoogle").addEventListener("click", function () { loginWith("google"); });
 $("btnGithubLogin").addEventListener("click", function () { loginWith("github"); });
 $("btnLink").addEventListener("click", linkLogin);
 $("btnLogout").addEventListener("click", function () { signOut(auth); });
+$("btnLang").addEventListener("click", function () {
+  setLang(lang === "da" ? "en" : "da");
+});
 $("btnCreate").addEventListener("click", createProject);
 $("btnJoin").addEventListener("click", joinFromInput);
 $("btnAdd").addEventListener("click", addRequirement);
@@ -2140,6 +2861,7 @@ $("btnJson").addEventListener("click", exportJson);
 $("btnMd").addEventListener("click", exportMarkdown);
 $("btnShare").addEventListener("click", copyShareLink);
 $("btnLeave").addEventListener("click", leaveProject);
+$("btnRemoveProject").addEventListener("click", removeProjectFromMyList);
 $("btnPyt").addEventListener("click", onPytToggle);
 $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
@@ -2203,6 +2925,7 @@ document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && !$("githubDialog").classList.contains("hidden")) { closeGithubDialog(); }
 });
 
+applyLanguage();
 applyColumnPrefs();
 
 onAuthStateChanged(auth, onAuthChanged);
