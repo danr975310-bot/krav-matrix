@@ -2925,6 +2925,13 @@ function cleanStatus(value) {
   }
 }
 
+// ---------- RETTELSE 1: idempotente markører + skip appens egne REQ-NNN ----------
+// Denne funktion har to ændringer ift. originalen:
+//   1. [Acceptance: …] og [Imported ID: …] tilføjes kun, hvis de ikke
+//      allerede findes i notes — så gentagen import ikke duplikerer dem.
+//   2. [Imported ID: …] tilføjes SLET IKKE, når ID'en er på appens egen
+//      REQ-NNN-form. Ellers ville round-trip af appens egen CSV/MD-eksport
+//      skabe en falsk diff (fil har markøren, online har den ikke).
 function buildImportRecords(objects) {
   const records = [];
   let skipped = 0;
@@ -2961,13 +2968,31 @@ function buildImportRecords(objects) {
     rec.source = source;
 
     let notes = (o.notes || "").trim();
+
+    // [Acceptance: …] — kun hvis den ikke allerede står der.
     const acceptance = (o.acceptance || "").trim();
     if (acceptance !== "") {
-      notes = (notes + " [Acceptance: " + acceptance + "]").trim();
+      const marker = "[Acceptance: " + acceptance + "]";
+      if (notes.indexOf(marker) < 0) {
+        notes = (notes + " " + marker).trim();
+      }
     }
+
+    // [Imported ID: …] — kun hvis:
+    //   a) ID'en er ikke-appens-egen (ikke REQ-NNN), OG
+    //   b) markøren ikke allerede står der.
+    // Det forhindrer falske diffs ved round-trip af appens egen eksport.
     if (o.importedId && o.importedId.trim() !== "") {
-      notes = (notes + " [Imported ID: " + o.importedId.trim() + "]").trim();
+      const idText = o.importedId.trim();
+      const isOwnId = /^REQ-?\s*0*\d+$/i.test(idText);
+      if (!isOwnId) {
+        const marker = "[Imported ID: " + idText + "]";
+        if (notes.indexOf(marker) < 0) {
+          notes = (notes + " " + marker).trim();
+        }
+      }
     }
+
     rec.notes = notes;
 
     records.push(rec);
@@ -3026,6 +3051,11 @@ function findImportDiffs(objects, liveReqs) {
   return diffs;
 }
 
+// ---------- RETTELSE 2: fjern tidligt return, så knapperne altid får labels ----------
+// Den oprindelige version havde et "if (... classList.contains('hidden')) return;"
+// som gjorde at teksten ALDRIG blev sat, fordi dialogen var skjult da funktionen
+// blev kaldt fra openImportDiffDialog(). Funktionen er billig at kalde, så vi
+// dropper tjekket helt.
 function updateImportDiffDialogText() {
   $("importDiffTitle").textContent = t("importDiffTitle");
   $("importDiffIntro").textContent = t("importDiffIntro");
