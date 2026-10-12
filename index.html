@@ -1997,12 +1997,37 @@ async function loadMyProjects() {
       empty.classList.remove("hidden");
       return;
     }
-    const items = [];
+
+    // Verify each project still exists. Orphaned entries (project deleted by
+    // another member) are silently removed from the user's own list.
+    const entries = [];
     snap.forEach(function (d) {
-      const data = d.data();
-      items.push({ pid: d.id, name: data.name || d.id });
+      entries.push({ pid: d.id, name: d.data().name || d.id, ref: d.ref });
     });
+
+    const checks = entries.map(async function (e) {
+      try {
+        const projSnap = await getDoc(doc(db, "projects", e.pid));
+        if (!projSnap.exists()) {
+          try { await deleteDoc(e.ref); } catch (err) { /* ignore */ }
+          return null;
+        }
+        return e;
+      } catch (err) {
+        // If we can't read it, treat it as gone for this user's purposes.
+        return null;
+      }
+    });
+
+    const results = await Promise.all(checks);
+    const items = results.filter(function (x) { return x !== null; });
     items.sort(function (a, b) { return a.name.localeCompare(b.name, lang); });
+
+    if (items.length === 0) {
+      empty.classList.remove("hidden");
+      return;
+    }
+
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       const li = document.createElement("li");
@@ -2018,13 +2043,7 @@ async function loadMyProjects() {
     empty.classList.remove("hidden");
   }
 }
-
-function onMyProjectsClick(event) {
-  const pid = event.target.dataset.pid;
-  if (!pid) { return; }
-  openProject(pid);
-}
-
+  
 // ---------- Auth ----------
 async function loginWith(providerName) {
   let provider;
