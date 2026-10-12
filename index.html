@@ -536,6 +536,7 @@
         <li data-i18n-html="importLi4"><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
       <p class="small" data-i18n="importNote">Import tilføjer nye krav og overskriver aldrig eksisterende.</p>
+      <p class="small" data-i18n="importDuplicateNote">Dubletter springes over: først på Krav-ID (REQ-NNN) hvis filen har det, ellers på beskrivelsen alene (normaliseret for store/små bogstaver og ekstra mellemrum).</p>
       <p class="small" data-i18n-html="importOutdatedNote">Hvis filen indeholder krav, hvor online-versionen er
          ændret, viser appen forskellene og lader dig vælge mellem at importere alligevel eller oprette et nyt projekt.</p>
     </section>
@@ -580,6 +581,7 @@
   <div class="modal-content" style="min-width: 620px;">
     <h3 id="importDiffTitle"></h3>
     <p id="importDiffIntro" class="small"></p>
+    <p id="importDiffDuplicates" class="small" style="display:none;"></p>
     <details id="importDiffDetails" open>
       <summary id="importDiffSummary"></summary>
       <div id="importDiffList" style="margin-top: 10px;"></div>
@@ -755,6 +757,7 @@ const I18N = {
     importLi3: "<strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps egen Markdown-eksport og med håndskrevne tabeller.",
     importLi4: "<strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.",
     importNote: "Import tilføjer nye krav og overskriver aldrig eksisterende.",
+    importDuplicateNote: "Dubletter springes over: først på Krav-ID (REQ-NNN) hvis filen har det, ellers på beskrivelsen alene (normaliseret for store/små bogstaver og ekstra mellemrum).",
     importOutdatedNote: "Hvis filen indeholder krav, hvor online-versionen er ændret, viser appen forskellene og lader dig vælge mellem at importere alligevel eller oprette et nyt projekt.",
     panelMembersTitle: "Medlemmer",
     membersNote: "Projektkoden fungerer som en adgangskode. Del den kun med gruppen.",
@@ -773,6 +776,7 @@ const I18N = {
 
     importDiffTitle: "Ældre fil opdaget",
     importDiffIntro: "Filen indeholder krav, hvor online-versionen er blevet ændret. Gennemgå forskellene nedenfor, før du fortsætter.",
+    importDiffDuplicates: "{n} rækker springes over som dubletter (samme Krav-ID eller samme beskrivelse).",
     importDiffSummary: "Vis forskelle ({n} krav)",
     importDiffFld: "Felt",
     importDiffFile: "Fil",
@@ -844,10 +848,13 @@ const I18N = {
     importTooMany: "Filen har {n} krav. Maks. er {max} pr. import.",
     importConfirmHead: "Importér {n} krav i dette projekt?\n\nDe får nye ID'er efter de eksisterende krav.",
     importConfirmSkipped: "\n\n{n} rækker uden beskrivelse springes over.",
+    importConfirmDuplicates: "\n\n{n} rækker springes over som dubletter (samme Krav-ID eller samme beskrivelse).",
     importConfirmUnrecognised: "\n\n{n} værdier i FURPS+, MoSCoW eller Status blev ikke genkendt og er sat til standardværdien (F / Should / Foreslået).",
     importConfirmEncoding: "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt.",
     importProgress: "Importerer... {done} af {total}",
     importDone: "Importerede {n} krav.",
+    importDoneSkipped: "Importerede {n} krav. {skipped} rækker blev sprunget over som dubletter.",
+    importAllDuplicates: "Alle {n} krav findes allerede (samme Krav-ID eller samme beskrivelse) — der er intet nyt at importere.",
     importStopped: "Importen stoppede efter {done} af {total} krav: {code}",
 
     leaveConfirm: "Forlad projektet?\n\nProjektet fjernes fra din liste, og du mister adgangen til at se og redigere krav.\n\nProjektet og alle krav bliver liggende — de andre deltagere kan stadig se det.",
@@ -1015,6 +1022,7 @@ const I18N = {
     importLi3: "<strong>.md</strong>: a Markdown file with tables. Works with this app's own Markdown export as well as hand-written tables.",
     importLi4: "<strong>.txt</strong>: one requirement per line. All get F / Should / Proposed, which you can correct afterwards.",
     importNote: "Import adds new requirements and never overwrites existing ones.",
+    importDuplicateNote: "Duplicates are skipped: first by Req ID (REQ-NNN) if the file has one, otherwise by description alone (normalised for case and extra whitespace).",
     importOutdatedNote: "If the file contains requirements where the online version has changed, the app shows the differences and lets you choose between importing anyway or creating a new project.",
     panelMembersTitle: "Members",
     membersNote: "The project code works as a password. Share it only with the group.",
@@ -1033,6 +1041,7 @@ const I18N = {
 
     importDiffTitle: "Outdated file detected",
     importDiffIntro: "The file contains requirements where the online version has changed. Review the differences below before continuing.",
+    importDiffDuplicates: "{n} rows are skipped as duplicates (same Req ID or same description).",
     importDiffSummary: "Show differences ({n} requirements)",
     importDiffFld: "Field",
     importDiffFile: "File",
@@ -1104,10 +1113,13 @@ const I18N = {
     importTooMany: "The file contains {n} requirements. The maximum is {max} per import.",
     importConfirmHead: "Import {n} requirements into this project?\n\nThey will get new IDs after the existing requirements.",
     importConfirmSkipped: "\n\n{n} rows without a description will be skipped.",
+    importConfirmDuplicates: "\n\n{n} rows are skipped as duplicates (same Req ID or same description).",
     importConfirmUnrecognised: "\n\n{n} values in FURPS+, MoSCoW or Status were not recognised and were set to the default (F / Should / Proposed).",
     importConfirmEncoding: "\n\nNote: the file does not look like it was saved as UTF-8, so special characters may be broken.",
     importProgress: "Importing... {done} of {total}",
     importDone: "Imported {n} requirements.",
+    importDoneSkipped: "Imported {n} requirements. {skipped} rows were skipped as duplicates.",
+    importAllDuplicates: "All {n} requirements already exist (same Req ID or same description) — nothing new to import.",
     importStopped: "The import stopped after {done} of {total} requirements: {code}",
 
     leaveConfirm: "Leave the project?\n\nThe project is removed from your list and you lose access to view and edit requirements.\n\nThe project and all requirements remain — the other members can still see them.",
@@ -1184,7 +1196,10 @@ let visibleColumns = loadColumns();
 
 let projectData = {};
 let pendingScrollToReq = null;
+
 let pendingImportRecords = null;
+let pendingImportRecordsAll = null;
+let pendingImportSkippedDupes = 0;
 
 const saveTimers = new Map();
 
@@ -1608,7 +1623,6 @@ function buildRefsCell(r) {
     if (i > 0) { td.appendChild(document.createElement("br")); }
     const ref = refs[i];
     if (ref.url) {
-      // We know which repo this belongs to, so make it a link
       const a = document.createElement("a");
       a.href = ref.url;
       a.target = "_blank";
@@ -1616,7 +1630,6 @@ function buildRefsCell(r) {
       a.textContent = ref.raw;
       td.appendChild(a);
     } else {
-      // #123 without a default repo: show as plain text with a hint
       const span = document.createElement("span");
       span.className = "unlinked";
       span.textContent = ref.raw;
@@ -1665,7 +1678,6 @@ async function loadMyProjects() {
   }
   empty.classList.add("hidden");
   try {
-    // Read the list of projects this user has joined
     const snap = await getDocs(collection(db, "users", currentUser.uid, "projects"));
     if (snap.empty) {
       empty.classList.remove("hidden");
@@ -1677,10 +1689,6 @@ async function loadMyProjects() {
       entries.push({ pid: d.id, name: d.data().name || d.id, ref: d.ref });
     });
 
-    // Check each project. We only remove an entry when Firestore
-    // clearly says the project is gone (exists() === false).
-    // If the check itself fails (permissions, network), we KEEP the
-    // project in the list, so one error does not hide everything.
     const checks = entries.map(async function (e) {
       try {
         const projSnap = await getDoc(doc(db, "projects", e.pid));
@@ -1704,7 +1712,6 @@ async function loadMyProjects() {
       return;
     }
 
-    // Build one button per project, with the project id in data-pid
     for (let i = 0; i < items.length; i++) {
       const li = document.createElement("li");
       const btn = document.createElement("button");
@@ -1720,9 +1727,6 @@ async function loadMyProjects() {
   }
 }
 
-// Handles clicks on the "Your projects" list.
-// The click lands on a <button> that has the project id in data-pid,
-// so we read it and open that project. Clicks elsewhere in the list are ignored.
 function onMyProjectsClick(event) {
   const pid = event.target.dataset.pid;
   if (!pid) { return; }
@@ -1963,7 +1967,6 @@ function onProjectSnapshot(snap) {
   isOwner = (projectData.ownerUid === currentUser.uid);
   updateGithubUi();
   renderMembers();
-  // The default repo may have changed, so refresh the reference links
   renderTable();
 }
 
@@ -2024,17 +2027,12 @@ async function removeProjectFromMyList() {
 
   try {
     if (lastOne) {
-      // 1. Delete the requirements (we are still a member, so this is allowed)
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       const reqDeletes = [];
       reqSnap.forEach(function (d) { reqDeletes.push(deleteDoc(d.ref)); });
       await Promise.all(reqDeletes);
 
-      // 2. Delete the project doc while we are still a member.
-      // The rules require isMember, so our member doc must still exist here.
       await deleteDoc(doc(db, "projects", pid));
-
-      // 3. Delete our own member doc last
       await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
     } else {
       try {
@@ -2925,13 +2923,11 @@ function cleanStatus(value) {
   }
 }
 
-// ---------- RETTELSE 1: idempotente markører + skip appens egne REQ-NNN ----------
-// Denne funktion har to ændringer ift. originalen:
-//   1. [Acceptance: …] og [Imported ID: …] tilføjes kun, hvis de ikke
-//      allerede findes i notes — så gentagen import ikke duplikerer dem.
-//   2. [Imported ID: …] tilføjes SLET IKKE, når ID'en er på appens egen
-//      REQ-NNN-form. Ellers ville round-trip af appens egen CSV/MD-eksport
-//      skabe en falsk diff (fil har markøren, online har den ikke).
+// Bygger records fra parsede objekter. Tre ting:
+// 1. Idempotente markører: [Acceptance: …] og [Imported ID: …] tilføjes kun
+//    hvis de ikke allerede findes i notes.
+// 2. Skip appens egen REQ-NNN-form for [Imported ID: …] (round-trip fix).
+// 3. Gemmer importedId i rec.__importedId (internt felt, gemmes ikke).
 function buildImportRecords(objects) {
   const records = [];
   let skipped = 0;
@@ -2944,6 +2940,7 @@ function buildImportRecords(objects) {
 
     const rec = emptyRecord();
     rec.description = description;
+    rec.__importedId = o.importedId ? o.importedId.trim() : "";
 
     const furpsRaw = o.furps || "";
     const furps = cleanFurps(furpsRaw);
@@ -2969,7 +2966,6 @@ function buildImportRecords(objects) {
 
     let notes = (o.notes || "").trim();
 
-    // [Acceptance: …] — kun hvis den ikke allerede står der.
     const acceptance = (o.acceptance || "").trim();
     if (acceptance !== "") {
       const marker = "[Acceptance: " + acceptance + "]";
@@ -2978,10 +2974,6 @@ function buildImportRecords(objects) {
       }
     }
 
-    // [Imported ID: …] — kun hvis:
-    //   a) ID'en er ikke-appens-egen (ikke REQ-NNN), OG
-    //   b) markøren ikke allerede står der.
-    // Det forhindrer falske diffs ved round-trip af appens egen eksport.
     if (o.importedId && o.importedId.trim() !== "") {
       const idText = o.importedId.trim();
       const isOwnId = /^REQ-?\s*0*\d+$/i.test(idText);
@@ -3000,11 +2992,20 @@ function buildImportRecords(objects) {
   return { records: records, skipped: skipped, unrecognised: unrecognised };
 }
 
-// ---------- Import diff detection ----------
+// ---------- Import diff + dublet-detektion ----------
 function parseImportedSeq(importedId) {
   if (!importedId) { return null; }
   const m = String(importedId).match(/REQ-?\s*0*(\d+)/i);
   return m ? parseInt(m[1], 10) : null;
+}
+
+// Normaliserer en beskrivelse til sammenligning:
+// lowercase, trim, kollaps mellemrum.
+function normalizeDescriptionForMatch(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function formatTs(ts) {
@@ -3015,31 +3016,52 @@ function formatTs(ts) {
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
 }
 
-function findImportDiffs(objects, liveReqs) {
+// Klassificerer records op imod live requirements. To-trins match:
+//   1. Hvis rækken har et REQ-NNN-ID, matches den på seq.
+//      - Alle felter ens  → dublet (skip)
+//      - Felter afviger   → diff (vis i dialog)
+//   2. Hvis rækken ikke har et REQ-NNN-ID, matches den på beskrivelse
+//      (normaliseret). Hvis beskrivelsen matcher en live-beskrivelse →
+//      dublet (skip). Beskrivelsen kan godt matche flere live-krav;
+//      vi springer rækken over uanset.
+// Returnerer:
+//   identicalSeqs:    Set af seq-værdier (ID-match, alt ens)
+//   duplicateIndices: Set af indices i records (beskrivelse-match, no-ID)
+//   diffs:            liste af { seq, label, updatedAt, changes }
+function classifyImportRows(records, liveReqs) {
   const liveBySeq = {};
+  const liveDescSet = new Set();
   for (let i = 0; i < liveReqs.length; i++) {
-    liveBySeq[liveReqs[i].seq] = liveReqs[i];
+    const r = liveReqs[i];
+    liveBySeq[r.seq] = r;
+    const key = normalizeDescriptionForMatch(r.description);
+    if (key !== "") { liveDescSet.add(key); }
   }
+
   const fields = ["description", "furps", "moscow", "source", "status", "notes"];
+  const identicalSeqs = new Set();
+  const duplicateIndices = new Set();
   const diffs = [];
-  for (let i = 0; i < objects.length; i++) {
-    const o = objects[i];
-    const seq = parseImportedSeq(o.importedId);
+
+  // Først: rækker MED REQ-NNN-ID
+  for (let i = 0; i < records.length; i++) {
+    const rec = records[i];
+    const seq = parseImportedSeq(rec.__importedId);
     if (seq === null) { continue; }
     const live = liveBySeq[seq];
     if (!live) { continue; }
-    const built = buildImportRecords([o]).records[0];
-    if (!built) { continue; }
     const changes = [];
     for (let f = 0; f < fields.length; f++) {
       const fld = fields[f];
-      const fileVal = String(built[fld] || "").trim();
+      const fileVal = String(rec[fld] || "").trim();
       const liveVal = String(live[fld] || "").trim();
       if (fileVal !== liveVal) {
         changes.push({ field: fld, fileVal: fileVal, liveVal: liveVal });
       }
     }
-    if (changes.length > 0) {
+    if (changes.length === 0) {
+      identicalSeqs.add(seq);
+    } else {
       diffs.push({
         seq: seq,
         label: reqLabel(seq),
@@ -3048,14 +3070,30 @@ function findImportDiffs(objects, liveReqs) {
       });
     }
   }
-  return diffs;
+
+  // Derefter: rækker UDEN REQ-NNN-ID — fallback på beskrivelse
+  // (også dedupe inden for filen: hvis samme beskrivelse optræder flere gange,
+  // beholder vi kun den første og springer resten over).
+  const seenInFile = new Set();
+  for (let i = 0; i < records.length; i++) {
+    const rec = records[i];
+    if (parseImportedSeq(rec.__importedId) !== null) { continue; }
+    const key = normalizeDescriptionForMatch(rec.description);
+    if (key === "") { continue; }
+    if (liveDescSet.has(key)) {
+      duplicateIndices.add(i);
+      continue;
+    }
+    if (seenInFile.has(key)) {
+      duplicateIndices.add(i);
+      continue;
+    }
+    seenInFile.add(key);
+  }
+
+  return { identicalSeqs: identicalSeqs, duplicateIndices: duplicateIndices, diffs: diffs };
 }
 
-// ---------- RETTELSE 2: fjern tidligt return, så knapperne altid får labels ----------
-// Den oprindelige version havde et "if (... classList.contains('hidden')) return;"
-// som gjorde at teksten ALDRIG blev sat, fordi dialogen var skjult da funktionen
-// blev kaldt fra openImportDiffDialog(). Funktionen er billig at kalde, så vi
-// dropper tjekket helt.
 function updateImportDiffDialogText() {
   $("importDiffTitle").textContent = t("importDiffTitle");
   $("importDiffIntro").textContent = t("importDiffIntro");
@@ -3067,13 +3105,23 @@ function updateImportDiffDialogText() {
     $("importDiffSummary").textContent =
       t("importDiffSummary", { n: list.dataset.diffCount });
   }
+  const dupEl = $("importDiffDuplicates");
+  const n = parseInt(list.dataset.dupeCount || "0", 10);
+  if (n > 0) {
+    dupEl.textContent = t("importDiffDuplicates", { n: n });
+    dupEl.style.display = "";
+  } else {
+    dupEl.textContent = "";
+    dupEl.style.display = "none";
+  }
 }
 
-function openImportDiffDialog(records, diffs) {
+function openImportDiffDialog(records, diffs, duplicateCount) {
   pendingImportRecords = records;
   const list = $("importDiffList");
   list.innerHTML = "";
   list.dataset.diffCount = String(diffs.length);
+  list.dataset.dupeCount = String(duplicateCount || 0);
   const fieldLabels = {
     description: "colDescription",
     furps: "colFurps",
@@ -3145,18 +3193,21 @@ function openImportDiffDialog(records, diffs) {
 
 function closeImportDiffDialog() {
   pendingImportRecords = null;
+  pendingImportRecordsAll = null;
+  pendingImportSkippedDupes = 0;
   $("importDiffDialog").classList.add("hidden");
 }
 
 async function onImportAnyway() {
   const records = pendingImportRecords;
+  const skipped = pendingImportSkippedDupes;
   closeImportDiffDialog();
   if (!records) { return; }
-  await importRecords(records);
+  await importRecords(records, skipped);
 }
 
 async function onImportAsNewProject() {
-  const records = pendingImportRecords;
+  const records = pendingImportRecordsAll || pendingImportRecords;
   if (!records) { return; }
   const name = prompt(t("importDiffNewProjectName"));
   if (!name || !name.trim()) { return; }
@@ -3182,7 +3233,7 @@ async function createProjectAndImport(name, records) {
   }
   await openProject(pid);
   if (currentPid !== pid) { return; }
-  await importRecords(records);
+  await importRecords(records, 0);
 }
 
 // ---------- Import flow ----------
@@ -3228,6 +3279,7 @@ async function onImportFileChosen(event) {
     return;
   }
 
+  // Hent live krav til diff- og dublet-tjek
   let liveReqs = [];
   try {
     const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
@@ -3235,15 +3287,43 @@ async function onImportFileChosen(event) {
   } catch (err) {
     console.warn("Could not fetch live requirements for diff:", err);
   }
-  const diffs = findImportDiffs(objects, liveReqs);
-  if (diffs.length > 0) {
-    openImportDiffDialog(built.records, diffs);
+
+  const classified = classifyImportRows(built.records, liveReqs);
+
+  // Byg "toImport"-liste: alle records der IKKE er dubletter.
+  // En record er dublet hvis enten dens seq er i identicalSeqs, eller dens
+  // index er i duplicateIndices (beskrivelses-match).
+  const toImport = [];
+  for (let i = 0; i < built.records.length; i++) {
+    const rec = built.records[i];
+    const seq = parseImportedSeq(rec.__importedId);
+    const dupBySeq = (seq !== null && classified.identicalSeqs.has(seq));
+    const dupByDesc = classified.duplicateIndices.has(i);
+    if (dupBySeq || dupByDesc) { continue; }
+    toImport.push(rec);
+  }
+  const skippedDuplicates = built.records.length - toImport.length;
+
+  // Alt var dubletter og der er ingen diffs → bare informér.
+  if (toImport.length === 0 && classified.diffs.length === 0) {
+    showMessage(t("importAllDuplicates", { n: skippedDuplicates }), true);
     return;
   }
 
-  let question = t("importConfirmHead", { n: built.records.length });
+  pendingImportRecordsAll = built.records;
+  pendingImportSkippedDupes = skippedDuplicates;
+
+  if (classified.diffs.length > 0) {
+    openImportDiffDialog(toImport, classified.diffs, skippedDuplicates);
+    return;
+  }
+
+  let question = t("importConfirmHead", { n: toImport.length });
   if (built.skipped > 0) {
     question += t("importConfirmSkipped", { n: built.skipped });
+  }
+  if (skippedDuplicates > 0) {
+    question += t("importConfirmDuplicates", { n: skippedDuplicates });
   }
   if (built.unrecognised > 0) {
     question += t("importConfirmUnrecognised", { n: built.unrecognised });
@@ -3251,12 +3331,20 @@ async function onImportFileChosen(event) {
   if (text.indexOf("\uFFFD") >= 0) {
     question += t("importConfirmEncoding");
   }
-  if (!confirm(question)) { return; }
+  if (!confirm(question)) {
+    pendingImportRecordsAll = null;
+    pendingImportSkippedDupes = 0;
+    return;
+  }
 
-  await importRecords(built.records);
+  const skipped = skippedDuplicates;
+  pendingImportRecordsAll = null;
+  pendingImportSkippedDupes = 0;
+  await importRecords(toImport, skipped);
 }
 
-async function importRecords(records) {
+async function importRecords(records, skippedDuplicates) {
+  const skipped = skippedDuplicates || 0;
   let done = 0;
   try {
     for (let start = 0; start < records.length; start += IMPORT_CHUNK_SIZE) {
@@ -3265,7 +3353,11 @@ async function importRecords(records) {
       done += chunk.length;
       showMessage(t("importProgress", { done: done, total: records.length }), true);
     }
-    showMessage(t("importDone", { n: done }), true);
+    if (skipped > 0) {
+      showMessage(t("importDoneSkipped", { n: done, skipped: skipped }), true);
+    } else {
+      showMessage(t("importDone", { n: done }), true);
+    }
   } catch (err) {
     showMessage(t("importStopped", {
       done: done, total: records.length, code: (err.code || err.message)
