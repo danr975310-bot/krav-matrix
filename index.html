@@ -3027,7 +3027,6 @@ function findImportDiffs(objects, liveReqs) {
 }
 
 function updateImportDiffDialogText() {
-  if ($("importDiffDialog").classList.contains("hidden")) { return; }
   $("importDiffTitle").textContent = t("importDiffTitle");
   $("importDiffIntro").textContent = t("importDiffIntro");
   $("btnImportAnyway").textContent = t("importDiffImportAnyway");
