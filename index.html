@@ -2043,6 +2043,14 @@ async function loadMyProjects() {
     empty.classList.remove("hidden");
   }
 }
+// Handles clicks on the "Your projects" list.
+// The click lands on a <button> that has the project id in data-pid,
+// so we read it and open that project. Clicks elsewhere in the list are ignored.
+function onMyProjectsClick(event) {
+  const pid = event.target.dataset.pid;
+  if (!pid) { return; }
+  openProject(pid);
+}
   
 // ---------- Auth ----------
 async function loginWith(providerName) {
