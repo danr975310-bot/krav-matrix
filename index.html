@@ -1992,19 +1992,22 @@ async function loadMyProjects() {
   }
   empty.classList.add("hidden");
   try {
+    // Read the list of projects this user has joined
     const snap = await getDocs(collection(db, "users", currentUser.uid, "projects"));
     if (snap.empty) {
       empty.classList.remove("hidden");
       return;
     }
 
-    // Verify each project still exists. Orphaned entries (project deleted by
-    // another member) are silently removed from the user's own list.
     const entries = [];
     snap.forEach(function (d) {
       entries.push({ pid: d.id, name: d.data().name || d.id, ref: d.ref });
     });
 
+    // Check each project. We only remove an entry when Firestore
+    // clearly says the project is gone (exists() === false).
+    // If the check itself fails (permissions, network), we KEEP the
+    // project in the list, so one error does not hide everything.
     const checks = entries.map(async function (e) {
       try {
         const projSnap = await getDoc(doc(db, "projects", e.pid));
@@ -2014,8 +2017,8 @@ async function loadMyProjects() {
         }
         return e;
       } catch (err) {
-        // If we can't read it, treat it as gone for this user's purposes.
-        return null;
+        console.warn("Could not check project", e.pid, err.code || err.message);
+        return e;
       }
     });
 
@@ -2028,12 +2031,12 @@ async function loadMyProjects() {
       return;
     }
 
+    // Build one button per project, with the project id in data-pid
     for (let i = 0; i < items.length; i++) {
-      const it = items[i];
       const li = document.createElement("li");
       const btn = document.createElement("button");
-      btn.textContent = it.name;
-      btn.dataset.pid = it.pid;
+      btn.textContent = items[i].name;
+      btn.dataset.pid = items[i].pid;
       li.appendChild(btn);
       list.appendChild(li);
     }
@@ -2043,6 +2046,7 @@ async function loadMyProjects() {
     empty.classList.remove("hidden");
   }
 }
+  
 // Handles clicks on the "Your projects" list.
 // The click lands on a <button> that has the project id in data-pid,
 // so we read it and open that project. Clicks elsewhere in the list are ignored.
