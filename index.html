@@ -151,7 +151,6 @@
   }
   .colprefs-panel label { display: block; font-size: 13px; padding: 3px 0; cursor: pointer; }
   .colprefs-panel .small { margin: 6px 0 0; }
-  /* Prioritet-sektioner: vises kun når man sorterer efter MoSCoW. */
   .matrix-sections {
     display: flex;
     flex-direction: column;
@@ -254,7 +253,7 @@
   .modal-content h4 { margin: 16px 0 6px; font-size: 14px; color: #1f2937;
                       padding-bottom: 4px; border-bottom: 1px solid #eef0f3; }
   .modal-content h4:first-of-type { margin-top: 0; }
-  .modal-content label { display: block; margin-bottom: 14px; font-size: 13px; }
+  .modal-content label { display: block; margin-bottom: 6px; font-size: 13px; }
   .modal-content label input {
     width: 100%; padding: 6px; margin-top: 4px;
     font: inherit; font-size: 13px; box-sizing: border-box;
@@ -262,6 +261,7 @@
   .modal-content code {
     background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
   }
+  .field-hint { margin: 0 0 14px; font-size: 12px; color: #6b7280; line-height: 1.4; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
   .modal-actions button { flex: 0 0 auto; }
   #ghTokenRow { display: flex; gap: 8px; margin-bottom: 8px; }
@@ -269,6 +269,7 @@
   #ghTokenStatus { margin: 6px 0 10px; }
   #ghTokenStatus.ok { color: #15803d; font-weight: 600; }
   #ghTokenStatus.err { color: #b91c1c; font-weight: 600; }
+  #ghTokenStatus.warn { color: #b45309; font-weight: 600; }
   #ghInstructions { margin: 12px 0; }
   #ghInstructions ol { padding-left: 20px; margin: 4px 0 8px; }
   #ghInstructions li { font-size: 12px; line-height: 1.5; margin-bottom: 3px; }
@@ -529,7 +530,7 @@
       <p data-i18n-html="githubIntro">Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
       <ul>
         <li data-i18n-html="githubLi1"><strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.</li>
-        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> (valgfrit) — fx <code>DGARosendal/reolmarked</code>. Bruges kun til at gøre <code>#123</code> til links.</li>
+        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links og til at teste et privat token.</li>
         <li data-i18n-html="githubLi3"><strong>Privat repository?</strong> Sæt et GitHub-token med læseadgang. Kun ejeren af projektet kan se og ændre tokenet.</li>
       </ul>
     </section>
@@ -562,22 +563,27 @@
   <div class="modal-content" style="min-width: 560px;">
     <h3 data-i18n="ghDialogTitle">GitHub-integration</h3>
 
-    <h4 data-i18n="ghPublicSection">Offentligt repository</h4>
-    <p class="small" data-i18n="ghPublicIntro">Hvis repository'et er offentligt, kan du bare sætte standard-repo'et nedenfor. Der kræves ingen token.</p>
+    <h4 data-i18n="ghGeneralSection">Generelt</h4>
 
     <label>
       <span data-i18n="ghBoardLabel">Scrum board URL (valgfrit)</span>
       <input type="text" id="githubBoardUrlInput"
              placeholder="https://github.com/users/DGARosendal/projects/1">
     </label>
+    <p class="field-hint" data-i18n="ghBoardHint">Vises som en knap i værktøjslinjen. Kan stå tom.</p>
+
     <label>
-      <span data-i18n="ghRepoLabel">Standard repository (valgfrit)</span>
+      <span data-i18n="ghRepoLabel">Standard repository</span>
       <input type="text" id="defaultRepoInput"
              placeholder="DGARosendal/reolmarked">
     </label>
+    <p class="field-hint" data-i18n-html="ghRepoHint">Bruges til at gøre <code>#123</code> til klikbare links og til at teste et privat token. Uden den virker kun <code>ejer/repo#123</code>.</p>
+
+    <h4 data-i18n="ghPublicSection">Offentligt repository</h4>
+    <p class="small" data-i18n="ghPublicIntro">Hvis repo'et er offentligt, virker links uden yderligere opsætning.</p>
 
     <h4 data-i18n="ghPrivateSection">Privat repository</h4>
-    <p class="small" data-i18n="ghPrivateIntro">Hvis repository'et er privat, skal du indsætte et GitHub-token med læseadgang til issues. Tokenet deles med projektets medlemmer, men er kun synligt for ejeren.</p>
+    <p class="small" data-i18n="ghPrivateIntro">Hvis repo'et er privat, skal du indsætte et token med læseadgang til issues. Tokenet deles med projektets medlemmer, men er kun synligt for ejeren.</p>
 
     <p id="ghTokenStatus" class="small"></p>
 
@@ -665,12 +671,6 @@ const AUTOSAVE_DELAY_MS = 800;
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
                  "status", "notes", "refs", "updatedBy", "age"];
 
-// ---------- Token encryption ----------
-// Level-2 protection: token is encrypted with AES-GCM using a key derived
-// from a constant in the app. This protects against casual inspection of
-// Firestore documents, but not against a determined attacker who inspects
-// the client source. Firestore rules + GitHub fine-grained token scopes
-// are the primary defense.
 const ENC_SECRET = "reqmatrix-2026-token-kek-v1";
 const ENC_SALT = "reqmatrix-salt-v1";
 
@@ -833,7 +833,7 @@ const I18N = {
     panelGithubTitle: "GitHub-integration",
     githubIntro: "Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:",
     githubLi1: "<strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.",
-    githubLi2: "<strong>Standard repository</strong> (valgfrit) — fx <code>DGARosendal/reolmarked</code>. Bruges kun til at gøre <code>#123</code> til links.",
+    githubLi2: "<strong>Standard repository</strong> — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links og til at teste et privat token.",
     githubLi3: "<strong>Privat repository?</strong> Sæt et GitHub-token med læseadgang. Kun ejeren af projektet kan se og ændre tokenet.",
     panelImportTitle: "Import: filformater",
     importLi1: "<strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten (danske eller engelske). Semikolon, komma og tab virker.",
@@ -846,12 +846,15 @@ const I18N = {
     membersNote: "Projektkoden fungerer som en adgangskode. Del den kun med gruppen.",
 
     ghDialogTitle: "GitHub-integration",
-    ghPublicSection: "Offentligt repository",
-    ghPublicIntro: "Hvis repository'et er offentligt, kan du bare sætte standard-repo'et nedenfor. Der kræves ingen token.",
-    ghPrivateSection: "Privat repository",
-    ghPrivateIntro: "Hvis repository'et er privat, skal du indsætte et GitHub-token med læseadgang til issues. Tokenet deles med projektets medlemmer, men er kun synligt for ejeren.",
+    ghGeneralSection: "Generelt",
     ghBoardLabel: "Scrum board URL (valgfrit)",
-    ghRepoLabel: "Standard repository (valgfrit)",
+    ghBoardHint: "Vises som en knap i værktøjslinjen. Kan stå tom.",
+    ghRepoLabel: "Standard repository",
+    ghRepoHint: "Bruges til at gøre <code>#123</code> til klikbare links og til at teste et privat token. Uden den virker kun <code>ejer/repo#123</code>.",
+    ghPublicSection: "Offentligt repository",
+    ghPublicIntro: "Hvis repo'et er offentligt, virker links uden yderligere opsætning.",
+    ghPrivateSection: "Privat repository",
+    ghPrivateIntro: "Hvis repo'et er privat, skal du indsætte et token med læseadgang til issues. Tokenet deles med projektets medlemmer, men er kun synligt for ejeren.",
     ghTokenLabel: "GitHub-token",
     ghTokenTest: "Test og gem",
     ghTokenDelete: "Slet token",
@@ -868,12 +871,12 @@ const I18N = {
     ghInstrNote: "Bemærk: Fine-grained tokens er typisk 93 tegn lange. Kopiér hele tokenet — også selvom det ser længere ud end forventet.",
     ghTokenValid: "✓ Token er gyldigt.",
     ghTokenInvalid: "✗ Token er ugyldigt eller udløbet.",
-    ghTokenMissingRepo: "Sæt først standard-repository ovenfor.",
     ghTokenSaved: "Token gemt og testet.",
+    ghTokenSavedNoRepo: "Token gemt. Det testes automatisk, når standard-repository er sat.",
     ghTokenDeleted: "Token slettet fra projektet.",
     ghTokenDeleteConfirm: "Slet tokenet fra projektet? Kravmatrixen mister adgang til private issues.",
-    ghTokenStatusSet: "Der er sat et token på dette projekt.",
     ghTokenStatusNone: "Der er ikke sat et token på dette projekt.",
+    ghTokenStatusUntested: "Der er sat et token, men det er ikke testet endnu.",
     ghTokenStatusSetValid: "Der er sat et gyldigt token på dette projekt.",
     ghTokenStatusSetInvalid: "Der er sat et token, men det virker ikke længere. Rul ned og følg instruktionerne.",
     ghTokenErrorNetwork: "Kunne ikke få forbindelse til GitHub. Tjek din netværksforbindelse.",
@@ -1124,7 +1127,7 @@ const I18N = {
     panelGithubTitle: "GitHub integration",
     githubIntro: "Click <strong>⚙️ GitHub</strong> in the toolbar to set:",
     githubLi1: "<strong>Scrum board URL</strong> (optional) — e.g. <code>https://github.com/users/DGARosendal/projects/1</code>.",
-    githubLi2: "<strong>Default repository</strong> (optional) — e.g. <code>DGARosendal/reolmarked</code>. Only used to turn <code>#123</code> into links.",
+    githubLi2: "<strong>Default repository</strong> — e.g. <code>DGARosendal/reolmarked</code>. Used to turn <code>#123</code> into links and to test a private token.",
     githubLi3: "<strong>Private repository?</strong> Set a GitHub token with read access. Only the project owner can see and change the token.",
     panelImportTitle: "Import: file formats",
     importLi1: "<strong>.csv</strong>: the first row is headers, the same as in the CSV export (Danish or English). Semicolon, comma and tab all work.",
@@ -1137,12 +1140,15 @@ const I18N = {
     membersNote: "The project code works as a password. Share it only with the group.",
 
     ghDialogTitle: "GitHub integration",
-    ghPublicSection: "Public repository",
-    ghPublicIntro: "If the repository is public, just set the default repository below. No token is needed.",
-    ghPrivateSection: "Private repository",
-    ghPrivateIntro: "If the repository is private, paste a GitHub token with read access to issues. The token is shared with the project's members but is only visible to the owner.",
+    ghGeneralSection: "General",
     ghBoardLabel: "Scrum board URL (optional)",
-    ghRepoLabel: "Default repository (optional)",
+    ghBoardHint: "Shown as a button in the toolbar. May be left empty.",
+    ghRepoLabel: "Default repository",
+    ghRepoHint: "Used to turn <code>#123</code> into clickable links and to test a private token. Without it, only <code>owner/repo#123</code> works.",
+    ghPublicSection: "Public repository",
+    ghPublicIntro: "If the repo is public, links work without any further setup.",
+    ghPrivateSection: "Private repository",
+    ghPrivateIntro: "If the repo is private, paste a token with read access to issues. The token is shared with the project's members but is only visible to the owner.",
     ghTokenLabel: "GitHub token",
     ghTokenTest: "Test and save",
     ghTokenDelete: "Delete token",
@@ -1159,12 +1165,12 @@ const I18N = {
     ghInstrNote: "Note: fine-grained tokens are typically 93 characters long. Copy the entire token — even if it looks longer than expected.",
     ghTokenValid: "✓ Token is valid.",
     ghTokenInvalid: "✗ Token is invalid or expired.",
-    ghTokenMissingRepo: "Set the default repository above first.",
     ghTokenSaved: "Token saved and tested.",
+    ghTokenSavedNoRepo: "Token saved. It will be tested automatically once the default repository is set.",
     ghTokenDeleted: "Token deleted from the project.",
     ghTokenDeleteConfirm: "Delete the token from the project? The requirements matrix will lose access to private issues.",
-    ghTokenStatusSet: "A token is set on this project.",
     ghTokenStatusNone: "No token is set on this project.",
+    ghTokenStatusUntested: "A token is set, but it has not been tested yet.",
     ghTokenStatusSetValid: "A valid token is set on this project.",
     ghTokenStatusSetInvalid: "A token is set, but it no longer works. Scroll down and follow the instructions.",
     ghTokenErrorNetwork: "Could not reach GitHub. Check your network connection.",
@@ -1664,14 +1670,21 @@ function openGithubDialog() {
 
 function updateGithubDialogState() {
   const hasToken = !!projectData.hasGithubToken;
-  const tokenValid = !!projectData.githubTokenValid;
+  const tested = !!projectData.githubTokenTested;
+  const valid = !!projectData.githubTokenValid;
   const status = $("ghTokenStatus");
-  status.classList.remove("ok", "err");
-  if (hasToken) {
-    if (tokenValid) { status.textContent = t("ghTokenStatusSetValid"); status.classList.add("ok"); }
-    else { status.textContent = t("ghTokenStatusSetInvalid"); status.classList.add("err"); }
-  } else {
+  status.classList.remove("ok", "err", "warn");
+  if (!hasToken) {
     status.textContent = t("ghTokenStatusNone");
+  } else if (!tested) {
+    status.textContent = t("ghTokenStatusUntested");
+    status.classList.add("warn");
+  } else if (valid) {
+    status.textContent = t("ghTokenStatusSetValid");
+    status.classList.add("ok");
+  } else {
+    status.textContent = t("ghTokenStatusSetInvalid");
+    status.classList.add("err");
   }
 
   const ownerControls = $("ghTokenOwnerControls");
@@ -1711,10 +1724,37 @@ async function saveGithubSettings() {
     projectData.defaultRepo = repo;
     updateGithubUi();
     renderTable();
-    closeGithubDialog();
-    showMessage(t("githubSaved"), true);
   } catch (err) {
     showMessage(t("errGithubSettings", { code: err.code || err.message }));
+    return;
+  }
+
+  // If owner has a stored token that was never tested, and a repo is now
+  // set, test it. Non-owners can't read the secrets doc, so skip silently.
+  if (isOwner && projectData.hasGithubToken && !projectData.githubTokenTested && repo) {
+    await tryTestStoredToken(repo);
+  }
+
+  updateGithubDialogState();
+  closeGithubDialog();
+  showMessage(t("githubSaved"), true);
+}
+
+async function tryTestStoredToken(repo) {
+  try {
+    const snap = await getDoc(doc(db, "projects", currentPid, "secrets", "github"));
+    if (!snap.exists()) { return; }
+    const data = snap.data();
+    const token = await decryptString(data.iv, data.ct);
+    const result = await testGithubToken(token, repo);
+    await updateDoc(doc(db, "projects", currentPid), {
+      githubTokenTested: true,
+      githubTokenValid: !!result.ok
+    });
+    projectData.githubTokenTested = true;
+    projectData.githubTokenValid = !!result.ok;
+  } catch (err) {
+    console.warn("Auto token test on repo save failed:", err);
   }
 }
 
@@ -1740,10 +1780,8 @@ async function saveGithubToken() {
   const token = $("ghTokenInput").value.trim();
   const repo = normalizeRepo($("defaultRepoInput").value) || String(projectData.defaultRepo || "");
   if (!token) { return; }
-  if (!repo || repo.indexOf("/") < 0) {
-    showMessage(t("ghTokenMissingRepo"));
-    return;
-  }
+
+  // Always store the encrypted token first.
   try {
     const enc = await encryptString(token);
     await setDoc(doc(db, "projects", currentPid, "secrets", "github"), {
@@ -1755,13 +1793,39 @@ async function saveGithubToken() {
     showMessage(t("errTokenSave", { code: err.code || err.message }));
     return;
   }
+
+  // No repo → mark as untested and stop.
+  if (!repo || repo.indexOf("/") < 0) {
+    try {
+      await updateDoc(doc(db, "projects", currentPid), {
+        hasGithubToken: true,
+        githubTokenTested: false,
+        githubTokenValid: false
+      });
+      projectData.hasGithubToken = true;
+      projectData.githubTokenTested = false;
+      projectData.githubTokenValid = false;
+    } catch (err) {
+      showMessage(t("errTokenSave", { code: err.code || err.message }));
+      return;
+    }
+    $("ghTokenInput").value = "";
+    updateGithubDialogState();
+    renderTable();
+    showMessage(t("ghTokenSavedNoRepo"), true);
+    return;
+  }
+
+  // Repo present → test now.
   const result = await testGithubToken(token, repo);
   try {
     await updateDoc(doc(db, "projects", currentPid), {
       hasGithubToken: true,
+      githubTokenTested: true,
       githubTokenValid: !!result.ok
     });
     projectData.hasGithubToken = true;
+    projectData.githubTokenTested = true;
     projectData.githubTokenValid = !!result.ok;
   } catch (err) {
     showMessage(t("errTokenSave", { code: err.code || err.message }));
@@ -1785,9 +1849,11 @@ async function deleteGithubToken() {
     await deleteDoc(doc(db, "projects", currentPid, "secrets", "github"));
     await updateDoc(doc(db, "projects", currentPid), {
       hasGithubToken: false,
+      githubTokenTested: false,
       githubTokenValid: false
     });
     projectData.hasGithubToken = false;
+    projectData.githubTokenTested = false;
     projectData.githubTokenValid = false;
     updateGithubDialogState();
     renderTable();
@@ -2092,6 +2158,7 @@ async function createProject() {
       githubBoardUrl: "",
       defaultRepo: "",
       hasGithubToken: false,
+      githubTokenTested: false,
       githubTokenValid: false,
       createdAt: serverTimestamp()
     });
@@ -2135,7 +2202,6 @@ async function openProject(pid) {
     return;
   }
 
-  // Join (creates member doc if new; increments memberCount atomically).
   try {
     await runTransaction(db, async function (tx) {
       const projRef = doc(db, "projects", pid);
@@ -3379,6 +3445,7 @@ async function createProjectAndImport(name, records) {
       githubBoardUrl: "",
       defaultRepo: "",
       hasGithubToken: false,
+      githubTokenTested: false,
       githubTokenValid: false,
       createdAt: serverTimestamp()
     });
