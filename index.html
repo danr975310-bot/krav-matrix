@@ -151,6 +151,53 @@
   }
   .colprefs-panel label { display: block; font-size: 13px; padding: 3px 0; cursor: pointer; }
   .colprefs-panel .small { margin: 6px 0 0; }
+  /* Prioritet-sektioner: vises kun når man sorterer efter MoSCoW. */
+  .matrix-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .matrix-section {
+    display: flex;
+    align-items: stretch;
+    background: #fff;
+    border: 1px solid #d9dde3;
+  }
+  .matrix-banner {
+    flex: 0 0 46px;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.18em;
+    padding: 10px 0;
+  }
+  .matrix-banner-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+  }
+  .matrix-banner.group-1 { background: #b91c1c; }
+  .matrix-banner.group-2 { background: #b45309; }
+  .matrix-banner.group-3 { background: #1d4ed8; }
+  .matrix-banner.group-4 { background: #4b5563; }
+  .matrix-section-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .matrix-sections-empty {
+    padding: 16px;
+    font-size: 13px;
+    color: #4b5563;
+    background: #fff;
+    border: 1px solid #d9dde3;
+    border-radius: 8px;
+  }
   .side-panel {
     position: fixed; top: 0; right: 0;
     height: 100vh; width: 440px; max-width: 92vw;
@@ -225,7 +272,6 @@
   #ghInstructions { margin: 12px 0; }
   #ghInstructions ol { padding-left: 20px; margin: 4px 0 8px; }
   #ghInstructions li { font-size: 12px; line-height: 1.5; margin-bottom: 3px; }
-  /* Import diff table */
   .diff-item { margin-bottom: 12px; padding: 8px 10px; background: #f9fafb;
                border: 1px solid #e5e7eb; border-radius: 6px; }
   .diff-item h5 { margin: 0 0 6px; font-size: 13px; color: #1f2937;
@@ -376,6 +422,7 @@
         </thead>
         <tbody id="tbody"></tbody>
       </table>
+      <div id="matrixSections" class="matrix-sections hidden"></div>
     </div>
   </div>
 </main>
@@ -461,7 +508,7 @@
         <li data-i18n-html="refsLi2"><code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.</li>
         <li data-i18n="refsLi3">Står der flere referencer i samme krav, vises de under hinanden.</li>
         <li data-i18n-html="refsLi4">Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.</li>
-        <li data-i18n-html="refsLi5">Er repo'et <strong>privat</strong>, skal der sættes et GitHub-token under ⚙️ GitHub.</li>
+        <li data-i18n-html="refsLi5">Er repo'et <strong>privat</strong>, skal der sættes et GitHub-token under ⚙️ GitHub. Uden et gyldigt token vises <code>#123</code> i gråt.</li>
       </ul>
     </section>
 
@@ -482,7 +529,7 @@
       <p data-i18n-html="githubIntro">Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
       <ul>
         <li data-i18n-html="githubLi1"><strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.</li>
-        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> (valgfrit) — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links.</li>
+        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> (valgfrit) — fx <code>DGARosendal/reolmarked</code>. Bruges kun til at gøre <code>#123</code> til links.</li>
         <li data-i18n-html="githubLi3"><strong>Privat repository?</strong> Sæt et GitHub-token med læseadgang. Kun ejeren af projektet kan se og ændre tokenet.</li>
       </ul>
     </section>
@@ -1366,7 +1413,8 @@ function daysSince(ts) {
   if (!ts) { return null; }
   const date = (typeof ts.toDate === "function") ? ts.toDate() : new Date(ts);
   if (isNaN(date.getTime())) { return null; }
-  return Math.floor((Date.now() - date.getTime()) / 86400000);
+  const diff = Math.floor((Date.now() - date.getTime()) / 86400000);
+  return diff < 0 ? 0 : diff;
 }
 
 function staleness(req) {
@@ -1397,7 +1445,7 @@ function parseHash() {
 
 function tryScrollToPendingReq() {
   if (!pendingScrollToReq) { return; }
-  const tr = document.querySelector('#tbody tr[data-req-id="' + pendingScrollToReq + '"]');
+  const tr = document.querySelector('tr[data-req-id="' + pendingScrollToReq + '"]');
   if (!tr) { return; }
   pendingScrollToReq = null;
   try { tr.scrollIntoView({ behavior: "smooth", block: "center" }); }
@@ -1841,7 +1889,7 @@ function buildRefsCell(r) {
 }
 
 function updateRefsCellFor(id) {
-  const tr = document.querySelector('#tbody tr[data-req-id="' + id + '"]');
+  const tr = document.querySelector('tr[data-req-id="' + id + '"]');
   if (!tr) { return; }
   const oldCell = tr.querySelector("td.refs");
   if (!oldCell) { return; }
@@ -2185,7 +2233,6 @@ async function onMemberListClick(event) {
   if (!confirm(t("removeMemberConfirm"))) { return; }
   try {
     await deleteDoc(doc(db, "projects", currentPid, "members", uid));
-    // Decrement memberCount (safe: we're still a member, since it's not us)
     try {
       await updateDoc(doc(db, "projects", currentPid), { memberCount: increment(-1) });
     } catch (e) { /* ignore */ }
@@ -2208,27 +2255,21 @@ async function removeProjectFromMyList() {
 
   try {
     if (lastOne) {
-      // Delete everything in this project, then the project itself.
-      // Requirements first.
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       const reqDeletes = [];
       reqSnap.forEach(function (d) { reqDeletes.push(deleteDoc(d.ref)); });
       await Promise.all(reqDeletes);
 
-      // Secrets (only deletable by owner; ignore failure otherwise).
       try { await deleteDoc(doc(db, "projects", pid, "secrets", "github")); }
       catch (e) { /* ignore */ }
 
-      // Members (all of them — including ours).
       const memSnap = await getDocs(collection(db, "projects", pid, "members"));
       const memDeletes = [];
       memSnap.forEach(function (d) { memDeletes.push(deleteDoc(d.ref)); });
       await Promise.all(memDeletes);
 
-      // Now delete the project. Rule allows it when memberCount == 1.
       await deleteDoc(doc(db, "projects", pid));
     } else {
-      // Decrement memberCount, then remove our own membership.
       try {
         await updateDoc(doc(db, "projects", pid), { memberCount: increment(-1) });
       } catch (e) { /* ignore */ }
@@ -2307,8 +2348,13 @@ function onReqsSnapshot(snapshot) {
 }
 
 function safeRender() {
-  if ($("tbody").contains(document.activeElement)) { renderPending = true; }
-  else { renderPending = false; renderTable(); }
+  const a = document.activeElement;
+  if ($("tbody").contains(a) || $("matrixSections").contains(a)) {
+    renderPending = true;
+  } else {
+    renderPending = false;
+    renderTable();
+  }
 }
 
 function compareReqs(a, b) {
@@ -2344,7 +2390,9 @@ function groupKeyForSortMode(req) {
 
 function renderTable() {
   const tbody = $("tbody");
+  const sections = $("matrixSections");
   tbody.innerHTML = "";
+  sections.innerHTML = "";
 
   const activeCol = activeSortColumn();
   const ths = document.querySelectorAll("#matrixTable thead th[data-col]");
@@ -2362,19 +2410,83 @@ function renderTable() {
   }
   visible.sort(compareReqs);
 
+  const useSections = (sortMode === "priority");
+
   if (visible.length === 0) {
-    const tr = document.createElement("tr");
-    const td = document.createElement("td");
-    td.colSpan = visibleCount() + 1;
-    td.className = "small";
-    td.style.padding = "16px";
-    td.textContent = onlyPyt ? t("emptyPyt") : t("emptyAll");
-    tr.appendChild(td);
-    tbody.appendChild(tr);
+    $("matrixTable").classList.toggle("hidden", useSections);
+    sections.classList.toggle("hidden", !useSections);
+    const emptyText = onlyPyt ? t("emptyPyt") : t("emptyAll");
+    if (useSections) {
+      const p = document.createElement("div");
+      p.className = "matrix-sections-empty";
+      p.textContent = emptyText;
+      sections.appendChild(p);
+    } else {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = visibleCount() + 1;
+      td.className = "small";
+      td.style.padding = "16px";
+      td.textContent = emptyText;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
     tryScrollToPendingReq();
     return;
   }
 
+  if (useSections) {
+    $("matrixTable").classList.add("hidden");
+    sections.classList.remove("hidden");
+    renderPrioritySections(visible, sections);
+  } else {
+    $("matrixTable").classList.remove("hidden");
+    sections.classList.add("hidden");
+    renderGroupedTable(visible, tbody);
+  }
+
+  tryScrollToPendingReq();
+}
+
+function renderPrioritySections(visible, container) {
+  const groups = ["Must", "Should", "Could", "Won't"];
+  const srcThead = document.querySelector("#matrixTable thead");
+  for (let g = 0; g < groups.length; g++) {
+    const key = groups[g];
+    const rows = [];
+    for (let i = 0; i < visible.length; i++) {
+      if (visible[i].moscow === key) { rows.push(visible[i]); }
+    }
+    if (rows.length === 0) { continue; }
+
+    const section = document.createElement("div");
+    section.className = "matrix-section";
+
+    const banner = document.createElement("div");
+    banner.className = "matrix-banner group-" + rankOf(key);
+    const bannerText = document.createElement("span");
+    bannerText.className = "matrix-banner-text";
+    bannerText.textContent = key.toUpperCase() + " (" + rows.length + ")";
+    banner.appendChild(bannerText);
+    section.appendChild(banner);
+
+    const body = document.createElement("div");
+    body.className = "matrix-section-body";
+
+    const table = document.createElement("table");
+    table.appendChild(srcThead.cloneNode(true));
+    const tbody = document.createElement("tbody");
+    for (let i = 0; i < rows.length; i++) {
+      tbody.appendChild(buildRow(rows[i], "moscow"));
+    }
+    table.appendChild(tbody);
+    body.appendChild(table);
+    section.appendChild(body);
+    container.appendChild(section);
+  }
+}
+
+function renderGroupedTable(visible, tbody) {
   const groupCounts = {};
   for (let i = 0; i < visible.length; i++) {
     const key = groupKeyForSortMode(visible[i]);
@@ -2382,6 +2494,7 @@ function renderTable() {
     groupCounts[key] = (groupCounts[key] || 0) + 1;
   }
 
+  const activeCol = activeSortColumn();
   let lastGroup = null;
   for (let i = 0; i < visible.length; i++) {
     const r = visible[i];
@@ -2392,8 +2505,6 @@ function renderTable() {
     }
     tbody.appendChild(buildRow(r, activeCol));
   }
-
-  tryScrollToPendingReq();
 }
 
 function buildGroupHeader(key, count) {
@@ -3320,7 +3431,6 @@ async function onImportFileChosen(event) {
     return;
   }
 
-  // Look for outdated content vs. live data.
   let liveReqs = [];
   try {
     const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
@@ -3393,9 +3503,13 @@ $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
 $("memberList").addEventListener("click", onMemberListClick);
 $("myProjectsList").addEventListener("click", onMyProjectsClick);
-$("tbody").addEventListener("input", onCellInput);
-$("tbody").addEventListener("focusout", onCellFocusOut);
-$("tbody").addEventListener("click", onTableClick);
+
+const matrixBodies = [$("tbody"), $("matrixSections")];
+for (let i = 0; i < matrixBodies.length; i++) {
+  matrixBodies[i].addEventListener("input", onCellInput);
+  matrixBodies[i].addEventListener("focusout", onCellFocusOut);
+  matrixBodies[i].addEventListener("click", onTableClick);
+}
 
 $("projectName").addEventListener("click", leaveProject);
 
