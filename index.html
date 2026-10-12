@@ -1,6 +1,4 @@
 <!DOCTYPE html>
-<!-- SRP: This page's single responsibility is to show a shared, realtime
-     requirements matrix (FURPS+ x MoSCoW) that a project group edits together. -->
 <html lang="da">
 <head>
 <meta charset="utf-8">
@@ -14,7 +12,6 @@
   .header-right { display: flex; align-items: center; gap: 16px; }
   #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
                transition: opacity 0.2s ease; }
-  /* Floating language toggle — always visible, bottom-right. */
   #btnLang {
     position: fixed;
     bottom: 20px;
@@ -45,7 +42,7 @@
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
   button.danger { border-color: #dc2626; color: #b91c1c; background: #fff; }
   button.danger:hover { background: #fef2f2; }
-  input[type=text], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
+  input[type=text], input[type=password], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
   #msg { color: #b91c1c; margin: 8px 0; }
   #msg:empty { display: none; }
@@ -115,6 +112,8 @@
   select.status-dropped { background: #e5e7eb; color: #6b7280; }
   details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
             border-radius: 8px; padding: 8px 12px; }
+  details > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  details[open] > summary { margin-bottom: 8px; }
   .small { font-size: 12px; color: #4b5563; }
   td.age { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
   td.age-fresh  { color: #9ca3af; }
@@ -201,9 +200,13 @@
   .modal-content {
     background: #fff; border-radius: 8px;
     padding: 20px 24px; min-width: 420px; max-width: 92vw;
+    max-height: 90vh; overflow-y: auto;
     box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   }
   .modal-content h3 { margin: 0 0 16px; font-size: 16px; }
+  .modal-content h4 { margin: 16px 0 6px; font-size: 14px; color: #1f2937;
+                      padding-bottom: 4px; border-bottom: 1px solid #eef0f3; }
+  .modal-content h4:first-of-type { margin-top: 0; }
   .modal-content label { display: block; margin-bottom: 14px; font-size: 13px; }
   .modal-content label input {
     width: 100%; padding: 6px; margin-top: 4px;
@@ -213,6 +216,30 @@
     background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
   }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal-actions button { flex: 0 0 auto; }
+  #ghTokenRow { display: flex; gap: 8px; margin-bottom: 8px; }
+  #ghTokenRow button { flex: 0 0 auto; }
+  #ghTokenStatus { margin: 6px 0 10px; }
+  #ghTokenStatus.ok { color: #15803d; font-weight: 600; }
+  #ghTokenStatus.err { color: #b91c1c; font-weight: 600; }
+  #ghInstructions { margin: 12px 0; }
+  #ghInstructions ol { padding-left: 20px; margin: 4px 0 8px; }
+  #ghInstructions li { font-size: 12px; line-height: 1.5; margin-bottom: 3px; }
+  /* Import diff table */
+  .diff-item { margin-bottom: 12px; padding: 8px 10px; background: #f9fafb;
+               border: 1px solid #e5e7eb; border-radius: 6px; }
+  .diff-item h5 { margin: 0 0 6px; font-size: 13px; color: #1f2937;
+                  display: flex; justify-content: space-between; align-items: baseline; }
+  .diff-item h5 .ts { font-size: 11px; color: #6b7280; font-weight: normal; }
+  .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+  .diff-table th, .diff-table td { border: 1px solid #e5e7eb; padding: 3px 6px;
+                                    vertical-align: top; text-align: left; }
+  .diff-table th { background: #eef0f3; font-weight: 600; width: auto; }
+  .diff-table td.old { color: #7f1d1d; background: #fef2f2; white-space: pre-wrap;
+                       word-break: break-word; }
+  .diff-table td.new { color: #14532d; background: #f0fdf4; white-space: pre-wrap;
+                       word-break: break-word; }
+  .diff-table td.fld { font-weight: 600; width: 20%; color: #1f2937; background: #fff; }
   @media (max-width: 500px) {
     .side-panel { width: 100vw; max-width: 100vw; }
     .modal-content { min-width: 0; width: 92vw; }
@@ -434,6 +461,7 @@
         <li data-i18n-html="refsLi2"><code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.</li>
         <li data-i18n="refsLi3">Står der flere referencer i samme krav, vises de under hinanden.</li>
         <li data-i18n-html="refsLi4">Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.</li>
+        <li data-i18n-html="refsLi5">Er repo'et <strong>privat</strong>, skal der sættes et GitHub-token under ⚙️ GitHub.</li>
       </ul>
     </section>
 
@@ -453,8 +481,9 @@
       <h3 data-i18n="panelGithubTitle">GitHub-integration</h3>
       <p data-i18n-html="githubIntro">Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
       <ul>
-        <li data-i18n-html="githubLi1"><strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/githubuser/projects/1</code>.</li>
-        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> (valgfrit) — fx <code>githubuser/projectname</code>. Bruges kun til at gøre <code>#123</code> til links. Uden den vises <code>#123</code> blot som tekst.</li>
+        <li data-i18n-html="githubLi1"><strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.</li>
+        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> (valgfrit) — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links.</li>
+        <li data-i18n-html="githubLi3"><strong>Privat repository?</strong> Sæt et GitHub-token med læseadgang. Kun ejeren af projektet kan se og ændre tokenet.</li>
       </ul>
     </section>
 
@@ -469,6 +498,8 @@
         <li data-i18n-html="importLi4"><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
       <p class="small" data-i18n="importNote">Import tilføjer nye krav og overskriver aldrig eksisterende.</p>
+      <p class="small" data-i18n-html="importOutdatedNote">Hvis filen indeholder krav, hvor online-versionen er
+         ændret, viser appen forskellene og lader dig vælge mellem at importere alligevel eller oprette et nyt projekt.</p>
     </section>
 
     <section>
@@ -481,28 +512,75 @@
 <div id="panelBackdrop" class="panel-backdrop hidden"></div>
 
 <div id="githubDialog" class="modal hidden">
-  <div class="modal-content">
+  <div class="modal-content" style="min-width: 560px;">
     <h3 data-i18n="ghDialogTitle">GitHub-integration</h3>
+
+    <h4 data-i18n="ghPublicSection">Offentligt repository</h4>
+    <p class="small" data-i18n="ghPublicIntro">Hvis repository'et er offentligt, kan du bare sætte standard-repo'et nedenfor. Der kræves ingen token.</p>
+
     <label>
       <span data-i18n="ghBoardLabel">Scrum board URL (valgfrit)</span>
       <input type="text" id="githubBoardUrlInput"
-             placeholder="https://github.com/users/githubuser/projects/1">
+             placeholder="https://github.com/users/DGARosendal/projects/1">
     </label>
     <label>
       <span data-i18n="ghRepoLabel">Standard repository (valgfrit)</span>
       <input type="text" id="defaultRepoInput"
-             placeholder="githubuser/projectname">
+             placeholder="DGARosendal/reolmarked">
     </label>
-    <p class="small" data-i18n-html="ghHint">
-      Scrum board URL vises som en "Scrum board"-knap i værktøjslinjen.<br>
-      Standard repository er <strong>valgfrit</strong> og bruges kun til at gøre
-      <code>#123</code> til klikbare links. Du kan altid skrive
-      <code>ejer/repo#123</code> direkte for at pege på et bestemt repo — det
-      virker helt uden at sætte noget her.
-    </p>
+
+    <h4 data-i18n="ghPrivateSection">Privat repository</h4>
+    <p class="small" data-i18n="ghPrivateIntro">Hvis repository'et er privat, skal du indsætte et GitHub-token med læseadgang til issues. Tokenet deles med projektets medlemmer, men er kun synligt for ejeren.</p>
+
+    <p id="ghTokenStatus" class="small"></p>
+
+    <div id="ghTokenOwnerControls" class="hidden">
+      <label>
+        <span data-i18n="ghTokenLabel">GitHub-token</span>
+        <input type="password" id="ghTokenInput" placeholder="github_pat_..." autocomplete="off">
+      </label>
+      <div id="ghTokenRow">
+        <button id="btnGhTokenSave" class="primary" data-i18n="ghTokenTest">Test og gem</button>
+        <button id="btnGhTokenDelete" class="danger" data-i18n="ghTokenDelete">Slet token</button>
+      </div>
+    </div>
+
+    <p id="ghTokenOnlyOwnerMsg" class="small hidden" data-i18n="ghTokenOnlyOwner">Kun ejeren af projektet kan se og ændre tokenet.</p>
+
+    <details id="ghInstructions">
+      <summary data-i18n="ghInstructions">Sådan finder du dit GitHub-token</summary>
+      <ol>
+        <li data-i18n="ghInstr1"></li>
+        <li data-i18n="ghInstr2"></li>
+        <li data-i18n="ghInstr3"></li>
+        <li data-i18n="ghInstr4"></li>
+        <li data-i18n="ghInstr5"></li>
+        <li data-i18n="ghInstr6"></li>
+        <li data-i18n="ghInstr7"></li>
+        <li data-i18n="ghInstr8"></li>
+      </ol>
+      <p class="small" data-i18n="ghInstrNote"></p>
+    </details>
+
     <div class="modal-actions">
       <button id="btnGithubCancel" data-i18n="cancelBtn">Annullér</button>
       <button id="btnGithubSave" class="primary" data-i18n="saveBtn">Gem</button>
+    </div>
+  </div>
+</div>
+
+<div id="importDiffDialog" class="modal hidden">
+  <div class="modal-content" style="min-width: 620px;">
+    <h3 id="importDiffTitle"></h3>
+    <p id="importDiffIntro" class="small"></p>
+    <details id="importDiffDetails" open>
+      <summary id="importDiffSummary"></summary>
+      <div id="importDiffList" style="margin-top: 10px;"></div>
+    </details>
+    <div class="modal-actions">
+      <button id="btnImportCancel"></button>
+      <button id="btnImportCreateNew"></button>
+      <button id="btnImportAnyway" class="primary"></button>
     </div>
   </div>
 </div>
@@ -513,7 +591,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
          GoogleAuthProvider, GithubAuthProvider }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
-         getDocs, onSnapshot, runTransaction, serverTimestamp }
+         getDocs, onSnapshot, runTransaction, serverTimestamp, increment }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -540,6 +618,52 @@ const AUTOSAVE_DELAY_MS = 800;
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
                  "status", "notes", "refs", "updatedBy", "age"];
 
+// ---------- Token encryption ----------
+// Level-2 protection: token is encrypted with AES-GCM using a key derived
+// from a constant in the app. This protects against casual inspection of
+// Firestore documents, but not against a determined attacker who inspects
+// the client source. Firestore rules + GitHub fine-grained token scopes
+// are the primary defense.
+const ENC_SECRET = "reqmatrix-2026-token-kek-v1";
+const ENC_SALT = "reqmatrix-salt-v1";
+
+function b64encode(bytes) {
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) { s += String.fromCharCode(bytes[i]); }
+  return btoa(s);
+}
+function b64decode(s) {
+  const bin = atob(s);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) { bytes[i] = bin.charCodeAt(i); }
+  return bytes;
+}
+async function getEncKey() {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw", enc.encode(ENC_SECRET), { name: "PBKDF2" }, false, ["deriveKey"]);
+  return crypto.subtle.deriveKey(
+    { name: "PBKDF2", salt: enc.encode(ENC_SALT), iterations: 100000, hash: "SHA-256" },
+    keyMaterial,
+    { name: "AES-GCM", length: 256 },
+    false,
+    ["encrypt", "decrypt"]);
+}
+async function encryptString(plain) {
+  const key = await getEncKey();
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const ct = await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key,
+                                          new TextEncoder().encode(plain));
+  return { iv: b64encode(iv), ct: b64encode(new Uint8Array(ct)) };
+}
+async function decryptString(ivB64, ctB64) {
+  const key = await getEncKey();
+  const pt = await crypto.subtle.decrypt(
+    { name: "AES-GCM", iv: b64decode(ivB64) }, key, b64decode(ctB64));
+  return new TextDecoder().decode(pt);
+}
+
+// ---------- i18n ----------
 const I18N = {
   da: {
     appTitle: "Kravmatrix · FURPS+ × MoSCoW",
@@ -654,29 +778,76 @@ const I18N = {
     refsLi2: "<code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.",
     refsLi3: "Står der flere referencer i samme krav, vises de under hinanden.",
     refsLi4: "Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.",
+    refsLi5: "Er repo'et <strong>privat</strong>, skal der sættes et GitHub-token under ⚙️ GitHub. Uden et gyldigt token vises <code>#123</code> i gråt.",
     panelShareTitle: "Del et krav via link 🔗",
     shareIntro1: "Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til det pågældende krav, fx:",
     shareIntro2: "Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver rækken et kort gult blink.",
     shareNote: "Bemærk: kun medlemmer af projektet kan åbne linket. Ikke-medlemmer får besked om at projektet ikke findes.",
     panelGithubTitle: "GitHub-integration",
     githubIntro: "Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:",
-    githubLi1: "<strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/githubuser/projects/1</code>.",
-    githubLi2: "<strong>Standard repository</strong> (valgfrit) — fx <code>githubuser/projectname</code>. Bruges kun til at gøre <code>#123</code> til links. Uden den vises <code>#123</code> blot som tekst.",
+    githubLi1: "<strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.",
+    githubLi2: "<strong>Standard repository</strong> (valgfrit) — fx <code>DGARosendal/reolmarked</code>. Bruges kun til at gøre <code>#123</code> til links.",
+    githubLi3: "<strong>Privat repository?</strong> Sæt et GitHub-token med læseadgang. Kun ejeren af projektet kan se og ændre tokenet.",
     panelImportTitle: "Import: filformater",
     importLi1: "<strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten (danske eller engelske). Semikolon, komma og tab virker.",
     importLi2: "<strong>.json</strong>: en liste af objekter, som i JSON-eksporten.",
     importLi3: "<strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps egen Markdown-eksport og med håndskrevne tabeller.",
     importLi4: "<strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.",
     importNote: "Import tilføjer nye krav og overskriver aldrig eksisterende.",
+    importOutdatedNote: "Hvis filen indeholder krav, hvor online-versionen er ændret, viser appen forskellene og lader dig vælge mellem at importere alligevel eller oprette et nyt projekt.",
     panelMembersTitle: "Medlemmer",
     membersNote: "Projektkoden fungerer som en adgangskode. Del den kun med gruppen.",
 
     ghDialogTitle: "GitHub-integration",
+    ghPublicSection: "Offentligt repository",
+    ghPublicIntro: "Hvis repository'et er offentligt, kan du bare sætte standard-repo'et nedenfor. Der kræves ingen token.",
+    ghPrivateSection: "Privat repository",
+    ghPrivateIntro: "Hvis repository'et er privat, skal du indsætte et GitHub-token med læseadgang til issues. Tokenet deles med projektets medlemmer, men er kun synligt for ejeren.",
     ghBoardLabel: "Scrum board URL (valgfrit)",
     ghRepoLabel: "Standard repository (valgfrit)",
-    ghHint: "Scrum board URL vises som en \"Scrum board\"-knap i værktøjslinjen.<br>Standard repository er <strong>valgfrit</strong> og bruges kun til at gøre <code>#123</code> til klikbare links. Du kan altid skrive <code>ejer/repo#123</code> direkte for at pege på et bestemt repo — det virker helt uden at sætte noget her.",
+    ghTokenLabel: "GitHub-token",
+    ghTokenTest: "Test og gem",
+    ghTokenDelete: "Slet token",
+    ghTokenOnlyOwner: "Kun ejeren af projektet kan se og ændre tokenet.",
+    ghInstructions: "Sådan finder du dit GitHub-token",
+    ghInstr1: "Gå til GitHub → klik på dit profilbillede (øverst til højre) → Settings.",
+    ghInstr2: "I venstre sidebjælke: rul ned til Developer settings → Personal access tokens → Fine-grained tokens.",
+    ghInstr3: "Klik Generate new token.",
+    ghInstr4: "Giv tokenet et navn (fx \"Kravmatrix\").",
+    ghInstr5: "Under Repository access: vælg \"Only select repositories\" og markér det private repo.",
+    ghInstr6: "Under Permissions → Repository permissions: sæt Issues til \"Read\" og Metadata til \"Read\".",
+    ghInstr7: "Klik Generate token og kopiér tokenet med det samme (det vises kun én gang).",
+    ghInstr8: "Indsæt tokenet i feltet ovenfor og klik Test og gem.",
+    ghInstrNote: "Bemærk: Fine-grained tokens er typisk 93 tegn lange. Kopiér hele tokenet — også selvom det ser længere ud end forventet.",
+    ghTokenValid: "✓ Token er gyldigt.",
+    ghTokenInvalid: "✗ Token er ugyldigt eller udløbet.",
+    ghTokenMissingRepo: "Sæt først standard-repository ovenfor.",
+    ghTokenSaved: "Token gemt og testet.",
+    ghTokenDeleted: "Token slettet fra projektet.",
+    ghTokenDeleteConfirm: "Slet tokenet fra projektet? Kravmatrixen mister adgang til private issues.",
+    ghTokenStatusSet: "Der er sat et token på dette projekt.",
+    ghTokenStatusNone: "Der er ikke sat et token på dette projekt.",
+    ghTokenStatusSetValid: "Der er sat et gyldigt token på dette projekt.",
+    ghTokenStatusSetInvalid: "Der er sat et token, men det virker ikke længere. Rul ned og følg instruktionerne.",
+    ghTokenErrorNetwork: "Kunne ikke få forbindelse til GitHub. Tjek din netværksforbindelse.",
+    ghTokenErrorRepo: "Kunne ikke få adgang til repo'et med dette token. Tjek at tokenet har Issues: Read og Metadata: Read, og at repo-navnet er korrekt.",
+    ghRepoFormat: "Standard repository skal være på formen \"ejer/repo\".",
+    githubSaved: "GitHub-indstillinger gemt.",
+
     cancelBtn: "Annullér",
     saveBtn: "Gem",
+
+    importDiffTitle: "Ældre fil opdaget",
+    importDiffIntro: "Filen indeholder krav, hvor online-versionen er blevet ændret. Gennemgå forskellene nedenfor, før du fortsætter.",
+    importDiffSummary: "Vis forskelle ({n} krav)",
+    importDiffFld: "Felt",
+    importDiffFile: "Fil",
+    importDiffOnline: "Online",
+    importDiffImportAnyway: "Importér alligevel",
+    importDiffCreateNew: "Opret som nyt projekt",
+    importDiffCancel: "Annullér",
+    importDiffNewProjectName: "Navn på det nye projekt:",
+    importDiffLastEdited: "Sidst rettet: {date}",
 
     statusProposed: "Foreslået",
     statusAgreed: "Aftalt",
@@ -696,11 +867,14 @@ const I18N = {
     errDeleteMember: "Kunne ikke fjerne medlemmet: {code}",
     errRemoveProject: "Kunne ikke fjerne projektet: {code}",
     errGithubSettings: "Kunne ikke gemme GitHub-indstillinger: {code}",
+    errTokenSave: "Kunne ikke gemme tokenet: {code}",
+    errTokenDelete: "Kunne ikke slette tokenet: {code}",
 
     removeMemberBtn: "Fjern",
     removeMemberConfirm: "Fjern dette medlem?",
     delReqConfirm: "Slet dette krav? ID'et bliver ikke genbrugt.",
     refUnlinkedTitle: "Standard repository er ikke sat — #123 vises som tekst. Sæt det under ⚙️ GitHub, hvis du vil have automatiske links, eller skriv ejer/repo#123.",
+    refTokenInvalidTitle: "Tokenet virker ikke — opdater under ⚙️ GitHub.",
     copyLinkTitle: "Kopiér et link til dette krav — klar til at sætte i GitHub",
     deleteReqTitle: "Slet krav",
     linkCopiedMsg: "Link til kravet kopieret — klar til at sætte ind i GitHub.",
@@ -731,9 +905,6 @@ const I18N = {
 
     shareLinkCopied: "Link kopieret. Del det kun med gruppen.",
     shareLinkPrompt: "Kopiér linket:",
-
-    githubRepoFormat: "Standard repository skal være på formen \"ejer/repo\".",
-    githubSaved: "GitHub-indstillinger gemt.",
 
     importUnknownType: "Ukendt filtype. Brug .json, .csv, .txt eller .md.",
     importReadError: "Kunne ikke læse filen: {msg}",
@@ -898,29 +1069,76 @@ const I18N = {
     refsLi2: "<code>owner/repo#123</code> → links to the specified repo. Works without setting anything.",
     refsLi3: "If a requirement has several references, they are shown one below the other.",
     refsLi4: "The default repository is <strong>optional</strong> — set it only if you frequently refer to the same repo.",
+    refsLi5: "If the repo is <strong>private</strong>, a GitHub token must be set under ⚙️ GitHub. Without a valid token, <code>#123</code> is shown in grey.",
     panelShareTitle: "Share a requirement via link 🔗",
     shareIntro1: "Each row has a <strong>🔗</strong> button. It copies a link straight to that requirement, e.g.:",
     shareIntro2: "Paste the link into a GitHub issue comment (or anywhere else), and when someone clicks it, the requirements matrix opens, scrolls to the requirement and gives the row a short yellow flash.",
     shareNote: "Note: only members of the project can open the link. Non-members are told that the project does not exist.",
     panelGithubTitle: "GitHub integration",
     githubIntro: "Click <strong>⚙️ GitHub</strong> in the toolbar to set:",
-    githubLi1: "<strong>Scrum board URL</strong> (optional) — e.g. <code>https://github.com/users/githubuser/projects/1</code>.",
-    githubLi2: "<strong>Default repository</strong> (optional) — e.g. <code>githubuser/projectname</code>. Only used to turn <code>#123</code> into links. Without it, <code>#123</code> is shown as plain text.",
+    githubLi1: "<strong>Scrum board URL</strong> (optional) — e.g. <code>https://github.com/users/DGARosendal/projects/1</code>.",
+    githubLi2: "<strong>Default repository</strong> (optional) — e.g. <code>DGARosendal/reolmarked</code>. Only used to turn <code>#123</code> into links.",
+    githubLi3: "<strong>Private repository?</strong> Set a GitHub token with read access. Only the project owner can see and change the token.",
     panelImportTitle: "Import: file formats",
     importLi1: "<strong>.csv</strong>: the first row is headers, the same as in the CSV export (Danish or English). Semicolon, comma and tab all work.",
     importLi2: "<strong>.json</strong>: a list of objects, as in the JSON export.",
     importLi3: "<strong>.md</strong>: a Markdown file with tables. Works with this app's own Markdown export as well as hand-written tables.",
     importLi4: "<strong>.txt</strong>: one requirement per line. All get F / Should / Proposed, which you can correct afterwards.",
     importNote: "Import adds new requirements and never overwrites existing ones.",
+    importOutdatedNote: "If the file contains requirements where the online version has changed, the app shows the differences and lets you choose between importing anyway or creating a new project.",
     panelMembersTitle: "Members",
     membersNote: "The project code works as a password. Share it only with the group.",
 
     ghDialogTitle: "GitHub integration",
+    ghPublicSection: "Public repository",
+    ghPublicIntro: "If the repository is public, just set the default repository below. No token is needed.",
+    ghPrivateSection: "Private repository",
+    ghPrivateIntro: "If the repository is private, paste a GitHub token with read access to issues. The token is shared with the project's members but is only visible to the owner.",
     ghBoardLabel: "Scrum board URL (optional)",
     ghRepoLabel: "Default repository (optional)",
-    ghHint: "The Scrum board URL appears as a \"Scrum board\" button in the toolbar.<br>The default repository is <strong>optional</strong> and is only used to turn <code>#123</code> into clickable links. You can always write <code>owner/repo#123</code> directly to point at a specific repo — this works without setting anything here.",
+    ghTokenLabel: "GitHub token",
+    ghTokenTest: "Test and save",
+    ghTokenDelete: "Delete token",
+    ghTokenOnlyOwner: "Only the project owner can see and change the token.",
+    ghInstructions: "How to find your GitHub token",
+    ghInstr1: "Go to GitHub → click your profile picture (top right) → Settings.",
+    ghInstr2: "In the left sidebar: scroll down to Developer settings → Personal access tokens → Fine-grained tokens.",
+    ghInstr3: "Click Generate new token.",
+    ghInstr4: "Give the token a name (e.g. \"Requirements matrix\").",
+    ghInstr5: "Under Repository access: choose \"Only select repositories\" and select the private repo.",
+    ghInstr6: "Under Permissions → Repository permissions: set Issues to \"Read\" and Metadata to \"Read\".",
+    ghInstr7: "Click Generate token and copy the token immediately (it is shown only once).",
+    ghInstr8: "Paste the token into the field above and click Test and save.",
+    ghInstrNote: "Note: fine-grained tokens are typically 93 characters long. Copy the entire token — even if it looks longer than expected.",
+    ghTokenValid: "✓ Token is valid.",
+    ghTokenInvalid: "✗ Token is invalid or expired.",
+    ghTokenMissingRepo: "Set the default repository above first.",
+    ghTokenSaved: "Token saved and tested.",
+    ghTokenDeleted: "Token deleted from the project.",
+    ghTokenDeleteConfirm: "Delete the token from the project? The requirements matrix will lose access to private issues.",
+    ghTokenStatusSet: "A token is set on this project.",
+    ghTokenStatusNone: "No token is set on this project.",
+    ghTokenStatusSetValid: "A valid token is set on this project.",
+    ghTokenStatusSetInvalid: "A token is set, but it no longer works. Scroll down and follow the instructions.",
+    ghTokenErrorNetwork: "Could not reach GitHub. Check your network connection.",
+    ghTokenErrorRepo: "Could not access the repo with this token. Check that the token has Issues: Read and Metadata: Read, and that the repo name is correct.",
+    ghRepoFormat: "The default repository must be in the form \"owner/repo\".",
+    githubSaved: "GitHub settings saved.",
+
     cancelBtn: "Cancel",
     saveBtn: "Save",
+
+    importDiffTitle: "Outdated file detected",
+    importDiffIntro: "The file contains requirements where the online version has changed. Review the differences below before continuing.",
+    importDiffSummary: "Show differences ({n} requirements)",
+    importDiffFld: "Field",
+    importDiffFile: "File",
+    importDiffOnline: "Online",
+    importDiffImportAnyway: "Import anyway",
+    importDiffCreateNew: "Create as new project",
+    importDiffCancel: "Cancel",
+    importDiffNewProjectName: "Name of the new project:",
+    importDiffLastEdited: "Last edited: {date}",
 
     statusProposed: "Proposed",
     statusAgreed: "Agreed",
@@ -940,11 +1158,14 @@ const I18N = {
     errDeleteMember: "Could not remove the member: {code}",
     errRemoveProject: "Could not remove the project: {code}",
     errGithubSettings: "Could not save GitHub settings: {code}",
+    errTokenSave: "Could not save the token: {code}",
+    errTokenDelete: "Could not delete the token: {code}",
 
     removeMemberBtn: "Remove",
     removeMemberConfirm: "Remove this member?",
     delReqConfirm: "Delete this requirement? The ID will not be reused.",
     refUnlinkedTitle: "No default repository is set — #123 is shown as text. Set one under ⚙️ GitHub if you want automatic links, or write owner/repo#123.",
+    refTokenInvalidTitle: "The token does not work — update it under ⚙️ GitHub.",
     copyLinkTitle: "Copy a link to this requirement — ready to paste into GitHub",
     deleteReqTitle: "Delete requirement",
     linkCopiedMsg: "Link to the requirement copied — ready to paste into GitHub.",
@@ -975,9 +1196,6 @@ const I18N = {
 
     shareLinkCopied: "Link copied. Share it only with the group.",
     shareLinkPrompt: "Copy the link:",
-
-    githubRepoFormat: "The default repository must be in the form \"owner/repo\".",
-    githubSaved: "GitHub settings saved.",
 
     importUnknownType: "Unknown file type. Use .json, .csv, .txt or .md.",
     importReadError: "Could not read the file: {msg}",
@@ -1066,6 +1284,7 @@ let visibleColumns = loadColumns();
 
 let projectData = {};
 let pendingScrollToReq = null;
+let pendingImportRecords = null;
 
 const saveTimers = new Map();
 
@@ -1098,6 +1317,7 @@ function applyLanguage() {
 
   updateLinkButton();
   updateGithubUi();
+  updateImportDiffDialogText();
   renderMembers();
   renderTable();
 }
@@ -1373,6 +1593,7 @@ function onCellFocusOut(event) {
   if (renderPending) { setTimeout(safeRender, 0); }
 }
 
+// ---------- GitHub UI ----------
 function updateGithubUi() {
   const url = String(projectData.githubBoardUrl || "").trim();
   const btn = $("btnOpenBoard");
@@ -1387,19 +1608,50 @@ function updateGithubUi() {
 function openGithubDialog() {
   $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
   $("defaultRepoInput").value = projectData.defaultRepo || "";
+  $("ghTokenInput").value = "";
+  updateGithubDialogState();
   $("githubDialog").classList.remove("hidden");
   setTimeout(function () { $("githubBoardUrlInput").focus(); }, 0);
+}
+
+function updateGithubDialogState() {
+  const hasToken = !!projectData.hasGithubToken;
+  const tokenValid = !!projectData.githubTokenValid;
+  const status = $("ghTokenStatus");
+  status.classList.remove("ok", "err");
+  if (hasToken) {
+    if (tokenValid) { status.textContent = t("ghTokenStatusSetValid"); status.classList.add("ok"); }
+    else { status.textContent = t("ghTokenStatusSetInvalid"); status.classList.add("err"); }
+  } else {
+    status.textContent = t("ghTokenStatusNone");
+  }
+
+  const ownerControls = $("ghTokenOwnerControls");
+  const ownerMsg = $("ghTokenOnlyOwnerMsg");
+  const delBtn = $("btnGhTokenDelete");
+  if (isOwner) {
+    ownerControls.classList.remove("hidden");
+    ownerMsg.classList.add("hidden");
+    delBtn.classList.toggle("hidden", !hasToken);
+  } else {
+    ownerControls.classList.add("hidden");
+    ownerMsg.classList.remove("hidden");
+  }
 }
 
 function closeGithubDialog() {
   $("githubDialog").classList.add("hidden");
 }
 
+function normalizeRepo(text) {
+  return String(text || "").trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/+$/, "");
+}
+
 async function saveGithubSettings() {
   const url = $("githubBoardUrlInput").value.trim();
-  const repo = $("defaultRepoInput").value.trim();
+  const repo = normalizeRepo($("defaultRepoInput").value);
   if (repo !== "" && repo.indexOf("/") < 0) {
-    showMessage(t("githubRepoFormat"));
+    showMessage(t("ghRepoFormat"));
     return;
   }
   try {
@@ -1418,12 +1670,92 @@ async function saveGithubSettings() {
   }
 }
 
+async function testGithubToken(token, repo) {
+  if (!repo || repo.indexOf("/") < 0) {
+    return { ok: false, reason: "no-repo" };
+  }
+  try {
+    const resp = await fetch("https://api.github.com/repos/" + repo, {
+      headers: {
+        "Authorization": "Bearer " + token,
+        "Accept": "application/vnd.github+json"
+      }
+    });
+    if (resp.ok) { return { ok: true }; }
+    return { ok: false, reason: "http-" + resp.status };
+  } catch (e) {
+    return { ok: false, reason: "network" };
+  }
+}
+
+async function saveGithubToken() {
+  const token = $("ghTokenInput").value.trim();
+  const repo = normalizeRepo($("defaultRepoInput").value) || String(projectData.defaultRepo || "");
+  if (!token) { return; }
+  if (!repo || repo.indexOf("/") < 0) {
+    showMessage(t("ghTokenMissingRepo"));
+    return;
+  }
+  try {
+    const enc = await encryptString(token);
+    await setDoc(doc(db, "projects", currentPid, "secrets", "github"), {
+      iv: enc.iv,
+      ct: enc.ct,
+      updatedAt: serverTimestamp()
+    });
+  } catch (err) {
+    showMessage(t("errTokenSave", { code: err.code || err.message }));
+    return;
+  }
+  const result = await testGithubToken(token, repo);
+  try {
+    await updateDoc(doc(db, "projects", currentPid), {
+      hasGithubToken: true,
+      githubTokenValid: !!result.ok
+    });
+    projectData.hasGithubToken = true;
+    projectData.githubTokenValid = !!result.ok;
+  } catch (err) {
+    showMessage(t("errTokenSave", { code: err.code || err.message }));
+    return;
+  }
+  $("ghTokenInput").value = "";
+  updateGithubDialogState();
+  renderTable();
+  if (result.ok) {
+    showMessage(t("ghTokenSaved"), true);
+  } else if (result.reason === "network") {
+    showMessage(t("ghTokenErrorNetwork"));
+  } else {
+    showMessage(t("ghTokenErrorRepo"));
+  }
+}
+
+async function deleteGithubToken() {
+  if (!confirm(t("ghTokenDeleteConfirm"))) { return; }
+  try {
+    await deleteDoc(doc(db, "projects", currentPid, "secrets", "github"));
+    await updateDoc(doc(db, "projects", currentPid), {
+      hasGithubToken: false,
+      githubTokenValid: false
+    });
+    projectData.hasGithubToken = false;
+    projectData.githubTokenValid = false;
+    updateGithubDialogState();
+    renderTable();
+    showMessage(t("ghTokenDeleted"), true);
+  } catch (err) {
+    showMessage(t("errTokenDelete", { code: err.code || err.message }));
+  }
+}
+
 function openBoard() {
   const url = String(projectData.githubBoardUrl || "").trim();
   if (!url) { return; }
   window.open(url, "_blank", "noopener");
 }
 
+// ---------- GitHub refs ----------
 function linkifyGitHubRefs(text, defaultRepo) {
   if (!text) { return ""; }
   const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
@@ -1452,17 +1784,26 @@ function extractGithubRefs(req, defaultRepo) {
       const repo = m[2];
       const num = m[3];
       let url = "";
+      let kind = "default";
       if (owner && repo) {
         url = "https://github.com/" + owner + "/" + repo + "/issues/" + num;
+        kind = "explicit";
       } else if (defaultRepo) {
         url = "https://github.com/" + defaultRepo + "/issues/" + num;
       }
       if (seen.has(raw)) { continue; }
       seen.add(raw);
-      refs.push({ raw: raw, url: url });
+      refs.push({ raw: raw, url: url, kind: kind });
     }
   }
   return refs;
+}
+
+function defaultRepoLinksActive() {
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
+  if (!defaultRepo) { return false; }
+  if (!projectData.hasGithubToken) { return true; }
+  return !!projectData.githubTokenValid;
 }
 
 function buildRefsCell(r) {
@@ -1475,10 +1816,12 @@ function buildRefsCell(r) {
     td.classList.add("refs-empty");
     return td;
   }
+  const defaultActive = defaultRepoLinksActive();
   for (let i = 0; i < refs.length; i++) {
     if (i > 0) { td.appendChild(document.createElement("br")); }
     const ref = refs[i];
-    if (ref.url) {
+    const active = ref.kind === "explicit" ? !!ref.url : (defaultActive && !!ref.url);
+    if (active) {
       const a = document.createElement("a");
       a.href = ref.url;
       a.target = "_blank";
@@ -1489,7 +1832,8 @@ function buildRefsCell(r) {
       const span = document.createElement("span");
       span.className = "unlinked";
       span.textContent = ref.raw;
-      span.title = t("refUnlinkedTitle");
+      if (ref.url && !defaultActive) { span.title = t("refTokenInvalidTitle"); }
+      else { span.title = t("refUnlinkedTitle"); }
       td.appendChild(span);
     }
   }
@@ -1523,6 +1867,7 @@ async function copyReqLink(rid) {
   }
 }
 
+// ---------- Projects list ----------
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
@@ -1566,6 +1911,7 @@ function onMyProjectsClick(event) {
   openProject(pid);
 }
 
+// ---------- Auth ----------
 async function loginWith(providerName) {
   let provider;
   switch (providerName) {
@@ -1671,6 +2017,7 @@ function onAuthChanged(user) {
   if (pid) { openProject(pid); } else { showScreen("chooser"); }
 }
 
+// ---------- Project ids ----------
 function makeProjectId(name) {
   let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (slug === "") { slug = "projekt"; }
@@ -1693,8 +2040,11 @@ async function createProject() {
       name: name,
       ownerUid: currentUser.uid,
       counter: 0,
+      memberCount: 0,
       githubBoardUrl: "",
       defaultRepo: "",
+      hasGithubToken: false,
+      githubTokenValid: false,
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -1737,11 +2087,25 @@ async function openProject(pid) {
     return;
   }
 
+  // Join (creates member doc if new; increments memberCount atomically).
   try {
-    await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
-                 { name: userLabel(), uid: currentUser.uid }, { merge: true });
+    await runTransaction(db, async function (tx) {
+      const projRef = doc(db, "projects", pid);
+      const projSnap = await tx.get(projRef);
+      if (!projSnap.exists()) { throw new Error("project-missing"); }
+      const memberRef = doc(db, "projects", pid, "members", currentUser.uid);
+      const memberSnap = await tx.get(memberRef);
+      if (memberSnap.exists()) {
+        tx.set(memberRef, { name: userLabel(), uid: currentUser.uid }, { merge: true });
+      } else {
+        tx.set(memberRef, { name: userLabel(), uid: currentUser.uid });
+        const current = (typeof projSnap.data().memberCount === "number")
+          ? projSnap.data().memberCount : 0;
+        tx.update(projRef, { memberCount: current + 1 });
+      }
+    });
   } catch (err) {
-    console.error("openProject: setDoc member failed for", pid, err);
+    console.error("openProject: join transaction failed for", pid, err);
     showMessage(t("errMember", { code: err.code || err.message }));
     showScreen("chooser");
     return;
@@ -1784,6 +2148,9 @@ function onProjectSnapshot(snap) {
   isOwner = (projectData.ownerUid === currentUser.uid);
   updateGithubUi();
   renderMembers();
+  if (!$("githubDialog").classList.contains("hidden")) {
+    updateGithubDialogState();
+  }
 }
 
 function onMembersSnapshot(snapshot) {
@@ -1818,6 +2185,10 @@ async function onMemberListClick(event) {
   if (!confirm(t("removeMemberConfirm"))) { return; }
   try {
     await deleteDoc(doc(db, "projects", currentPid, "members", uid));
+    // Decrement memberCount (safe: we're still a member, since it's not us)
+    try {
+      await updateDoc(doc(db, "projects", currentPid), { memberCount: increment(-1) });
+    } catch (e) { /* ignore */ }
   } catch (err) {
     showMessage(t("errDeleteMember", { code: err.code }));
   }
@@ -1837,18 +2208,30 @@ async function removeProjectFromMyList() {
 
   try {
     if (lastOne) {
+      // Delete everything in this project, then the project itself.
+      // Requirements first.
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       const reqDeletes = [];
       reqSnap.forEach(function (d) { reqDeletes.push(deleteDoc(d.ref)); });
       await Promise.all(reqDeletes);
 
+      // Secrets (only deletable by owner; ignore failure otherwise).
+      try { await deleteDoc(doc(db, "projects", pid, "secrets", "github")); }
+      catch (e) { /* ignore */ }
+
+      // Members (all of them — including ours).
       const memSnap = await getDocs(collection(db, "projects", pid, "members"));
       const memDeletes = [];
       memSnap.forEach(function (d) { memDeletes.push(deleteDoc(d.ref)); });
       await Promise.all(memDeletes);
 
+      // Now delete the project. Rule allows it when memberCount == 1.
       await deleteDoc(doc(db, "projects", pid));
     } else {
+      // Decrement memberCount, then remove our own membership.
+      try {
+        await updateDoc(doc(db, "projects", pid), { memberCount: increment(-1) });
+      } catch (e) { /* ignore */ }
       await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
     }
 
@@ -2165,6 +2548,14 @@ function onPytToggle() {
   renderTable();
 }
 
+// ---------- Export ----------
+function timestampSuffix() {
+  const d = new Date();
+  const pad = function (n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) +
+         "-" + pad(d.getHours()) + pad(d.getMinutes());
+}
+
 function downloadFile(filename, text, mimeType) {
   const blob = new Blob([text], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -2212,7 +2603,7 @@ function exportCsv() {
     ];
     csv += cells.join(";") + "\r\n";
   }
-  downloadFile("krav.csv", csv, "text/csv;charset=utf-8");
+  downloadFile("krav-" + timestampSuffix() + ".csv", csv, "text/csv;charset=utf-8");
 }
 
 function exportJson() {
@@ -2230,7 +2621,8 @@ function exportJson() {
       notes: r.notes, updatedBy: r.updatedBy, references: refs
     });
   }
-  downloadFile("krav.json", JSON.stringify(output, null, 2), "application/json");
+  downloadFile("krav-" + timestampSuffix() + ".json",
+               JSON.stringify(output, null, 2), "application/json");
 }
 
 function mdCell(value) {
@@ -2259,7 +2651,6 @@ function exportMarkdown() {
     md += t("mdRefsNote", { repo: defaultRepo }) + "\n\n";
   }
 
-  // ---------- Summary table ----------
   const moscowOrder = ["Must", "Should", "Could", "Won't"];
   const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
   let grandTotal = 0;
@@ -2291,10 +2682,6 @@ function exportMarkdown() {
         "** | **" + totals.agreed + "** | **" + totals.proposed + "** | **" +
         totals.parked + "** | **" + totals.dropped + "** |\n\n";
 
-  // ---------- Full-fledged table helpers ----------
-  // Every section uses the same complete set of columns, so the export reads
-  // like the on-screen matrix and stays consistent regardless of which fields
-  // happen to be filled in.
   const FULL_HEADER = "| " + t("thId") + " | " + t("thDescription") + " | " +
     t("thFurps") + " | " + t("thMoscow") + " | " + t("thSource") + " | " +
     t("thStatus") + " | " + t("thNotes") + " | " + t("thRefs") + " | " +
@@ -2333,7 +2720,6 @@ function exportMarkdown() {
     return out;
   }
 
-  // ---------- Active sections grouped by priority ----------
   const activePriorities = ["Must", "Should", "Could"];
   for (let p = 0; p < activePriorities.length; p++) {
     const group = [];
@@ -2349,7 +2735,6 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // ---------- Parked (PYT) ----------
   const parked = [];
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].status === "Parked") { parked.push(rows[i]); }
@@ -2361,7 +2746,6 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // ---------- Won't ----------
   const wonts = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -2376,7 +2760,6 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // ---------- Dropped ----------
   const dropped = [];
   for (let i = 0; i < rows.length; i++) {
     if (rows[i].status === "Dropped") { dropped.push(rows[i]); }
@@ -2388,7 +2771,7 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  downloadFile("krav.md", md, "text/markdown;charset=utf-8");
+  downloadFile("krav-" + timestampSuffix() + ".md", md, "text/markdown;charset=utf-8");
 }
 
 async function copyShareLink() {
@@ -2402,6 +2785,7 @@ async function copyShareLink() {
   }
 }
 
+// ---------- Import: parse helpers ----------
 function normalizeKey(text) {
   return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
@@ -2710,6 +3094,190 @@ function buildImportRecords(objects) {
   return { records: records, skipped: skipped, unrecognised: unrecognised };
 }
 
+// ---------- Import diff detection ----------
+function parseImportedSeq(importedId) {
+  if (!importedId) { return null; }
+  const m = String(importedId).match(/REQ-?\s*0*(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function formatTs(ts) {
+  if (!ts) { return ""; }
+  const d = (typeof ts.toDate === "function") ? ts.toDate() : new Date(ts);
+  if (isNaN(d.getTime())) { return ""; }
+  const pad = function (n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+function findImportDiffs(objects, liveReqs) {
+  const liveBySeq = {};
+  for (let i = 0; i < liveReqs.length; i++) {
+    liveBySeq[liveReqs[i].seq] = liveReqs[i];
+  }
+  const fields = ["description", "furps", "moscow", "source", "status", "notes"];
+  const diffs = [];
+  for (let i = 0; i < objects.length; i++) {
+    const o = objects[i];
+    const seq = parseImportedSeq(o.importedId);
+    if (seq === null) { continue; }
+    const live = liveBySeq[seq];
+    if (!live) { continue; }
+    const built = buildImportRecords([o]).records[0];
+    if (!built) { continue; }
+    const changes = [];
+    for (let f = 0; f < fields.length; f++) {
+      const fld = fields[f];
+      const fileVal = String(built[fld] || "").trim();
+      const liveVal = String(live[fld] || "").trim();
+      if (fileVal !== liveVal) {
+        changes.push({ field: fld, fileVal: fileVal, liveVal: liveVal });
+      }
+    }
+    if (changes.length > 0) {
+      diffs.push({
+        seq: seq,
+        label: reqLabel(seq),
+        updatedAt: live.updatedAt,
+        changes: changes
+      });
+    }
+  }
+  return diffs;
+}
+
+function updateImportDiffDialogText() {
+  if ($("importDiffDialog").classList.contains("hidden")) { return; }
+  $("importDiffTitle").textContent = t("importDiffTitle");
+  $("importDiffIntro").textContent = t("importDiffIntro");
+  $("btnImportAnyway").textContent = t("importDiffImportAnyway");
+  $("btnImportCreateNew").textContent = t("importDiffCreateNew");
+  $("btnImportCancel").textContent = t("importDiffCancel");
+  const list = $("importDiffList");
+  if (list.dataset.diffCount) {
+    $("importDiffSummary").textContent =
+      t("importDiffSummary", { n: list.dataset.diffCount });
+  }
+}
+
+function openImportDiffDialog(records, diffs) {
+  pendingImportRecords = records;
+  const list = $("importDiffList");
+  list.innerHTML = "";
+  list.dataset.diffCount = String(diffs.length);
+  const fieldLabels = {
+    description: "colDescription",
+    furps: "colFurps",
+    moscow: "colMoscow",
+    source: "colSource",
+    status: "colStatus",
+    notes: "colNotes"
+  };
+  for (let i = 0; i < diffs.length; i++) {
+    const d = diffs[i];
+    const wrap = document.createElement("div");
+    wrap.className = "diff-item";
+
+    const h = document.createElement("h5");
+    const left = document.createElement("span");
+    left.textContent = d.label;
+    const right = document.createElement("span");
+    right.className = "ts";
+    right.textContent = d.updatedAt
+      ? t("importDiffLastEdited", { date: formatTs(d.updatedAt) })
+      : "";
+    h.appendChild(left);
+    h.appendChild(right);
+    wrap.appendChild(h);
+
+    const table = document.createElement("table");
+    table.className = "diff-table";
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const thF = document.createElement("th");
+    thF.textContent = t("importDiffFld");
+    const thOld = document.createElement("th");
+    thOld.textContent = t("importDiffFile");
+    const thNew = document.createElement("th");
+    thNew.textContent = t("importDiffOnline");
+    headRow.appendChild(thF);
+    headRow.appendChild(thOld);
+    headRow.appendChild(thNew);
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    for (let c = 0; c < d.changes.length; c++) {
+      const ch = d.changes[c];
+      const tr = document.createElement("tr");
+      const tdF = document.createElement("td");
+      tdF.className = "fld";
+      const labelKey = fieldLabels[ch.field] || ch.field;
+      tdF.textContent = t(labelKey);
+      const tdOld = document.createElement("td");
+      tdOld.className = "old";
+      tdOld.textContent = ch.fileVal || "–";
+      const tdNew = document.createElement("td");
+      tdNew.className = "new";
+      tdNew.textContent = ch.liveVal || "–";
+      tr.appendChild(tdF);
+      tr.appendChild(tdOld);
+      tr.appendChild(tdNew);
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+
+    list.appendChild(wrap);
+  }
+  updateImportDiffDialogText();
+  $("importDiffDialog").classList.remove("hidden");
+}
+
+function closeImportDiffDialog() {
+  pendingImportRecords = null;
+  $("importDiffDialog").classList.add("hidden");
+}
+
+async function onImportAnyway() {
+  const records = pendingImportRecords;
+  closeImportDiffDialog();
+  if (!records) { return; }
+  await importRecords(records);
+}
+
+async function onImportAsNewProject() {
+  const records = pendingImportRecords;
+  if (!records) { return; }
+  const name = prompt(t("importDiffNewProjectName"));
+  if (!name || !name.trim()) { return; }
+  closeImportDiffDialog();
+  await createProjectAndImport(name.trim(), records);
+}
+
+async function createProjectAndImport(name, records) {
+  const pid = makeProjectId(name);
+  try {
+    await setDoc(doc(db, "projects", pid), {
+      name: name,
+      ownerUid: currentUser.uid,
+      counter: 0,
+      memberCount: 0,
+      githubBoardUrl: "",
+      defaultRepo: "",
+      hasGithubToken: false,
+      githubTokenValid: false,
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    showMessage(t("errCreate", { code: err.code || err.message }));
+    return;
+  }
+  await openProject(pid);
+  if (currentPid !== pid) { return; }
+  await importRecords(records);
+}
+
+// ---------- Import flow ----------
 function onImportClick() { $("importFile").click(); }
 
 async function onImportFileChosen(event) {
@@ -2749,6 +3317,20 @@ async function onImportFileChosen(event) {
   }
   if (built.records.length > MAX_IMPORT_ROWS) {
     showMessage(t("importTooMany", { n: built.records.length, max: MAX_IMPORT_ROWS }));
+    return;
+  }
+
+  // Look for outdated content vs. live data.
+  let liveReqs = [];
+  try {
+    const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
+    snap.forEach(function (d) { liveReqs.push(Object.assign({ id: d.id }, d.data())); });
+  } catch (err) {
+    console.warn("Could not fetch live requirements for diff:", err);
+  }
+  const diffs = findImportDiffs(objects, liveReqs);
+  if (diffs.length > 0) {
+    openImportDiffDialog(built.records, diffs);
     return;
   }
 
@@ -2850,6 +3432,8 @@ $("btnGithubSettings").addEventListener("click", openGithubDialog);
 $("btnOpenBoard").addEventListener("click", openBoard);
 $("btnGithubCancel").addEventListener("click", closeGithubDialog);
 $("btnGithubSave").addEventListener("click", saveGithubSettings);
+$("btnGhTokenSave").addEventListener("click", saveGithubToken);
+$("btnGhTokenDelete").addEventListener("click", deleteGithubToken);
 $("githubDialog").addEventListener("click", function (e) {
   if (e.target === $("githubDialog")) { closeGithubDialog(); }
 });
@@ -2859,6 +3443,16 @@ $("githubBoardUrlInput").addEventListener("keydown", function (e) {
 $("defaultRepoInput").addEventListener("keydown", function (e) {
   if (e.key === "Enter") { saveGithubSettings(); }
 });
+$("ghTokenInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubToken(); }
+});
+
+$("btnImportAnyway").addEventListener("click", onImportAnyway);
+$("btnImportCreateNew").addEventListener("click", onImportAsNewProject);
+$("btnImportCancel").addEventListener("click", closeImportDiffDialog);
+$("importDiffDialog").addEventListener("click", function (e) {
+  if (e.target === $("importDiffDialog")) { closeImportDiffDialog(); }
+});
 
 $("btnInfo").addEventListener("click", openPanel);
 $("btnClosePanel").addEventListener("click", closePanel);
@@ -2866,6 +3460,7 @@ $("panelBackdrop").addEventListener("click", closePanel);
 document.addEventListener("keydown", function (e) {
   if (e.key === "Escape" && $("sidePanel").classList.contains("open")) { closePanel(); }
   if (e.key === "Escape" && !$("githubDialog").classList.contains("hidden")) { closeGithubDialog(); }
+  if (e.key === "Escape" && !$("importDiffDialog").classList.contains("hidden")) { closeImportDiffDialog(); }
 });
 
 applyLanguage();
