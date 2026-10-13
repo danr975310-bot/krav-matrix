@@ -538,6 +538,7 @@
       <p class="small" data-i18n-html="importOutdatedNote">Hvis filen indeholder krav, hvor online-versionen er
          ændret, viser appen forskellene og lader dig vælge mellem at opdatere, tilføje som nye eller oprette et nyt projekt.</p>
       <p class="small" data-i18n="importSeqNote">Et slettet kravs REQ-NNN pensioneres: ingen andre krav kan overtage nummeret. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.</p>
+      <p class="small" data-i18n="importMdStableNote">Markdown-eksporten indeholder en skjult metadata-blok nederst med de stabile ID'er. Den er usynlig i renderet markdown, men gør at importen kan genkende kravet selv hvis beskrivelsen er ændret.</p>
     </section>
 
     <section>
@@ -764,6 +765,7 @@ const I18N = {
     importDuplicateNote: "Dubletter springes over: først på stabilt ID (usynligt) eller Krav-ID (REQ-NNN), ellers på beskrivelsen alene (normaliseret for store/små bogstaver og ekstra mellemrum).",
     importOutdatedNote: "Hvis filen indeholder krav, hvor online-versionen er ændret, viser appen forskellene og lader dig vælge mellem at opdatere, tilføje som nye eller oprette et nyt projekt.",
     importSeqNote: "Et slettet kravs REQ-NNN pensioneres: ingen andre krav kan overtage nummeret. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.",
+    importMdStableNote: "Markdown-eksporten indeholder en skjult metadata-blok nederst med de stabile ID'er. Den er usynlig i renderet markdown, men gør at importen kan genkende kravet selv hvis beskrivelsen er ændret.",
     panelMembersTitle: "Medlemmer",
     membersNote: "Projektkoden giver adgang til kravene. Alle, der kender den, kan se og redigere projektet — så del den kun med gruppen.",
 
@@ -1042,6 +1044,7 @@ const I18N = {
     importDuplicateNote: "Duplicates are skipped: first by stable (invisible) ID or Req ID (REQ-NNN), otherwise by description alone (normalised for case and extra whitespace).",
     importOutdatedNote: "If the file contains requirements where the online version has changed, the app shows the differences and lets you choose between updating, adding as new, or creating a new project.",
     importSeqNote: "A deleted requirement's REQ-NNN is retired: no other requirement can take that number. Only if the exact same requirement (same invisible ID) is imported again is the number resumed.",
+    importMdStableNote: "The Markdown export includes a hidden metadata block at the bottom with the stable IDs. It is invisible in rendered markdown, but lets the import recognise the requirement even if the description has changed.",
     panelMembersTitle: "Members",
     membersNote: "The project code gives access to the requirements. Anyone who knows it can view and edit the project — so share it only with the group.",
 
@@ -1223,8 +1226,6 @@ let unsubMembers = null;
 let unsubTombstones = null;
 let visibleColumns = loadColumns();
 
-// Race-beskyttelse: hvert kald til openProject får et nummer.
-// Hvis et nyere kald starter, opgiver det gamle.
 let openToken = 0;
 
 let projectData = {};
@@ -1237,7 +1238,6 @@ let pendingImportAllRecords = null;
 let pendingImportSkippedDupes = 0;
 let pendingImportUsedSeqs = null;
 
-// Autosave-map: key = "<id>|<field>", value = { timer, value, el }
 const saveTimers = new Map();
 
 function $(id) { return document.getElementById(id); }
@@ -1461,8 +1461,6 @@ function stopListeners() {
   allTombstones = [];
 }
 
-// Blev kaldt af onSnapshot ved fejl. Ved mistet adgang forlader vi
-// projektet med en tydelig besked, så brugeren ikke sidder på en død skærm.
 function onListenError(err) {
   const code = (err && err.code) ? err.code : "";
   if (code === "permission-denied") {
@@ -1972,10 +1970,8 @@ async function joinFromInput() {
 }
 
 async function openProject(pid) {
-  // Hvert kald får et nummer. Starter et nyere kald, stopper dette.
   const myToken = ++openToken;
 
-  // Gem det brugeren har skrevet, før vi skifter væk.
   flushAllPendingSaves();
   stopListeners();
   isOwner = false;
@@ -1998,9 +1994,6 @@ async function openProject(pid) {
     return;
   }
 
-  // Simpel join: opret eller opdater vores egen member-doc.
-  // Ingen transaktion — setDoc med merge gør præcis det samme og undgår
-  // den kendte permission-denied-fejl ved exists() i transaction.
   try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
                  { name: userLabel(), uid: currentUser.uid },
@@ -2092,8 +2085,6 @@ function onMembersSnapshot(snapshot) {
   renderMembers();
 }
 
-// Medlemmer er kun til visning. Der er ingen "fjern"-funktion —
-// projektkoden er adgangsnøglen, og den eneste måde at forlade er selv.
 function renderMembers() {
   const list = $("memberList");
   list.innerHTML = "";
@@ -2105,9 +2096,6 @@ function renderMembers() {
   }
 }
 
-// Sletter projektet (hvis ejer) eller forlader det (hvis ikke-ejer).
-// Slet projekt-doc FØR subcollections, så en afvist projekt-sletning
-// ikke efterlader et tomt projekt.
 async function removeProjectFromMyList() {
   if (!currentPid || !currentUser) { return; }
   const pid = currentPid;
@@ -2124,11 +2112,8 @@ async function removeProjectFromMyList() {
 
   try {
     if (wasOwner) {
-      // Slet projekt-doc FØRST. Hvis dette fejler, er intet tabt.
       await deleteDoc(doc(db, "projects", pid));
 
-      // Vores member-doc findes stadig, så subcollection-sletningerne
-      // er tilladte (reglen kræver kun isMember).
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       await Promise.all(reqSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
 
@@ -2139,7 +2124,6 @@ async function removeProjectFromMyList() {
     await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
   } catch (err) {
     console.error("removeProjectFromMyList failed:", err);
-    // Tilbage til listen, men behold fejlen synlig.
     leaveProject();
     showMessage(t("errRemoveProject", { code: err.code || err.message }));
     return;
@@ -2591,9 +2575,6 @@ function sortedBySeq() {
   return copy;
 }
 
-// Beskyt mod formel-injektion i Excel/Sheets. Dækker =, +, @, - (ikke
-// negativt tal), samt ledende tab og CR, som også er farlige i visse
-// regneark.
 function csvCell(value) {
   let text = String(value === undefined || value === null ? "" : value);
   if (/^[=+@]/.test(text) || /^[\t\r]/.test(text) || (/^-/.test(text) && !/^-\d/.test(text))) {
@@ -2801,6 +2782,21 @@ function exportMarkdown() {
     md += "\n";
   }
 
+  // Skjult metadata-blok med stabile ID'er. Usynlig i renderet markdown,
+  // men gør at importen kan matche kravet selv om beskrivelsen er ændret.
+  const idLines = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.importedId) {
+      idLines.push(reqLabel(r.seq) + "=" + r.importedId);
+    }
+  }
+  if (idLines.length > 0) {
+    md += "\n<!-- kravmatrix-stable-ids\n";
+    md += idLines.join("\n") + "\n";
+    md += "-->\n";
+  }
+
   downloadFile("krav-" + timestampSuffix() + ".md", md, "text/markdown;charset=utf-8");
 }
 
@@ -2982,7 +2978,33 @@ function textToObjects(text) {
   return objects;
 }
 
+// Læser den skjulte metadata-blok fra .md-filen og returnerer et map
+// fra seq-nummer (som streng) til stabilt ID.
+function parseMarkdownStableIds(text) {
+  const map = {};
+  const match = text.match(/<!--\s*kravmatrix-stable-ids\s*\n([\s\S]*?)-->/i);
+  if (!match) { return map; }
+  const lines = match[1].split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) { continue; }
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) { continue; }
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim();
+    if (!key || !val) { continue; }
+    const seqMatch = key.match(/(\d+)/);
+    if (seqMatch) { map[String(parseInt(seqMatch[1], 10))] = val; }
+  }
+  return map;
+}
+
 function markdownToObjects(text) {
+  // Læs skjulte stabile ID'er FØRST, og fjern metadata-blokken fra
+  // teksten, så tabel-parseren ikke forvirres.
+  const stableIds = parseMarkdownStableIds(text);
+  text = text.replace(/<!--\s*kravmatrix-stable-ids[\s\S]*?-->\s*$/i, "");
+
   const lines = text.split(/\r?\n/);
   const objects = [];
   let currentSection = null;
@@ -3039,6 +3061,17 @@ function markdownToObjects(text) {
       else if (currentSection === "Droppede") { obj.status = "Dropped"; }
     }
     if (!obj.description || String(obj.description).trim() === "") { continue; }
+
+    // Injicér stabilt ID fra metadata-blokken, hvis det findes.
+    // Filen har kun REQ-NNN, så vi slår op på seq-nummeret.
+    if (obj.fileId) {
+      const seqMatch = String(obj.fileId).match(/(\d+)/);
+      if (seqMatch) {
+        const seqKey = String(parseInt(seqMatch[1], 10));
+        if (stableIds[seqKey]) { obj.importedId = stableIds[seqKey]; }
+      }
+    }
+
     objects.push(obj);
   }
 
@@ -3081,9 +3114,6 @@ function cleanStatus(value) {
   }
 }
 
-// Excel viser en ledende apostrof som en del af teksten, hvis man
-// importerer vores egen CSV tilbage. Fjern den, hvis den beskyttede
-// en formel (dvs. resten starter med =, +, @, - (ikke tal), tab eller CR).
 function stripFormulaProtection(value) {
   if (typeof value !== "string") { return value; }
   if (value.length >= 2 && value[0] === "'") {
@@ -3208,11 +3238,13 @@ function formatTs(ts) {
 
 // Klassificerer records op imod live krav OG tombstones.
 //
-// Tombstone-matchning sker i tre trin:
-//   1. via importedId (fra CSV/JSON-eksport hvor den er med)
-//   2. via seq + beskrivelse (fallback — .md og gamle .csv-filer har
-//      kun REQ-NNN, ikke det stabile ID)
-//   3. via beskrivelse alene (fanger "ny" fil hvor seq er ændret)
+// Match-rækkefølge:
+//   1. importedId (findes i .json, .csv fra ny version, samt .md fra ny version)
+//   2. seq + beskrivelse (fallback for .md og gamle .csv uden metadata)
+//   3. seq alene mod tombstone — fordi seq pensioneres ved sletning, kan
+//      et tombstone-seq aldrig referere til et andet krav. Vi logger en
+//      advarsel hvis beskrivelsen er ændret.
+//   4. beskrivelse alene (fanger "ny" fil hvor seq er ændret)
 function classifyImportRows(records, liveReqs, tombstones) {
   const liveByImportedId = {};
   const liveBySeq = {};
@@ -3238,20 +3270,19 @@ function classifyImportRows(records, liveReqs, tombstones) {
   const newRecords = [];
   const matchedLiveIds = new Set();
   const seenFileImportedIds = new Set();
-  // Tombstones spores via deres id (Firestore doc-id) så vi ikke gendanner
-  // den samme to gange.
-  const usedTombstoneIds = new Set();
+  const usedTombstoneKeys = new Set();
 
   function markTombstoneUsed(tb) {
-    if (tb && tb.id) { usedTombstoneIds.add(tb.id); }
-    else if (tb && tb.importedId) { usedTombstoneIds.add("iid:" + tb.importedId); }
-    else if (tb && typeof tb.seq === "number") { usedTombstoneIds.add("seq:" + tb.seq); }
+    if (!tb) { return; }
+    if (tb.id) { usedTombstoneKeys.add("id:" + tb.id); }
+    if (tb.importedId) { usedTombstoneKeys.add("iid:" + tb.importedId); }
+    if (typeof tb.seq === "number") { usedTombstoneKeys.add("seq:" + tb.seq); }
   }
   function isTombstoneUsed(tb) {
     if (!tb) { return false; }
-    if (tb.id && usedTombstoneIds.has(tb.id)) { return true; }
-    if (tb.importedId && usedTombstoneIds.has("iid:" + tb.importedId)) { return true; }
-    if (typeof tb.seq === "number" && usedTombstoneIds.has("seq:" + tb.seq)) { return true; }
+    if (tb.id && usedTombstoneKeys.has("id:" + tb.id)) { return true; }
+    if (tb.importedId && usedTombstoneKeys.has("iid:" + tb.importedId)) { return true; }
+    if (typeof tb.seq === "number" && usedTombstoneKeys.has("seq:" + tb.seq)) { return true; }
     return false;
   }
 
@@ -3283,7 +3314,7 @@ function classifyImportRows(records, liveReqs, tombstones) {
     let live = null;
     let tomb = null;
 
-    // Trin 1: match på importedId (levende eller tombstone)
+    // Trin 1: importedId (levende eller tombstone)
     if (iid !== "" && !seenFileImportedIds.has(iid)) {
       if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
         live = liveByImportedId[iid];
@@ -3293,36 +3324,52 @@ function classifyImportRows(records, liveReqs, tombstones) {
     }
     if (iid !== "") { seenFileImportedIds.add(iid); }
 
-    // Trin 2: seq + beskrivelse. Tjek levende krav først, fald tilbage
-    // til tombstones. Det er denne fallback der redder .md og gamle
-    // .csv-filer, hvor det stabile ID ikke er med.
+    // Trin 2+3: seq-matchning
     if (!live && !tomb) {
       const seq = rec.__desiredSeq;
       if (seq !== null) {
         const recNorm = normalizeDescriptionForMatch(rec.description);
+
+        // 2a: live krav på seq + beskrivelse
         if (recNorm !== "") {
           const liveCand = liveBySeq[seq];
           if (liveCand && !matchedLiveIds.has(liveCand.id)) {
             const liveNorm = normalizeDescriptionForMatch(liveCand.description);
             if (recNorm === liveNorm) { live = liveCand; }
           }
-          if (!live) {
-            const tbCand = tbBySeq[seq];
-            if (tbCand && !isTombstoneUsed(tbCand)) {
-              const tbNorm = normalizeDescriptionForMatch(tbCand.description);
-              // Tombstone-beskrivelsen er trunkeret til 200 tegn ved
-              // sletning, så vi accepterer også et rent prefix-match.
-              if (tbNorm !== "" &&
-                  (recNorm === tbNorm || recNorm.indexOf(tbNorm) === 0)) {
-                tomb = tbCand;
-              }
+        }
+
+        // 2b + 3: tombstone på seq
+        if (!live) {
+          const tbCand = tbBySeq[seq];
+          if (tbCand && !isTombstoneUsed(tbCand)) {
+            const tbNorm = normalizeDescriptionForMatch(tbCand.description);
+            const tbDescExists = tbNorm !== "";
+            const descMatch = tbDescExists &&
+              (recNorm === tbNorm || (recNorm !== "" && recNorm.indexOf(tbNorm) === 0));
+
+            if (!tbDescExists || descMatch) {
+              // Beskrivelsen matcher, eller tombstonen har ingen beskrivelse.
+              tomb = tbCand;
+            } else {
+              // Beskrivelsen matcher ikke, men seq er pensioneret — så
+              // REQ-NNN refererer stadig til det samme krav. Gendan alligevel,
+              // og log hvad der sker.
+              console.warn(
+                "[import] Tombstone seq=" + seq +
+                " matcher ikke filens beskrivelse. Gendanner alligevel " +
+                "fordi REQ-NNN er pensioneret.\n" +
+                "  Fil:       \"" + rec.description.slice(0, 100) + "\"\n" +
+                "  Tombstone: \"" + String(tbCand.description).slice(0, 100) + "\""
+              );
+              tomb = tbCand;
             }
           }
         }
       }
     }
 
-    // Trin 3: beskrivelses-match (uafhængigt af seq)
+    // Trin 4: beskrivelse alene (uafhængigt af seq)
     if (!live && !tomb) {
       const key = normalizeDescriptionForMatch(rec.description);
       if (key !== "") {
