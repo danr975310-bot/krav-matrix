@@ -42,7 +42,7 @@
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
   button.danger { border-color: #dc2626; color: #b91c1c; background: #fff; }
   button.danger:hover { background: #fef2f2; }
-  input[type=text], input[type=password], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
+  input[type=text], input[type=password], input[type=number], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
   #msg { color: #b91c1c; margin: 8px 0; }
   #msg:empty { display: none; }
@@ -382,8 +382,8 @@
         </div>
       </div>
 
-      <button id="btnGithubSettings" data-i18n-title="githubBtnTitle"
-              title="Indstil GitHub Scrum board og standard-repo">⚙️ GitHub</button>
+      <button id="btnGithubSettings" data-i18n-title="settingsBtnTitle"
+              title="Projektindstillinger: GitHub, aldersgrænser m.m.">⚙️ Indstillinger</button>
       <button id="btnOpenBoard" class="hidden" data-i18n-title="boardBtnTitle"
               title="Åbn Scrum board i ny fane">Scrum board ↗</button>
       <button id="btnInfo" data-i18n-title="infoBtnTitle"
@@ -469,8 +469,7 @@
       <h3 data-i18n="panelAgeTitle">Alder</h3>
       <ul>
         <li data-i18n="ageLi1">Antal dage siden kravet sidst blev rettet.</li>
-        <li data-i18n-html="ageLi2">Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres:
-            gul efter 14 dage, rød efter 28 dage.</li>
+        <li data-i18n-html="ageLi2">Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres med gul og rød, når de nærmer sig de grænser, gruppen har sat under ⚙️ Indstillinger.</li>
         <li data-i18n="ageLi3">Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
         <li data-i18n="ageLi4">Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.</li>
       </ul>
@@ -516,7 +515,7 @@
 
     <section>
       <h3 data-i18n="panelGithubTitle">GitHub-integration</h3>
-      <p data-i18n-html="githubIntro">Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:</p>
+      <p data-i18n-html="githubIntro">Klik <strong>⚙️ Indstillinger</strong> i værktøjslinjen for at sætte:</p>
       <ul>
         <li data-i18n-html="githubLi1"><strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.</li>
         <li data-i18n-html="githubLi2"><strong>Standard repository</strong> — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links.</li>
@@ -552,7 +551,9 @@
 
 <div id="githubDialog" class="modal hidden">
   <div class="modal-content" style="min-width: 560px;">
-    <h3 data-i18n="ghDialogTitle">GitHub-integration</h3>
+    <h3 data-i18n="settingsDialogTitle">Projektindstillinger</h3>
+
+    <h4 data-i18n="settingsGithubSection">GitHub-integration</h4>
 
     <label>
       <span data-i18n="ghBoardLabel">Scrum board URL (valgfrit)</span>
@@ -569,6 +570,21 @@
     <p class="field-hint" data-i18n-html="ghRepoHint">Bruges til at gøre <code>#123</code> til klikbare links. Uden den virker kun <code>ejer/repo#123</code>.</p>
 
     <p class="small" data-i18n="ghPrivateNote">Er repo'et privat, virker linkene kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.</p>
+
+    <h4 data-i18n="settingsAgeSection">Aldersgrænser</h4>
+    <p class="field-hint" data-i18n="settingsAgeHint">Krav der ikke er Færdige, Parkerede eller Droppede markeres med farve, når de ikke er blevet rettet i et stykke tid. Grænserne gælder for alle i gruppen.</p>
+
+    <label>
+      <span data-i18n="settingsWarnLabel">Gul efter (dage)</span>
+      <input type="number" id="staleWarnInput" min="1" max="999" step="1" inputmode="numeric">
+    </label>
+    <p class="field-hint" data-i18n="settingsAgeWarnHint">Skal være mindst 1.</p>
+
+    <label>
+      <span data-i18n="settingsUrgentLabel">Rød efter (dage)</span>
+      <input type="number" id="staleUrgentInput" min="2" max="999" step="1" inputmode="numeric">
+    </label>
+    <p class="field-hint" data-i18n="settingsAgeUrgentHint">Skal være større end den gule grænse.</p>
 
     <div class="modal-actions">
       <button id="btnGithubCancel" data-i18n="cancelBtn">Annullér</button>
@@ -621,8 +637,8 @@ const STATUS = ["Proposed", "Agreed", "Done", "Parked", "Dropped"];
 
 const MAX_IMPORT_ROWS = 500;
 const IMPORT_CHUNK_SIZE = 100;
-const STALE_WARN_DAYS = 14;
-const STALE_URGENT_DAYS = 28;
+const DEFAULT_STALE_WARN_DAYS = 14;
+const DEFAULT_STALE_URGENT_DAYS = 28;
 
 const AUTOSAVE_DELAY_MS = 800;
 
@@ -689,6 +705,7 @@ const I18N = {
     boardBtnTitle: "Åbn Scrum board i ny fane",
     infoBtnTitle: "Forklaring, PYT, import-info og medlemmer",
     backToProjectsTitle: "Tilbage til projektlisten",
+    settingsBtnTitle: "Projektindstillinger: GitHub, aldersgrænser m.m.",
 
     thId: "Krav-ID",
     thDescription: "Kravbeskrivelse",
@@ -701,7 +718,7 @@ const I18N = {
     thRefsTitle: "GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter. Skriv #123 eller ejer/repo#123.",
     thUpdatedBy: "Sidst rettet af",
     thAge: "Alder",
-    thAgeTitle: "Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter 14 og 28 dage.",
+    thAgeTitle: "Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter de grænser, gruppen har sat under ⚙️ Indstillinger.",
 
     panelTitle: "Information",
     panelCloseTitle: "Luk",
@@ -731,7 +748,7 @@ const I18N = {
     pytNote: "Forskellen fra \"Droppet\": Droppet betyder \"vi har besluttet ikke at gøre det\". Parkeret betyder \"vi beslutter det ikke nu\".",
     panelAgeTitle: "Alder",
     ageLi1: "Antal dage siden kravet sidst blev rettet.",
-    ageLi2: "Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres: gul efter 14 dage, rød efter 28 dage.",
+    ageLi2: "Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres med gul og rød, når de nærmer sig de grænser, gruppen har sat under ⚙️ Indstillinger.",
     ageLi3: "Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).",
     ageLi4: "Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.",
     ageNote: "Færdige, parkerede og droppede rækker vises dæmpet, så de ikke konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.",
@@ -743,7 +760,7 @@ const I18N = {
     storageNote: "Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +. Vælg én konvention, og brug den konsekvent.",
     panelRefsTitle: "Referencer (GitHub)",
     refsIntro: "Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.",
-    refsLi1: "<code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ GitHub. Ellers vises det som tekst.",
+    refsLi1: "<code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ Indstillinger. Ellers vises det som tekst.",
     refsLi2: "<code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.",
     refsLi3: "Står der flere referencer i samme krav, vises de under hinanden.",
     refsLi4: "Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.",
@@ -753,7 +770,7 @@ const I18N = {
     shareIntro2: "Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver rækken et kort gult blink.",
     shareNote: "Bemærk: alle, der kender projektkoden, kan åbne linket og redigere kravene. Del det kun med gruppen.",
     panelGithubTitle: "GitHub-integration",
-    githubIntro: "Klik <strong>⚙️ GitHub</strong> i værktøjslinjen for at sætte:",
+    githubIntro: "Klik <strong>⚙️ Indstillinger</strong> i værktøjslinjen for at sætte:",
     githubLi1: "<strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.",
     githubLi2: "<strong>Standard repository</strong> — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links.",
     panelImportTitle: "Import: filformater",
@@ -769,7 +786,18 @@ const I18N = {
     panelMembersTitle: "Medlemmer",
     membersNote: "Projektkoden giver adgang til kravene. Alle, der kender den, kan se og redigere projektet — så del den kun med gruppen.",
 
-    ghDialogTitle: "GitHub-integration",
+    settingsDialogTitle: "Projektindstillinger",
+    settingsGithubSection: "GitHub-integration",
+    settingsAgeSection: "Aldersgrænser",
+    settingsAgeHint: "Krav der ikke er Færdige, Parkerede eller Droppede markeres med farve, når de ikke er blevet rettet i et stykke tid. Grænserne gælder for alle i gruppen.",
+    settingsWarnLabel: "Gul efter (dage)",
+    settingsUrgentLabel: "Rød efter (dage)",
+    settingsAgeWarnHint: "Skal være mindst 1.",
+    settingsAgeUrgentHint: "Skal være større end den gule grænse.",
+    settingsAgeBadWarn: "Den gule grænse skal være et helt tal på mindst 1.",
+    settingsAgeBadUrgent: "Den røde grænse skal være et helt tal, der er større end den gule grænse.",
+    settingsSaved: "Indstillinger gemt.",
+
     ghBoardLabel: "Scrum board URL (valgfrit)",
     ghBoardHint: "Vises som en knap i værktøjslinjen. Kan stå tom.",
     ghRepoLabel: "Standard repository",
@@ -777,7 +805,6 @@ const I18N = {
     ghPrivateNote: "Er repo'et privat, virker linkene kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.",
     ghRepoFormat: "Standard repository skal være på formen \"ejer/repo\".",
     ghBadBoardUrl: "Scrum board URL skal starte med https://github.com/",
-    githubSaved: "GitHub-indstillinger gemt.",
 
     cancelBtn: "Annullér",
     saveBtn: "Gem",
@@ -817,10 +844,10 @@ const I18N = {
     errAddReq: "Kunne ikke tilføje kravet: {code}",
     errDeleteReq: "Kunne ikke slette: {code}",
     errRemoveProject: "Kunne ikke fjerne projektet: {code}",
-    errGithubSettings: "Kunne ikke gemme GitHub-indstillinger: {code}",
+    errGithubSettings: "Kunne ikke gemme indstillinger: {code}",
 
     delReqConfirm: "Slet dette krav?\n\nKravets REQ-NNN pensioneres og kan ikke længere tildeles andre krav. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.",
-    refUnlinkedTitle: "Standard repository er ikke sat — #123 vises som tekst. Sæt det under ⚙️ GitHub, hvis du vil have automatiske links, eller skriv ejer/repo#123.",
+    refUnlinkedTitle: "Standard repository er ikke sat — #123 vises som tekst. Sæt det under ⚙️ Indstillinger, hvis du vil have automatiske links, eller skriv ejer/repo#123.",
     copyLinkTitle: "Kopiér et link til dette krav — klar til at sætte i GitHub",
     deleteReqTitle: "Slet krav",
     linkCopiedMsg: "Link til kravet kopieret — klar til at sætte ind i GitHub.",
@@ -968,6 +995,7 @@ const I18N = {
     boardBtnTitle: "Open Scrum board in a new tab",
     infoBtnTitle: "Explanation, PYT, import info and members",
     backToProjectsTitle: "Back to project list",
+    settingsBtnTitle: "Project settings: GitHub, age thresholds, etc.",
 
     thId: "Req ID",
     thDescription: "Requirement",
@@ -980,7 +1008,7 @@ const I18N = {
     thRefsTitle: "GitHub issues mentioned in Requirement, Source or Notes. Write #123 or owner/repo#123.",
     thUpdatedBy: "Last edited by",
     thAge: "Age",
-    thAgeTitle: "Days since the requirement was last edited. Requirements that are not Done or Dropped are highlighted after 14 and 28 days.",
+    thAgeTitle: "Days since the requirement was last edited. Requirements that are not Done or Dropped are highlighted according to the thresholds the group has set under ⚙️ Settings.",
 
     panelTitle: "Information",
     panelCloseTitle: "Close",
@@ -1010,7 +1038,7 @@ const I18N = {
     pytNote: "The difference from \"Dropped\": Dropped means \"we have decided not to do it\". Parked means \"we are not deciding now\".",
     panelAgeTitle: "Age",
     ageLi1: "Number of days since the requirement was last edited.",
-    ageLi2: "Requirements that are <em>not</em> Done, Parked or Dropped are highlighted: yellow after 14 days, red after 28 days.",
+    ageLi2: "Requirements that are <em>not</em> Done, Parked or Dropped are highlighted with yellow and red as they approach the thresholds the group has set under ⚙️ Settings.",
     ageLi3: "Parked and finished requirements are shown in a neutral colour (parked in italics).",
     ageLi4: "The purpose is to make it visible when a Should/Could requirement is about to be forgotten.",
     ageNote: "Done, parked and dropped rows are dimmed so they do not compete with the active requirements. Hover to see them at full strength.",
@@ -1022,7 +1050,7 @@ const I18N = {
     storageNote: "Security and other cross-cutting concerns can be classified under F or +. Pick one convention and use it consistently.",
     panelRefsTitle: "References (GitHub)",
     refsIntro: "The <strong>References</strong> column automatically finds GitHub issues mentioned in Requirement, Source or Notes and shows them as clickable links.",
-    refsLi1: "<code>#123</code> → links to the default repo, if one is set under ⚙️ GitHub. Otherwise it is shown as text.",
+    refsLi1: "<code>#123</code> → links to the default repo, if one is set under ⚙️ Settings. Otherwise it is shown as text.",
     refsLi2: "<code>owner/repo#123</code> → links to the specified repo. Works without setting anything.",
     refsLi3: "If a requirement has several references, they are shown one below the other.",
     refsLi4: "The default repository is <strong>optional</strong> — set it only if you frequently refer to the same repo.",
@@ -1032,7 +1060,7 @@ const I18N = {
     shareIntro2: "Paste the link into a GitHub issue comment (or anywhere else), and when someone clicks it, the requirements matrix opens, scrolls to the requirement and gives the row a short yellow flash.",
     shareNote: "Note: anyone who knows the project code can open the link and edit the requirements. Share it only with the group.",
     panelGithubTitle: "GitHub integration",
-    githubIntro: "Click <strong>⚙️ GitHub</strong> in the toolbar to set:",
+    githubIntro: "Click <strong>⚙️ Settings</strong> in the toolbar to set:",
     githubLi1: "<strong>Scrum board URL</strong> (optional) — e.g. <code>https://github.com/users/DGARosendal/projects/1</code>.",
     githubLi2: "<strong>Default repository</strong> — e.g. <code>DGARosendal/reolmarked</code>. Used to turn <code>#123</code> into links.",
     panelImportTitle: "Import: file formats",
@@ -1048,7 +1076,18 @@ const I18N = {
     panelMembersTitle: "Members",
     membersNote: "The project code gives access to the requirements. Anyone who knows it can view and edit the project — so share it only with the group.",
 
-    ghDialogTitle: "GitHub integration",
+    settingsDialogTitle: "Project settings",
+    settingsGithubSection: "GitHub integration",
+    settingsAgeSection: "Age thresholds",
+    settingsAgeHint: "Requirements that are not Done, Parked or Dropped are highlighted once they have not been edited for a while. The thresholds apply to everyone in the group.",
+    settingsWarnLabel: "Yellow after (days)",
+    settingsUrgentLabel: "Red after (days)",
+    settingsAgeWarnHint: "Must be at least 1.",
+    settingsAgeUrgentHint: "Must be greater than the yellow threshold.",
+    settingsAgeBadWarn: "The yellow threshold must be a whole number of at least 1.",
+    settingsAgeBadUrgent: "The red threshold must be a whole number greater than the yellow threshold.",
+    settingsSaved: "Settings saved.",
+
     ghBoardLabel: "Scrum board URL (optional)",
     ghBoardHint: "Shown as a button in the toolbar. May be left empty.",
     ghRepoLabel: "Default repository",
@@ -1056,7 +1095,6 @@ const I18N = {
     ghPrivateNote: "If the repo is private, the links only work for people who have access to the repo on GitHub. No token is needed.",
     ghRepoFormat: "The default repository must be in the form \"owner/repo\".",
     ghBadBoardUrl: "The Scrum board URL must start with https://github.com/",
-    githubSaved: "GitHub settings saved.",
 
     cancelBtn: "Cancel",
     saveBtn: "Save",
@@ -1096,10 +1134,10 @@ const I18N = {
     errAddReq: "Could not add the requirement: {code}",
     errDeleteReq: "Could not delete: {code}",
     errRemoveProject: "Could not remove the project: {code}",
-    errGithubSettings: "Could not save GitHub settings: {code}",
+    errGithubSettings: "Could not save settings: {code}",
 
     delReqConfirm: "Delete this requirement?\n\nThe requirement's REQ-NNN is retired and can no longer be assigned to other requirements. Only if the exact same requirement (same invisible ID) is imported again is the number resumed.",
-    refUnlinkedTitle: "No default repository is set — #123 is shown as text. Set one under ⚙️ GitHub if you want automatic links, or write owner/repo#123.",
+    refUnlinkedTitle: "No default repository is set — #123 is shown as text. Set one under ⚙️ Settings if you want automatic links, or write owner/repo#123.",
     copyLinkTitle: "Copy a link to this requirement — ready to paste into GitHub",
     deleteReqTitle: "Delete requirement",
     linkCopiedMsg: "Link to the requirement copied — ready to paste into GitHub.",
@@ -1261,6 +1299,18 @@ function formatTime(d) {
   return hh + ":" + mm + ":" + ss;
 }
 
+// Læser aldersgrænserne fra projekt-dokumentet med fornuftige fallbacks.
+// Bruges af staleness() og af dialogen, så gamle projekter (oprettet før
+// denne funktion) automatisk får standardværdierne.
+function staleWarnDays() {
+  const n = projectData ? Number(projectData.staleWarnDays) : NaN;
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_STALE_WARN_DAYS;
+}
+function staleUrgentDays() {
+  const n = projectData ? Number(projectData.staleUrgentDays) : NaN;
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_STALE_URGENT_DAYS;
+}
+
 function showMessage(text, isGood) {
   $("msg").textContent = text;
   $("msg").style.color = isGood ? "#15803d" : "#b91c1c";
@@ -1353,8 +1403,8 @@ function staleness(req) {
   if (req.status === "Parked") { return 3; }
   const days = daysSince(req.updatedAt);
   if (days === null) { return 0; }
-  if (days >= STALE_URGENT_DAYS) { return 2; }
-  if (days >= STALE_WARN_DAYS) { return 1; }
+  if (days >= staleUrgentDays()) { return 2; }
+  if (days >= staleWarnDays()) { return 1; }
   return 0;
 }
 
@@ -1594,7 +1644,7 @@ function onCellFocusOut(event) {
   if (renderPending) { setTimeout(safeRender, 0); }
 }
 
-// ---------- GitHub UI ----------
+// ---------- GitHub + indstillinger ----------
 function updateGithubUi() {
   const url = String(projectData.githubBoardUrl || "").trim();
   const btn = $("btnOpenBoard");
@@ -1609,6 +1659,8 @@ function updateGithubUi() {
 function openGithubDialog() {
   $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
   $("defaultRepoInput").value = projectData.defaultRepo || "";
+  $("staleWarnInput").value = staleWarnDays();
+  $("staleUrgentInput").value = staleUrgentDays();
   $("githubDialog").classList.remove("hidden");
   setTimeout(function () { $("githubBoardUrlInput").focus(); }, 0);
 }
@@ -1628,6 +1680,10 @@ function isSafeBoardUrl(url) {
 async function saveGithubSettings() {
   const url = $("githubBoardUrlInput").value.trim();
   const repo = normalizeRepo($("defaultRepoInput").value);
+
+  const warn = parseInt($("staleWarnInput").value, 10);
+  const urgent = parseInt($("staleUrgentInput").value, 10);
+
   if (url !== "" && !isSafeBoardUrl(url)) {
     showMessage(t("ghBadBoardUrl"));
     return;
@@ -1636,13 +1692,26 @@ async function saveGithubSettings() {
     showMessage(t("ghRepoFormat"));
     return;
   }
+  if (!Number.isInteger(warn) || warn < 1 || warn > 999) {
+    showMessage(t("settingsAgeBadWarn"));
+    return;
+  }
+  if (!Number.isInteger(urgent) || urgent <= warn || urgent > 999) {
+    showMessage(t("settingsAgeBadUrgent"));
+    return;
+  }
+
   try {
     await updateDoc(doc(db, "projects", currentPid), {
       githubBoardUrl: url,
-      defaultRepo: repo
+      defaultRepo: repo,
+      staleWarnDays: warn,
+      staleUrgentDays: urgent
     });
     projectData.githubBoardUrl = url;
     projectData.defaultRepo = repo;
+    projectData.staleWarnDays = warn;
+    projectData.staleUrgentDays = urgent;
     updateGithubUi();
     renderTable();
   } catch (err) {
@@ -1651,7 +1720,7 @@ async function saveGithubSettings() {
   }
 
   closeGithubDialog();
-  showMessage(t("githubSaved"), true);
+  showMessage(t("settingsSaved"), true);
 }
 
 function openBoard() {
@@ -1976,6 +2045,8 @@ async function createProject() {
       counter: 0,
       githubBoardUrl: "",
       defaultRepo: "",
+      staleWarnDays: DEFAULT_STALE_WARN_DAYS,
+      staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -3712,6 +3783,8 @@ async function createProjectAndImport(name, records) {
       counter: 0,
       githubBoardUrl: "",
       defaultRepo: "",
+      staleWarnDays: DEFAULT_STALE_WARN_DAYS,
+      staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -4060,6 +4133,12 @@ $("githubBoardUrlInput").addEventListener("keydown", function (e) {
   if (e.key === "Enter") { saveGithubSettings(); }
 });
 $("defaultRepoInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("staleWarnInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("staleUrgentInput").addEventListener("keydown", function (e) {
   if (e.key === "Enter") { saveGithubSettings(); }
 });
 
