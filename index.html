@@ -903,7 +903,8 @@ const I18N = {
     importErrJsonNotList: "JSON-filen skal være en liste af krav.",
 
     leaveConfirm: "Forlad projektet?\n\nDu mister adgangen til at se og redigere krav. Projektet og alle krav bliver liggende — de andre deltagere kan stadig se det.",
-    deleteProjectConfirm: "Slet projektet og alle krav permanent?\n\nDette kan ikke fortrydes. Eventuelle andre medlemmer mister også adgang.",
+    deleteProjectTypeName: "Slet projektet \"{name}\" og alle krav permanent?\n\nDette kan ikke fortrydes. Eventuelle andre medlemmer mister også adgang.\n\nSkriv projektets navn for at bekræfte:",
+    deleteProjectNameMismatch: "Navnet stemmer ikke. Sletningen blev annulleret.",
     projectRemoved: "Du er ikke længere medlem af projektet.",
     projectDeleted: "Projektet og alle krav er slettet.",
 
@@ -1195,7 +1196,8 @@ const I18N = {
     importErrJsonNotList: "The JSON file must be a list of requirements.",
 
     leaveConfirm: "Leave the project?\n\nYou lose access to view and edit the requirements. The project and all requirements remain — the other members can still see them.",
-    deleteProjectConfirm: "Delete the project and all requirements permanently?\n\nThis cannot be undone. Any other members also lose access.",
+    deleteProjectTypeName: "Delete project \"{name}\" and all requirements permanently?\n\nThis cannot be undone. Any other members also lose access.\n\nType the project name to confirm:",
+    deleteProjectNameMismatch: "The name does not match. Deletion was cancelled.",
     projectRemoved: "You are no longer a member of the project.",
     projectDeleted: "The project and all requirements have been deleted.",
 
@@ -2192,7 +2194,13 @@ async function removeProjectFromMyList() {
   const wasOwner = isOwner;
 
   if (wasOwner) {
-    if (!confirm(t("deleteProjectConfirm"))) { return; }
+    const projectName = String(projectData.name || "").trim();
+    const answer = prompt(t("deleteProjectTypeName", { name: projectName }));
+    if (answer === null) { return; }
+    if (answer.trim() !== projectName) {
+      showMessage(t("deleteProjectNameMismatch"));
+      return;
+    }
   } else {
     if (!confirm(t("leaveConfirm"))) { return; }
   }
