@@ -705,7 +705,7 @@ const I18N = {
     furpsU: "<strong>U</strong> Brugbarhed (Usability): lethed i brug, tilgængelighed, brugeroplevelse.",
     furpsR: "<strong>R</strong> Pålidelighed (Reliability): tilgængelighed, nøjagtighed, genopretning.",
     furpsP: "<strong>P</strong> Ydeevne (Performance): svartid, kapacitet, ressourceforbrug.",
-    furpsS: "<strong>S</strong> Vedligeholdelse (Supportability): vedligeholdbarhed, testbarhed, tilpasningsevne.",
+    furpsS: "<strong>S</strong> Vedligeholdelse (Supportability): vedligeholdelsesvenlighed, testbarhed, tilpasningsevne.",
     furpsPlus: "<strong>+</strong> Begrænsninger: design, implementering, grænseflader, jura (fx GDPR), fysiske krav.",
     panelMoscowTitle: "MoSCoW (prioritet)",
     moscowMust: "<strong>Must</strong> Uundværlig for den aftalte løsning eller version.",
@@ -2095,6 +2095,9 @@ async function onTableClick(event) {
   if (!confirm(t("delReqConfirm"))) { return; }
   try {
     await deleteDoc(doc(db, "projects", currentPid, "requirements", el.dataset.id));
+    // Slip fokus fra den nu slettede knap, så safeRender ikke tror,
+    // at brugeren stadig redigerer i tabellen og udskyder render.
+    if (document.activeElement === el) { el.blur(); }
   } catch (err) {
     showMessage(t("errDeleteReq", { code: err.code }));
   }
