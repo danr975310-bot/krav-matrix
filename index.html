@@ -262,7 +262,7 @@
     background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
   }
   .field-hint { margin: 0 0 14px; font-size: 12px; color: #6b7280; line-height: 1.4; }
-  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
   .modal-actions button { flex: 0 0 auto; }
   .diff-item { margin-bottom: 12px; padding: 8px 10px; background: #f9fafb;
                border: 1px solid #e5e7eb; border-radius: 6px; }
@@ -589,7 +589,8 @@
     <div class="modal-actions">
       <button id="btnImportCancel"></button>
       <button id="btnImportCreateNew"></button>
-      <button id="btnImportAnyway" class="primary"></button>
+      <button id="btnImportAnyway"></button>
+      <button id="btnImportUpdate" class="primary"></button>
     </div>
   </div>
 </div>
@@ -775,17 +776,20 @@ const I18N = {
     saveBtn: "Gem",
 
     importDiffTitle: "Ældre fil opdaget",
-    importDiffIntro: "Filen indeholder krav, hvor online-versionen er blevet ændret. Gennemgå forskellene nedenfor, før du fortsætter.",
+    importDiffIntro: "Filen indeholder krav, hvor online-versionen er blevet ændret. Vælg om de eksisterende krav skal opdateres, eller om filens rækker skal tilføjes som nye krav.",
     importDiffDuplicates: "{n} rækker springes over som dubletter (samme Krav-ID eller samme beskrivelse).",
     importDiffSummary: "Vis forskelle ({n} krav)",
     importDiffFld: "Felt",
     importDiffFile: "Fil",
     importDiffOnline: "Online",
-    importDiffImportAnyway: "Importér alligevel",
+    importDiffImportAnyway: "Tilføj som nye krav",
+    importDiffUpdateExisting: "Opdatér eksisterende",
     importDiffCreateNew: "Opret som nyt projekt",
     importDiffCancel: "Annullér",
     importDiffNewProjectName: "Navn på det nye projekt:",
     importDiffLastEdited: "Sidst rettet: {date}",
+    importUpdateProgress: "Opdaterer… {done} af {total}",
+    importUpdateDone: "Opdaterede {updated} krav og tilføjede {inserted} nye.",
 
     statusProposed: "Foreslået",
     statusAgreed: "Aftalt",
@@ -1040,17 +1044,20 @@ const I18N = {
     saveBtn: "Save",
 
     importDiffTitle: "Outdated file detected",
-    importDiffIntro: "The file contains requirements where the online version has changed. Review the differences below before continuing.",
+    importDiffIntro: "The file contains requirements where the online version has changed. Choose whether to update the existing requirements, or to add the file's rows as new requirements.",
     importDiffDuplicates: "{n} rows are skipped as duplicates (same Req ID or same description).",
     importDiffSummary: "Show differences ({n} requirements)",
     importDiffFld: "Field",
     importDiffFile: "File",
     importDiffOnline: "Online",
-    importDiffImportAnyway: "Import anyway",
+    importDiffImportAnyway: "Add as new requirements",
+    importDiffUpdateExisting: "Update existing",
     importDiffCreateNew: "Create as new project",
     importDiffCancel: "Cancel",
     importDiffNewProjectName: "Name of the new project:",
     importDiffLastEdited: "Last edited: {date}",
+    importUpdateProgress: "Updating… {done} of {total}",
+    importUpdateDone: "Updated {updated} requirements and added {inserted} new ones.",
 
     statusProposed: "Proposed",
     statusAgreed: "Agreed",
@@ -1197,8 +1204,15 @@ let visibleColumns = loadColumns();
 let projectData = {};
 let pendingScrollToReq = null;
 
-let pendingImportRecords = null;
-let pendingImportRecordsAll = null;
+// Import state — tre lister med forskellige formål:
+//   pendingImportUpdates:    rækker der matcher et eksisterende krav, men hvor
+//                            felterne afviger → opdatér i stedet for at oprette nyt
+//   pendingImportNewRecords: rækker der ikke matcher noget → oprettes som nye
+//   pendingImportAllRecords: ALLE ikke-dublet-rækker (til "opret som nyt projekt"
+//                            og "tilføj som nye krav")
+let pendingImportUpdates = null;
+let pendingImportNewRecords = null;
+let pendingImportAllRecords = null;
 let pendingImportSkippedDupes = 0;
 
 const saveTimers = new Map();
@@ -2065,7 +2079,7 @@ async function writeRequirements(records) {
     for (let i = 0; i < records.length; i++) {
       const r = records[i];
       const newRef = doc(collection(db, "projects", currentPid, "requirements"));
-      tx.set(newRef, {
+      const data = {
         seq: last + 1 + i,
         description: r.description,
         furps: r.furps,
@@ -2075,7 +2089,11 @@ async function writeRequirements(records) {
         notes: r.notes,
         updatedBy: userLabel(),
         updatedAt: serverTimestamp()
-      });
+      };
+      // Stabilt, usynligt import-ID — gemmes på dokumentet så vi kan matche
+      // samme krav igen ved en senere import (og undgå at give det nyt REQ-NNN).
+      if (r.__importedId) { data.importedId = r.__importedId; }
+      tx.set(newRef, data);
     }
   });
 }
@@ -2095,8 +2113,6 @@ async function onTableClick(event) {
   if (!confirm(t("delReqConfirm"))) { return; }
   try {
     await deleteDoc(doc(db, "projects", currentPid, "requirements", el.dataset.id));
-    // Slip fokus fra den nu slettede knap, så safeRender ikke tror,
-    // at brugeren stadig redigerer i tabellen og udskyder render.
     if (document.activeElement === el) { el.blur(); }
   } catch (err) {
     showMessage(t("errDeleteReq", { code: err.code }));
@@ -2494,11 +2510,14 @@ function exportJson() {
     const refs = extractGithubRefs(r, defaultRepo).map(function (x) {
       return { raw: x.raw, url: x.url };
     });
-    output.push({
+    const obj = {
       id: reqLabel(r.seq), description: r.description, furps: r.furps,
       moscow: r.moscow, source: r.source, status: r.status,
       notes: r.notes, updatedBy: r.updatedBy, references: refs
-    });
+    };
+    // Bevar det stabile import-ID ved round-trip, så genimport matcher korrekt.
+    if (r.importedId) { obj.importedId = r.importedId; }
+    output.push(obj);
   }
   downloadFile("krav-" + timestampSuffix() + ".json",
                JSON.stringify(output, null, 2), "application/json");
@@ -2679,6 +2698,10 @@ function fieldFromHeader(header) {
     case "reqid":
     case "kravid":
     case "id":
+      return "importedId";
+    case "importedid":
+    case "importeretid":
+    case "importid":
       return "importedId";
     case "requirementdescription":
     case "description":
@@ -2930,7 +2953,8 @@ function cleanStatus(value) {
 // 1. Idempotente markører: [Acceptance: …] og [Imported ID: …] tilføjes kun
 //    hvis de ikke allerede findes i notes.
 // 2. Skip appens egen REQ-NNN-form for [Imported ID: …] (round-trip fix).
-// 3. Gemmer importedId i rec.__importedId (internt felt, gemmes ikke).
+// 3. Gemmer importedId i rec.__importedId (bruges til matching, gemmes som
+//    separat felt på dokumentet — ikke synligt i UI).
 function buildImportRecords(objects) {
   const records = [];
   let skipped = 0;
@@ -3002,6 +3026,19 @@ function parseImportedSeq(importedId) {
   return m ? parseInt(m[1], 10) : null;
 }
 
+// Bagudkompatibilitet: gamle rækker har kun [Imported ID: …] i Noter.
+function extractImportedIdFromNotes(notes) {
+  if (!notes) { return ""; }
+  const m = String(notes).match(/\[Imported ID:\s*([^\]]+)\]/);
+  return m ? m[1].trim() : "";
+}
+
+// Returnerer r'ens effektive stabile import-ID (felt eller Noter-markør).
+function liveImportedId(r) {
+  if (r.importedId) { return String(r.importedId).trim(); }
+  return extractImportedIdFromNotes(r.notes);
+}
+
 // Normaliserer en beskrivelse til sammenligning:
 // lowercase, trim, kollaps mellemrum.
 function normalizeDescriptionForMatch(text) {
@@ -3019,24 +3056,24 @@ function formatTs(ts) {
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
 }
 
-// Klassificerer records op imod live requirements. To-trins match:
-//   1. Hvis rækken har et REQ-NNN-ID, matches den på seq.
-//      - Alle felter ens  → dublet (skip)
-//      - Felter afviger   → diff (vis i dialog)
-//   2. Hvis rækken ikke har et REQ-NNN-ID, matches den på beskrivelse
-//      (normaliseret). Hvis beskrivelsen matcher en live-beskrivelse →
-//      dublet (skip). Beskrivelsen kan godt matche flere live-krav;
-//      vi springer rækken over uanset.
-// Returnerer:
-//   identicalSeqs:    Set af seq-værdier (ID-match, alt ens)
-//   duplicateIndices: Set af indices i records (beskrivelse-match, no-ID)
-//   diffs:            liste af { seq, label, updatedAt, changes }
+// Klassificerer records op imod live requirements. Match-rækkefølge pr. række:
+//   1. importedId (stabilt, usynligt felt) — mest pålideligt
+//   2. seq (falder tilbage for gamle rækker uden importedId-felt)
+//   3. beskrivelse (kun for rækker uden ID)
+// Resultat:
+//   identicalSeqs:    Set af seq-værdier der allerede findes og er identiske → skip
+//   duplicateIndices: Set af indices i records der er dubletter (beskrivelses-match) → skip
+//   updates:          [{ liveId, liveSeq, importedId, changes, rec }] → opdatér i stedet for nyt
+//   newRecords:       [rec] → oprettes som nye
 function classifyImportRows(records, liveReqs) {
   const liveBySeq = {};
+  const liveByImportedId = {};
   const liveDescSet = new Set();
   for (let i = 0; i < liveReqs.length; i++) {
     const r = liveReqs[i];
     liveBySeq[r.seq] = r;
+    const iid = liveImportedId(r);
+    if (iid !== "") { liveByImportedId[iid] = r; }
     const key = normalizeDescriptionForMatch(r.description);
     if (key !== "") { liveDescSet.add(key); }
   }
@@ -3044,15 +3081,12 @@ function classifyImportRows(records, liveReqs) {
   const fields = ["description", "furps", "moscow", "source", "status", "notes"];
   const identicalSeqs = new Set();
   const duplicateIndices = new Set();
-  const diffs = [];
+  const updates = [];
+  const newRecords = [];
+  const matchedLiveIds = new Set();   // undgå at to fil-rækker opdaterer samme live-række
+  const seenFileImportedIds = new Set();
 
-  // Først: rækker MED REQ-NNN-ID
-  for (let i = 0; i < records.length; i++) {
-    const rec = records[i];
-    const seq = parseImportedSeq(rec.__importedId);
-    if (seq === null) { continue; }
-    const live = liveBySeq[seq];
-    if (!live) { continue; }
+  function compareFields(rec, live) {
     const changes = [];
     for (let f = 0; f < fields.length; f++) {
       const fld = fields[f];
@@ -3062,45 +3096,92 @@ function classifyImportRows(records, liveReqs) {
         changes.push({ field: fld, fileVal: fileVal, liveVal: liveVal });
       }
     }
-    if (changes.length === 0) {
-      identicalSeqs.add(seq);
-    } else {
-      diffs.push({
-        seq: seq,
-        label: reqLabel(seq),
-        updatedAt: live.updatedAt,
-        changes: changes
-      });
-    }
+    return changes;
   }
 
-  // Derefter: rækker UDEN REQ-NNN-ID — fallback på beskrivelse
-  // (også dedupe inden for filen: hvis samme beskrivelse optræder flere gange,
-  // beholder vi kun den første og springer resten over).
-  const seenInFile = new Set();
   for (let i = 0; i < records.length; i++) {
     const rec = records[i];
-    if (parseImportedSeq(rec.__importedId) !== null) { continue; }
-    const key = normalizeDescriptionForMatch(rec.description);
-    if (key === "") { continue; }
-    if (liveDescSet.has(key)) {
-      duplicateIndices.add(i);
-      continue;
+    const iid = rec.__importedId || "";
+
+    let live = null;
+
+    // 1. Match på stabilt importedId
+    if (iid !== "" && !seenFileImportedIds.has(iid)) {
+      if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
+        live = liveByImportedId[iid];
+      }
     }
-    if (seenInFile.has(key)) {
-      duplicateIndices.add(i);
-      continue;
+    if (iid !== "") { seenFileImportedIds.add(iid); }
+
+    // 2. Fallback: match på seq (gamle rækker uden importedId-felt)
+    if (!live) {
+      const seq = parseImportedSeq(iid);
+      if (seq !== null && liveBySeq[seq] && !matchedLiveIds.has(liveBySeq[seq].id)) {
+        live = liveBySeq[seq];
+      }
     }
-    seenInFile.add(key);
+
+    // 3. Fallback: match på beskrivelse
+    if (!live) {
+      const key = normalizeDescriptionForMatch(rec.description);
+      if (key !== "") {
+        for (let k = 0; k < liveReqs.length; k++) {
+          const candidate = liveReqs[k];
+          if (matchedLiveIds.has(candidate.id)) { continue; }
+          if (normalizeDescriptionForMatch(candidate.description) === key) {
+            live = candidate;
+            break;
+          }
+        }
+        // Eller en anden række i filen med samme beskrivelse (in-file dedupe)
+        if (!live) {
+          // allerede-set beskrivelse i denne fil → dublet
+          let seenBefore = false;
+          for (let j = 0; j < i; j++) {
+            if (normalizeDescriptionForMatch(records[j].description) === key) {
+              seenBefore = true; break;
+            }
+          }
+          if (seenBefore) {
+            duplicateIndices.add(i);
+            continue;
+          }
+        }
+      }
+    }
+
+    if (live) {
+      matchedLiveIds.add(live.id);
+      const changes = compareFields(rec, live);
+      if (changes.length === 0) {
+        identicalSeqs.add(live.seq);
+      } else {
+        updates.push({
+          liveId: live.id,
+          liveSeq: live.seq,
+          importedId: iid,
+          changes: changes,
+          rec: rec
+        });
+      }
+    } else {
+      newRecords.push(rec);
+    }
   }
 
-  return { identicalSeqs: identicalSeqs, duplicateIndices: duplicateIndices, diffs: diffs };
+  return {
+    identicalSeqs: identicalSeqs,
+    duplicateIndices: duplicateIndices,
+    updates: updates,
+    newRecords: newRecords
+  };
 }
 
 function updateImportDiffDialogText() {
   $("importDiffTitle").textContent = t("importDiffTitle");
   $("importDiffIntro").textContent = t("importDiffIntro");
   $("btnImportAnyway").textContent = t("importDiffImportAnyway");
+  $("btnImportUpdate").textContent = t("importDiffUpdateExisting");
   $("btnImportCreateNew").textContent = t("importDiffCreateNew");
   $("btnImportCancel").textContent = t("importDiffCancel");
   const list = $("importDiffList");
@@ -3119,11 +3200,11 @@ function updateImportDiffDialogText() {
   }
 }
 
-function openImportDiffDialog(records, diffs, duplicateCount) {
-  pendingImportRecords = records;
+function openImportDiffDialog(updates, duplicateCount) {
+  pendingImportUpdates = updates;
   const list = $("importDiffList");
   list.innerHTML = "";
-  list.dataset.diffCount = String(diffs.length);
+  list.dataset.diffCount = String(updates.length);
   list.dataset.dupeCount = String(duplicateCount || 0);
   const fieldLabels = {
     description: "colDescription",
@@ -3133,18 +3214,23 @@ function openImportDiffDialog(records, diffs, duplicateCount) {
     status: "colStatus",
     notes: "colNotes"
   };
-  for (let i = 0; i < diffs.length; i++) {
-    const d = diffs[i];
+  for (let i = 0; i < updates.length; i++) {
+    const u = updates[i];
     const wrap = document.createElement("div");
     wrap.className = "diff-item";
 
     const h = document.createElement("h5");
     const left = document.createElement("span");
-    left.textContent = d.label;
+    left.textContent = reqLabel(u.liveSeq);
     const right = document.createElement("span");
     right.className = "ts";
-    right.textContent = d.updatedAt
-      ? t("importDiffLastEdited", { date: formatTs(d.updatedAt) })
+    // find live row for updatedAt
+    let liveReq = null;
+    for (let k = 0; k < allReqs.length; k++) {
+      if (allReqs[k].id === u.liveId) { liveReq = allReqs[k]; break; }
+    }
+    right.textContent = (liveReq && liveReq.updatedAt)
+      ? t("importDiffLastEdited", { date: formatTs(liveReq.updatedAt) })
       : "";
     h.appendChild(left);
     h.appendChild(right);
@@ -3167,8 +3253,8 @@ function openImportDiffDialog(records, diffs, duplicateCount) {
     table.appendChild(thead);
 
     const tbody = document.createElement("tbody");
-    for (let c = 0; c < d.changes.length; c++) {
-      const ch = d.changes[c];
+    for (let c = 0; c < u.changes.length; c++) {
+      const ch = u.changes[c];
       const tr = document.createElement("tr");
       const tdF = document.createElement("td");
       tdF.className = "fld";
@@ -3195,23 +3281,36 @@ function openImportDiffDialog(records, diffs, duplicateCount) {
 }
 
 function closeImportDiffDialog() {
-  pendingImportRecords = null;
-  pendingImportRecordsAll = null;
+  pendingImportUpdates = null;
+  pendingImportNewRecords = null;
+  pendingImportAllRecords = null;
   pendingImportSkippedDupes = 0;
   $("importDiffDialog").classList.add("hidden");
 }
 
+// "Tilføj som nye krav": ignorér matching, tilføj alle ikke-dubletter som nye.
 async function onImportAnyway() {
-  const records = pendingImportRecords;
+  const records = pendingImportAllRecords;
   const skipped = pendingImportSkippedDupes;
   closeImportDiffDialog();
-  if (!records) { return; }
+  if (!records || records.length === 0) { return; }
   await importRecords(records, skipped);
 }
 
+// "Opdatér eksisterende": opdatér matchede rækker på plads (samme seq),
+// og tilføj rækker uden match som nye.
+async function onImportUpdate() {
+  const updates = pendingImportUpdates;
+  const newRecords = pendingImportNewRecords;
+  const skipped = pendingImportSkippedDupes;
+  closeImportDiffDialog();
+  if (!updates) { return; }
+  await applyImportUpdates(updates, newRecords || [], skipped);
+}
+
 async function onImportAsNewProject() {
-  const records = pendingImportRecordsAll || pendingImportRecords;
-  if (!records) { return; }
+  const records = pendingImportAllRecords;
+  if (!records || records.length === 0) { return; }
   const name = prompt(t("importDiffNewProjectName"));
   if (!name || !name.trim()) { return; }
   closeImportDiffDialog();
@@ -3293,35 +3392,35 @@ async function onImportFileChosen(event) {
 
   const classified = classifyImportRows(built.records, liveReqs);
 
-  // Byg "toImport"-liste: alle records der IKKE er dubletter.
-  // En record er dublet hvis enten dens seq er i identicalSeqs, eller dens
-  // index er i duplicateIndices (beskrivelses-match).
-  const toImport = [];
-  for (let i = 0; i < built.records.length; i++) {
-    const rec = built.records[i];
-    const seq = parseImportedSeq(rec.__importedId);
-    const dupBySeq = (seq !== null && classified.identicalSeqs.has(seq));
-    const dupByDesc = classified.duplicateIndices.has(i);
-    if (dupBySeq || dupByDesc) { continue; }
-    toImport.push(rec);
+  // Byg listen af ALLE ikke-dubletter (til "tilføj som nye" og "nyt projekt").
+  // Det er updates.rec + newRecords.
+  const allNonDupes = [];
+  for (let i = 0; i < classified.updates.length; i++) {
+    allNonDupes.push(classified.updates[i].rec);
   }
-  const skippedDuplicates = built.records.length - toImport.length;
+  for (let i = 0; i < classified.newRecords.length; i++) {
+    allNonDupes.push(classified.newRecords[i]);
+  }
+  const skippedDuplicates = built.records.length - allNonDupes.length;
 
   // Alt var dubletter og der er ingen diffs → bare informér.
-  if (toImport.length === 0 && classified.diffs.length === 0) {
+  if (allNonDupes.length === 0) {
     showMessage(t("importAllDuplicates", { n: skippedDuplicates }), true);
     return;
   }
 
-  pendingImportRecordsAll = built.records;
+  pendingImportAllRecords = allNonDupes;
+  pendingImportNewRecords = classified.newRecords;
   pendingImportSkippedDupes = skippedDuplicates;
 
-  if (classified.diffs.length > 0) {
-    openImportDiffDialog(toImport, classified.diffs, skippedDuplicates);
+  // Hvis der er opdateringer (match med afvigende felter) → vis diff-dialog.
+  if (classified.updates.length > 0) {
+    openImportDiffDialog(classified.updates, skippedDuplicates);
     return;
   }
 
-  let question = t("importConfirmHead", { n: toImport.length });
+  // Ellers: ren tilføjelse af nye krav — som før.
+  let question = t("importConfirmHead", { n: classified.newRecords.length });
   if (built.skipped > 0) {
     question += t("importConfirmSkipped", { n: built.skipped });
   }
@@ -3335,15 +3434,18 @@ async function onImportFileChosen(event) {
     question += t("importConfirmEncoding");
   }
   if (!confirm(question)) {
-    pendingImportRecordsAll = null;
+    pendingImportAllRecords = null;
+    pendingImportNewRecords = null;
     pendingImportSkippedDupes = 0;
     return;
   }
 
+  const toInsert = classified.newRecords;
   const skipped = skippedDuplicates;
-  pendingImportRecordsAll = null;
+  pendingImportAllRecords = null;
+  pendingImportNewRecords = null;
   pendingImportSkippedDupes = 0;
-  await importRecords(toImport, skipped);
+  await importRecords(toInsert, skipped);
 }
 
 async function importRecords(records, skippedDuplicates) {
@@ -3364,6 +3466,46 @@ async function importRecords(records, skippedDuplicates) {
   } catch (err) {
     showMessage(t("importStopped", {
       done: done, total: records.length, code: (err.code || err.message)
+    }));
+  }
+}
+
+// Opdatér matchede krav på plads (beholder seq og dermed REQ-NNN).
+async function applyImportUpdates(updates, newRecords, skippedDuplicates) {
+  const skipped = skippedDuplicates || 0;
+  let updated = 0;
+  let inserted = 0;
+  const total = updates.length + newRecords.length;
+
+  try {
+    for (let i = 0; i < updates.length; i++) {
+      const u = updates[i];
+      const changes = {};
+      for (let c = 0; c < u.changes.length; c++) {
+        changes[u.changes[c].field] = u.changes[c].fileVal;
+      }
+      changes.updatedBy = userLabel();
+      changes.updatedAt = serverTimestamp();
+      await updateDoc(
+        doc(db, "projects", currentPid, "requirements", u.liveId),
+        changes
+      );
+      updated++;
+      showMessage(t("importUpdateProgress", { done: updated, total: updates.length }), true);
+    }
+
+    if (newRecords.length > 0) {
+      for (let start = 0; start < newRecords.length; start += IMPORT_CHUNK_SIZE) {
+        const chunk = newRecords.slice(start, start + IMPORT_CHUNK_SIZE);
+        await writeRequirements(chunk);
+        inserted += chunk.length;
+      }
+    }
+
+    showMessage(t("importUpdateDone", { updated: updated, inserted: inserted }), true);
+  } catch (err) {
+    showMessage(t("importStopped", {
+      done: updated + inserted, total: total, code: (err.code || err.message)
     }));
   }
 }
@@ -3449,6 +3591,7 @@ $("defaultRepoInput").addEventListener("keydown", function (e) {
 });
 
 $("btnImportAnyway").addEventListener("click", onImportAnyway);
+$("btnImportUpdate").addEventListener("click", onImportUpdate);
 $("btnImportCreateNew").addEventListener("click", onImportAsNewProject);
 $("btnImportCancel").addEventListener("click", closeImportDiffDialog);
 $("importDiffDialog").addEventListener("click", function (e) {
