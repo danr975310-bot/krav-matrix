@@ -1461,9 +1461,15 @@ function stopListeners() {
   allTombstones = [];
 }
 
+// Blev kaldt af onSnapshot ved fejl. Ved mistet adgang forlader vi
+// projektet med en tydelig besked, så brugeren ikke sidder på en død
+// skærm. Vi kaster ventende saves væk først, ellers ville de forsøge
+// at skrive til et projekt brugeren ikke længere har adgang til, og
+// efterlade en forvirrende "Kunne ikke gemme"-besked oveni.
 function onListenError(err) {
   const code = (err && err.code) ? err.code : "";
   if (code === "permission-denied") {
+    cancelPendingSaves();
     showMessage(t("errRealtimeAccess"));
     leaveProject();
     return;
@@ -2999,6 +3005,22 @@ function parseMarkdownStableIds(text) {
   return map;
 }
 
+// Splitter en markdown-tabel-række på | — men respekterer \| som escaping.
+// Uden dette ville en celle som "A | B" blive splittet i to, og alle
+// efterfølgende kolonner ville blive forskudt.
+function splitMarkdownRow(inner) {
+  const cells = [];
+  let cur = "";
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch === "\\" && inner[i + 1] === "|") { cur += "|"; i++; continue; }
+    if (ch === "|") { cells.push(cur); cur = ""; continue; }
+    cur += ch;
+  }
+  cells.push(cur);
+  return cells;
+}
+
 function markdownToObjects(text) {
   // Læs skjulte stabile ID'er FØRST, og fjern metadata-blokken fra
   // teksten, så tabel-parseren ikke forvirres.
@@ -3031,7 +3053,7 @@ function markdownToObjects(text) {
     if (currentSection === null || currentSection === "Oversigt") { continue; }
     if (line.length < 2 || line[0] !== "|") { continue; }
     const inner = line.slice(1, line.length - 1);
-    const cells = inner.split("|");
+    const cells = splitMarkdownRow(inner);
     for (let c = 0; c < cells.length; c++) { cells[c] = cells[c].trim(); }
 
     if (cells.length > 0 && cells[0].replace(/-/g, "").trim() === "") { continue; }
@@ -3048,7 +3070,8 @@ function markdownToObjects(text) {
       const field = headerCols[c];
       if (field === "") { continue; }
       if (field === "references") { continue; }
-      let value = cells[c].replace(/<br\s*\/?>/gi, "\n").replace(/\\\|/g, "|");
+      // \| er allerede håndteret i splitMarkdownRow.
+      let value = cells[c].replace(/<br\s*\/?>/gi, "\n");
       value = value.replace(/\[([^\]]+)\]\(https:\/\/github\.com\/[^)]+\)/g, "$1");
       obj[field] = value;
     }
@@ -3349,12 +3372,8 @@ function classifyImportRows(records, liveReqs, tombstones) {
               (recNorm === tbNorm || (recNorm !== "" && recNorm.indexOf(tbNorm) === 0));
 
             if (!tbDescExists || descMatch) {
-              // Beskrivelsen matcher, eller tombstonen har ingen beskrivelse.
               tomb = tbCand;
             } else {
-              // Beskrivelsen matcher ikke, men seq er pensioneret — så
-              // REQ-NNN refererer stadig til det samme krav. Gendan alligevel,
-              // og log hvad der sker.
               console.warn(
                 "[import] Tombstone seq=" + seq +
                 " matcher ikke filens beskrivelse. Gendanner alligevel " +
