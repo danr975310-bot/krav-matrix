@@ -597,8 +597,9 @@
   <div class="modal-content" style="min-width: 620px;">
     <h3 id="importDiffTitle"></h3>
     <p id="importDiffIntro" class="small"></p>
-    <p id="importDiffDuplicates" class="small" style="display:none;"></p>
+    <p id="importDiffDuplicates" class="small"></p>
     <p id="importDiffRestores" class="small" style="display:none;"></p>
+    <p id="importDiffIdentical" class="small"></p>
     <details id="importDiffDetails" open>
       <summary id="importDiffSummary"></summary>
       <div id="importDiffList" style="margin-top: 10px;"></div>
@@ -606,7 +607,7 @@
     <div class="modal-actions">
       <button id="btnImportCancel"></button>
       <button id="btnImportCreateNew"></button>
-      <button id="btnImportAnyway"></button>
+      <button id="btnImportForce"></button>
       <button id="btnImportUpdate" class="primary"></button>
     </div>
   </div>
@@ -813,11 +814,12 @@ const I18N = {
     importDiffIntro: "Filen indeholder krav, hvor online-versionen er blevet ændret. Vælg om de eksisterende krav skal opdateres, eller om filens rækker skal tilføjes som nye krav.",
     importDiffDuplicates: "{n} rækker springes over som dubletter (samme Krav-ID eller samme beskrivelse).",
     importDiffRestores: "{n} slettede krav gendannes (samme usynlige ID) og får deres oprindelige REQ-NNN tilbage.",
+    importDiffIdentical: "{n} krav er uændrede og springes over.",
     importDiffSummary: "Vis forskelle ({n} krav)",
     importDiffFld: "Felt",
     importDiffFile: "Fil",
     importDiffOnline: "Online",
-    importDiffImportAnyway: "Tilføj som nye krav",
+    importDiffForce: "Importér alle som nye",
     importDiffUpdateExisting: "Opdatér og gendan",
     importDiffCreateNew: "Opret som nyt projekt",
     importDiffCancel: "Annullér",
@@ -894,6 +896,7 @@ const I18N = {
     importDone: "Importerede {n} krav.",
     importDoneSkipped: "Importerede {n} krav. {skipped} rækker blev sprunget over som dubletter.",
     importAllDuplicates: "Alle {n} krav findes allerede (samme Krav-ID eller samme beskrivelse) — der er intet nyt at importere.",
+    importForced: "Importerede {n} krav som nye (kolliderende ID'er blev regenereret).",
     importStopped: "Importen stoppede efter {done} af {total} krav: {code}",
     importErrCsvNoRows: "CSV-filen har ingen datarækker.",
     importErrCsvNoDesc: "Ingen kolonne med kravbeskrivelse fundet.",
@@ -1103,11 +1106,12 @@ const I18N = {
     importDiffIntro: "The file contains requirements where the online version has changed. Choose whether to update the existing requirements, or to add the file's rows as new requirements.",
     importDiffDuplicates: "{n} rows are skipped as duplicates (same Req ID or same description).",
     importDiffRestores: "{n} deleted requirements are restored (same invisible ID) and get their original REQ-NNN back.",
+    importDiffIdentical: "{n} requirements are unchanged and will be skipped.",
     importDiffSummary: "Show differences ({n} requirements)",
     importDiffFld: "Field",
     importDiffFile: "File",
     importDiffOnline: "Online",
-    importDiffImportAnyway: "Add as new requirements",
+    importDiffForce: "Import all as new",
     importDiffUpdateExisting: "Update and restore",
     importDiffCreateNew: "Create as new project",
     importDiffCancel: "Cancel",
@@ -1184,6 +1188,7 @@ const I18N = {
     importDone: "Imported {n} requirements.",
     importDoneSkipped: "Imported {n} requirements. {skipped} rows were skipped as duplicates.",
     importAllDuplicates: "All {n} requirements already exist (same Req ID or same description) — nothing new to import.",
+    importForced: "Imported {n} requirements as new (colliding IDs were regenerated).",
     importStopped: "The import stopped after {done} of {total} requirements: {code}",
     importErrCsvNoRows: "The CSV file has no data rows.",
     importErrCsvNoDesc: "No description column found.",
@@ -1264,8 +1269,6 @@ let unsubMembers = null;
 let unsubTombstones = null;
 let visibleColumns = loadColumns();
 
-// Holder styr på hvornår der sidst blev gemt, så sproget kan skiftes
-// uden at "✓ Gemt 12:34:56" bliver hængende på det gamle sprog.
 let lastSavedDate = null;
 
 let openToken = 0;
@@ -1284,9 +1287,6 @@ const saveTimers = new Map();
 
 function $(id) { return document.getElementById(id); }
 
-// Formaterer et Date-objekt som lokal YYYY-MM-DD. Bruges i stedet for
-// toISOString().slice(0,10), så datoen matcher brugerens lokale tid —
-// ellers ville tooltips og diffs være uenige omkring midnat.
 function localDateString(d) {
   const pad = function (n) { return String(n).padStart(2, "0"); };
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
@@ -1299,9 +1299,6 @@ function formatTime(d) {
   return hh + ":" + mm + ":" + ss;
 }
 
-// Læser aldersgrænserne fra projekt-dokumentet med fornuftige fallbacks.
-// Bruges af staleness() og af dialogen, så gamle projekter (oprettet før
-// denne funktion) automatisk får standardværdierne.
 function staleWarnDays() {
   const n = projectData ? Number(projectData.staleWarnDays) : NaN;
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_STALE_WARN_DAYS;
@@ -2205,12 +2202,6 @@ async function removeProjectFromMyList() {
 
   try {
     if (wasOwner) {
-      // Rækkefølgen er kritisk med de nye regler:
-      //  - members/requirements/tombstones kræver at projektet findes
-      //  - vi skal stadig være medlem for at slette requirements/tombstones
-      // Derfor: andre medlemmer → requirements → tombstones → egen
-      // member-doc → projektet → egen user-project-liste.
-
       const memSnap = await getDocs(collection(db, "projects", pid, "members"));
       await Promise.all(
         memSnap.docs
@@ -2899,8 +2890,7 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // Skjult metadata-blok med stabile ID'er. Usynlig i renderet markdown,
-  // men gør at importen kan matche kravet selv om beskrivelsen er ændret.
+  // Skjult metadata-blok med stabile ID'er.
   const idLines = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -3095,8 +3085,6 @@ function textToObjects(text) {
   return objects;
 }
 
-// Læser den skjulte metadata-blok fra .md-filen og returnerer et map
-// fra seq-nummer (som streng) til stabilt ID.
 function parseMarkdownStableIds(text) {
   const map = {};
   const match = text.match(/<!--\s*kravmatrix-stable-ids\s*\n([\s\S]*?)-->/i);
@@ -3116,9 +3104,6 @@ function parseMarkdownStableIds(text) {
   return map;
 }
 
-// Splitter en markdown-tabel-række på | — men respekterer \| som escaping.
-// Uden dette ville en celle som "A | B" blive splittet i to, og alle
-// efterfølgende kolonner ville blive forskudt.
 function splitMarkdownRow(inner) {
   const cells = [];
   let cur = "";
@@ -3132,10 +3117,6 @@ function splitMarkdownRow(inner) {
   return cells;
 }
 
-// Genkender en separator-række i en markdown-tabel. Hver celle skal
-// matche ":?-{3,}:?" — dvs. valgfrit kolon, mindst tre bindestreger,
-// valgfrit kolon. Det fanger både "---" og ":---:" og afviser
-// datarækker som fx "F | Must | ...".
 function isMarkdownSeparatorRow(cells) {
   if (cells.length === 0) { return false; }
   for (let i = 0; i < cells.length; i++) {
@@ -3179,9 +3160,6 @@ function markdownToObjects(text) {
     const cells = splitMarkdownRow(inner);
     for (let c = 0; c < cells.length; c++) { cells[c] = cells[c].trim(); }
 
-    // Spring separator-rækken over. Den korrekte test er at ALLE celler
-    // er separator-format; en enkelt tom/dash-celle i første kolonne er
-    // ikke nok, og det ville fejlagtigt springe datarækker over.
     if (isMarkdownSeparatorRow(cells)) { continue; }
 
     if (headerCols === null) {
@@ -3196,7 +3174,6 @@ function markdownToObjects(text) {
       const field = headerCols[c];
       if (field === "") { continue; }
       if (field === "references") { continue; }
-      // \| er allerede håndteret i splitMarkdownRow.
       let value = cells[c].replace(/<br\s*\/?>/gi, "\n");
       value = value.replace(/\[([^\]]+)\]\(https:\/\/github\.com\/[^)]+\)/g, "$1");
       obj[field] = value;
@@ -3210,16 +3187,9 @@ function markdownToObjects(text) {
       else if (currentSection === "Droppede") { obj.status = "Dropped"; }
     }
 
-    // Behold rækken hvis den har et Krav-ID (som senere slås op i
-    // metadata-blokken for stabilt ID). Ellers ville krav med tom
-    // beskrivelse blive tabt ved round-trip eksport/import.
-    if ((!obj.description || String(obj.description).trim() === "")
-        && (!obj.fileId || String(obj.fileId).trim() === "")) {
-      continue;
-    }
-
-    // Injicér stabilt ID fra metadata-blokken, hvis det findes.
-    // Filen har kun REQ-NNN, så vi slår op på seq-nummeret.
+    // Injicér stabilt ID fra metadata-blokken FØR vi beslutter om rækken
+    // skal beholdes. Ellers ville krav med tom beskrivelse blive droppet
+    // her og aldrig nå frem til buildImportRecords.
     if (obj.fileId) {
       const seqMatch = String(obj.fileId).match(/(\d+)/);
       if (seqMatch) {
@@ -3227,6 +3197,14 @@ function markdownToObjects(text) {
         if (stableIds[seqKey]) { obj.importedId = stableIds[seqKey]; }
       }
     }
+
+    // Behold rækken hvis den har en beskrivelse ELLER et Krav-ID ELLER et
+    // injiceret stabilt ID. Uden dette ville krav med tom beskrivelse
+    // blive tabt ved round-trip eksport/import.
+    const hasDescription = obj.description && String(obj.description).trim() !== "";
+    const hasFileId = obj.fileId && String(obj.fileId).trim() !== "";
+    const hasImportedId = obj.importedId && String(obj.importedId).trim() !== "";
+    if (!hasDescription && !hasFileId && !hasImportedId) { continue; }
 
     objects.push(obj);
   }
@@ -3240,6 +3218,8 @@ function markdownToObjects(text) {
   if (objects.length === 0 && !hasMarkdownStructure) {
     return textToObjects(text);
   }
+
+  console.log("[import] markdownToObjects: parsed", objects.length, "rows from markdown");
   return objects;
 }
 
@@ -3301,9 +3281,7 @@ function buildImportRecords(objects) {
     const extId = (o.importedId || "").trim();
 
     // Tillad tom beskrivelse hvis vi har et ID at matche på. Uden dette
-    // ville eksport/import af krav med tom beskrivelse tabe dem, og ved
-    // markdown-import ville de desuden risikere at blive læst som
-    // tekstlinjer.
+    // ville eksport/import af krav med tom beskrivelse tabe dem.
     if (description === "" && fileId === "" && extId === "") {
       skipped++; continue;
     }
@@ -3363,6 +3341,8 @@ function buildImportRecords(objects) {
 
     records.push(rec);
   }
+  console.log("[import] buildImportRecords:", records.length,
+              "records,", skipped, "skipped,", unrecognised, "unrecognised values");
   return { records: records, skipped: skipped, unrecognised: unrecognised };
 }
 
@@ -3510,8 +3490,7 @@ function classifyImportRows(records, liveReqs, tombstones) {
             } else {
               console.warn(
                 "[import] Tombstone seq=" + seq +
-                " matcher ikke filens beskrivelse. Gendanner alligevel " +
-                "fordi REQ-NNN er pensioneret.\n" +
+                " matcher ikke filens beskrivelse. Gendanner alligevel.\n" +
                 "  Fil:       \"" + rec.description.slice(0, 100) + "\"\n" +
                 "  Tombstone: \"" + String(tbCand.description).slice(0, 100) + "\""
               );
@@ -3566,6 +3545,12 @@ function classifyImportRows(records, liveReqs, tombstones) {
     }
   }
 
+  console.log("[import] classifyImportRows:",
+              "updates=" + updates.length,
+              "restores=" + restores.length,
+              "new=" + newRecords.length,
+              "identical=" + identicalSeqs.size,
+              "dupes=" + duplicateIndices.size);
   return {
     identicalSeqs: identicalSeqs,
     duplicateIndices: duplicateIndices,
@@ -3578,7 +3563,7 @@ function classifyImportRows(records, liveReqs, tombstones) {
 function updateImportDiffDialogText() {
   $("importDiffTitle").textContent = t("importDiffTitle");
   $("importDiffIntro").textContent = t("importDiffIntro");
-  $("btnImportAnyway").textContent = t("importDiffImportAnyway");
+  $("btnImportForce").textContent = t("importDiffForce");
   $("btnImportUpdate").textContent = t("importDiffUpdateExisting");
   $("btnImportCreateNew").textContent = t("importDiffCreateNew");
   $("btnImportCancel").textContent = t("importDiffCancel");
@@ -3605,9 +3590,18 @@ function updateImportDiffDialogText() {
     resEl.textContent = "";
     resEl.style.display = "none";
   }
+  const idEl = $("importDiffIdentical");
+  const ident = parseInt(list.dataset.identicalCount || "0", 10);
+  if (ident > 0) {
+    idEl.textContent = t("importDiffIdentical", { n: ident });
+    idEl.style.display = "";
+  } else {
+    idEl.textContent = "";
+    idEl.style.display = "none";
+  }
 }
 
-function openImportDiffDialog(updates, restores, duplicateCount) {
+function openImportDiffDialog(updates, restores, duplicateCount, identicalCount) {
   pendingImportUpdates = updates;
   pendingImportRestores = restores;
   const list = $("importDiffList");
@@ -3615,6 +3609,7 @@ function openImportDiffDialog(updates, restores, duplicateCount) {
   list.dataset.diffCount = String(updates.length);
   list.dataset.restoreCount = String((restores || []).length);
   list.dataset.dupeCount = String(duplicateCount || 0);
+  list.dataset.identicalCount = String(identicalCount || 0);
   const fieldLabels = {
     description: "colDescription",
     furps: "colFurps",
@@ -3727,7 +3722,10 @@ async function regenerateCollidingImportedIds(records) {
   }
 }
 
-async function onImportAnyway() {
+// "Importér alle som nye"-stien. Bypasser matching; alle rækker oprettes
+// som nye krav med friske REQ-numre og regenererede stabile ID'er hvor
+// de ville kollidere.
+async function onImportForce() {
   const records = pendingImportAllRecords;
   const skipped = pendingImportSkippedDupes;
   const usedSeqs = pendingImportUsedSeqs;
@@ -3811,6 +3809,7 @@ async function onImportFileChosen(event) {
     showMessage(t("importReadError", { msg: err.message }));
     return;
   }
+  console.log("[import] file parsed:", objects.length, "objects (raw)");
 
   const built = buildImportRecords(objects);
   if (built.records.length === 0) {
@@ -3871,15 +3870,21 @@ async function onImportFileChosen(event) {
   pendingImportSkippedDupes = skippedDuplicates;
   pendingImportUsedSeqs = usedSeqs;
 
-  if (classified.updates.length > 0) {
-    openImportDiffDialog(classified.updates, classified.restores, skippedDuplicates);
+  // Vis altid diff-dialogen hvis der er noget at fortælle. Også når der
+  // kun er identiske krav — så brugeren kan se hvad der sker.
+  if (classified.updates.length > 0
+      || classified.restores.length > 0
+      || classified.identicalSeqs.size > 0) {
+    openImportDiffDialog(
+      classified.updates,
+      classified.restores,
+      skippedDuplicates,
+      classified.identicalSeqs.size
+    );
     return;
   }
 
   let question = t("importConfirmHead", { n: classified.newRecords.length });
-  if (classified.restores.length > 0) {
-    question += t("importConfirmRestores", { n: classified.restores.length });
-  }
   if (built.skipped > 0) {
     question += t("importConfirmSkipped", { n: built.skipped });
   }
@@ -4125,7 +4130,7 @@ $("staleUrgentInput").addEventListener("keydown", function (e) {
   if (e.key === "Enter") { saveGithubSettings(); }
 });
 
-$("btnImportAnyway").addEventListener("click", onImportAnyway);
+$("btnImportForce").addEventListener("click", onImportForce);
 $("btnImportUpdate").addEventListener("click", onImportUpdate);
 $("btnImportCreateNew").addEventListener("click", onImportAsNewProject);
 $("btnImportCancel").addEventListener("click", closeImportDiffDialog);
