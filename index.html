@@ -606,9 +606,9 @@ import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
-apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4", 
-authDomain: "reqmatrix-fc50a.firebaseapp.com", 
-projectId: "reqmatrix-fc50a", 
+apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4",
+authDomain: "reqmatrix-fc50a.firebaseapp.com",
+projectId: "reqmatrix-fc50a",
 appId: "1:480693503390:web:d8c32525e3370b301a428f"
 };
 const app = initializeApp(firebaseConfig);
@@ -1226,6 +1226,10 @@ let unsubMembers = null;
 let unsubTombstones = null;
 let visibleColumns = loadColumns();
 
+// Holder styr på hvornår der sidst blev gemt, så sproget kan skiftes
+// uden at "✓ Gemt 12:34:56" bliver hængende på det gamle sprog.
+let lastSavedDate = null;
+
 let openToken = 0;
 
 let projectData = {};
@@ -1241,6 +1245,21 @@ let pendingImportUsedSeqs = null;
 const saveTimers = new Map();
 
 function $(id) { return document.getElementById(id); }
+
+// Formaterer et Date-objekt som lokal YYYY-MM-DD. Bruges i stedet for
+// toISOString().slice(0,10), så datoen matcher brugerens lokale tid —
+// ellers ville tooltips og diffs være uenige omkring midnat.
+function localDateString(d) {
+  const pad = function (n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+function formatTime(d) {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return hh + ":" + mm + ":" + ss;
+}
 
 function showMessage(text, isGood) {
   $("msg").textContent = text;
@@ -1273,6 +1292,12 @@ function applyLanguage() {
   updateProjectButtons();
   renderMembers();
   renderTable();
+
+  // Opdater "Gemt"-kvitteringen med den nye sprogvariant, men kun hvis
+  // der faktisk er noget at vise.
+  if (lastSavedDate) {
+    $("lastSaved").textContent = t("savedAt", { time: formatTime(lastSavedDate) });
+  }
 }
 
 function setLang(next) {
@@ -1542,11 +1567,8 @@ function flashSaved(el) {
 function updateLastSaved() {
   const el = $("lastSaved");
   if (!el) { return; }
-  const now = new Date();
-  const hh = String(now.getHours()).padStart(2, "0");
-  const mm = String(now.getMinutes()).padStart(2, "0");
-  const ss = String(now.getSeconds()).padStart(2, "0");
-  el.textContent = t("savedAt", { time: hh + ":" + mm + ":" + ss });
+  lastSavedDate = new Date();
+  el.textContent = t("savedAt", { time: formatTime(lastSavedDate) });
   el.classList.remove("hidden");
 }
 
@@ -1897,6 +1919,7 @@ function onAuthChanged(user) {
     currentPid = null;
     projectData = {};
     pendingScrollToReq = null;
+    lastSavedDate = null;
     $("lastSaved").classList.add("hidden");
     $("userInfo").classList.add("hidden");
     updateLinkButton();
@@ -2118,15 +2141,37 @@ async function removeProjectFromMyList() {
 
   try {
     if (wasOwner) {
-      await deleteDoc(doc(db, "projects", pid));
+      // Rækkefølgen er kritisk med de nye regler:
+      //  - members/requirements/tombstones kræver at projektet findes
+      //  - vi skal stadig være medlem for at slette requirements/tombstones
+      // Derfor: andre medlemmer → requirements → tombstones → egen
+      // member-doc → projektet → egen user-project-liste.
 
+      // 1. Slet alle andre medlemmers docs (kræver isOwner).
+      const memSnap = await getDocs(collection(db, "projects", pid, "members"));
+      await Promise.all(
+        memSnap.docs
+          .filter(function (d) { return d.id !== currentUser.uid; })
+          .map(function (d) { return deleteDoc(d.ref); })
+      );
+
+      // 2. Slet krav og tombstones mens vi stadig er medlem.
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       await Promise.all(reqSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
 
       const tbSnap = await getDocs(collection(db, "projects", pid, "tombstones"));
       await Promise.all(tbSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
     }
+
+    // 3. Egen member-doc (uid==uid tillades altid).
     await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
+
+    // 4. Selve projektet — kun owner (isOwner via project.ownerUid).
+    if (wasOwner) {
+      await deleteDoc(doc(db, "projects", pid));
+    }
+
+    // 5. Egen liste over projekter.
     await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
   } catch (err) {
     console.error("removeProjectFromMyList failed:", err);
@@ -2148,6 +2193,16 @@ async function writeRequirements(records, usedSeqs) {
     const assigned = [];
     const projRef = doc(db, "projects", currentPid);
     const projSnap = await tx.get(projRef);
+
+    // Hvis projektet er slettet samtidig med at vi forsøger at skrive
+    // (fx en anden bruger slettede det), ville .data() være undefined og
+    // kaste en TypeError. Giv i stedet en tydelig fejl.
+    if (!projSnap.exists()) {
+      const e = new Error("project-missing");
+      e.code = "project-missing";
+      throw e;
+    }
+
     const storedCounter = projSnap.data().counter || 0;
     let counter = storedCounter;
 
@@ -2485,7 +2540,9 @@ function buildRow(r, activeCol) {
     else { ageCell.classList.add("age-fresh"); }
     if (level !== 3) {
       const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
-      ageCell.title = t("ageTitleUpdated", { date: d.toISOString().slice(0, 10) });
+      // Brug lokal dato, ikke UTC — ellers er tooltip og diff-dialog uenige
+      // omkring midnat i ikke-UTC-tidszoner.
+      ageCell.title = t("ageTitleUpdated", { date: localDateString(d) });
     }
   }
   maybeHidden(ageCell, "age");
@@ -3021,6 +3078,18 @@ function splitMarkdownRow(inner) {
   return cells;
 }
 
+// Genkender en separator-række i en markdown-tabel. Hver celle skal
+// matche ":?-{3,}:?" — dvs. valgfrit kolon, mindst tre bindestreger,
+// valgfrit kolon. Det fanger både "---" og ":---:" og afviser
+// datarækker som fx "F | Must | ...".
+function isMarkdownSeparatorRow(cells) {
+  if (cells.length === 0) { return false; }
+  for (let i = 0; i < cells.length; i++) {
+    if (!/^:?-{3,}:?$/.test(cells[i].trim())) { return false; }
+  }
+  return true;
+}
+
 function markdownToObjects(text) {
   // Læs skjulte stabile ID'er FØRST, og fjern metadata-blokken fra
   // teksten, så tabel-parseren ikke forvirres.
@@ -3056,7 +3125,10 @@ function markdownToObjects(text) {
     const cells = splitMarkdownRow(inner);
     for (let c = 0; c < cells.length; c++) { cells[c] = cells[c].trim(); }
 
-    if (cells.length > 0 && cells[0].replace(/-/g, "").trim() === "") { continue; }
+    // Spring separator-rækken over. Den korrekte test er at ALLE celler
+    // er separator-format; en enkelt tom/dash-celle i første kolonne er
+    // ikke nok, og det ville fejlagtigt springe datarækker over.
+    if (isMarkdownSeparatorRow(cells)) { continue; }
 
     if (headerCols === null) {
       headerCols = [];
@@ -3255,8 +3327,7 @@ function formatTs(ts) {
   if (!ts) { return ""; }
   const d = (typeof ts.toDate === "function") ? ts.toDate() : new Date(ts);
   if (isNaN(d.getTime())) { return ""; }
-  const pad = function (n) { return String(n).padStart(2, "0"); };
-  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  return localDateString(d);
 }
 
 // Klassificerer records op imod live krav OG tombstones.
@@ -3565,6 +3636,10 @@ function closeImportDiffDialog() {
   $("importDiffDialog").classList.add("hidden");
 }
 
+// Sikrer at et importeret ID ikke kolliderer med et levende krav, et
+// tombstone eller et andet ID i samme fil. Tombstones tæller med, fordi
+// et pensioneret ID ikke bør genbruges ved "Tilføj som nye krav" — det
+// ville gøre et efterfølgende import-match tvetydigt.
 async function regenerateCollidingImportedIds(records) {
   let liveReqs = [];
   try {
@@ -3579,53 +3654,31 @@ async function regenerateCollidingImportedIds(records) {
     const iid = liveImportedId(liveReqs[i]);
     if (iid) { liveIds.add(iid); }
   }
+  const tombstoneIds = new Set();
+  for (let i = 0; i < allTombstones.length; i++) {
+    if (allTombstones[i].importedId) { tombstoneIds.add(allTombstones[i].importedId); }
+  }
   const seenInFile = new Set();
   for (let i = 0; i < records.length; i++) {
     const iid = records[i].__importedId || "";
     if (iid === "") { continue; }
-    if (liveIds.has(iid) || seenInFile.has(iid)) {
+    if (liveIds.has(iid) || tombstoneIds.has(iid) || seenInFile.has(iid)) {
       records[i].__importedId = makeImportedId();
     }
     seenInFile.add(records[i].__importedId);
   }
 }
 
-async function removeMatchedTombstones(restores, records) {
-  const idsToRemove = new Set();
-  if (restores) {
-    for (let i = 0; i < restores.length; i++) {
-      if (restores[i].tombstone.id) { idsToRemove.add(restores[i].tombstone.id); }
-    }
-  }
-  for (let i = 0; i < records.length; i++) {
-    const iid = records[i].__importedId;
-    if (!iid) { continue; }
-    for (let k = 0; k < allTombstones.length; k++) {
-      if (allTombstones[k].importedId === iid && allTombstones[k].id) {
-        idsToRemove.add(allTombstones[k].id);
-      }
-    }
-  }
-  if (idsToRemove.size === 0) { return; }
-  try {
-    const deletes = [];
-    idsToRemove.forEach(function (id) {
-      deletes.push(deleteDoc(doc(db, "projects", currentPid, "tombstones", id)));
-    });
-    await Promise.all(deletes);
-  } catch (err) {
-    console.warn("Could not remove matched tombstones:", err);
-  }
-}
-
+// "Tilføj som nye krav"-stien. Vi fjerner IKKE tombstones her — de
+// repræsenterer pensionerede REQ-NNN, og brugeren har netop valgt ikke
+// at gendanne. Tombstone-seq er allerede i usedSeqs, så writeRequirements
+// tildeler friske numre.
 async function onImportAnyway() {
   const records = pendingImportAllRecords;
   const skipped = pendingImportSkippedDupes;
   const usedSeqs = pendingImportUsedSeqs;
-  const restores = pendingImportRestores;
   closeImportDiffDialog();
   if (!records || records.length === 0) { return; }
-  await removeMatchedTombstones(restores || [], records);
   await regenerateCollidingImportedIds(records);
   await importRecords(records, skipped, usedSeqs);
 }
