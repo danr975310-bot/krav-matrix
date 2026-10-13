@@ -806,6 +806,7 @@ const I18N = {
 
     savedAt: "✓ Gemt {time}",
     errRealtime: "Fejl ved realtidsopdatering: {code}",
+    errRealtimeAccess: "Adgangen til projektet blev afvist. Du er sandsynligvis ikke længere medlem.",
     errSave: "Kunne ikke gemme: {code}",
     errProjects: "Kunne ikke hente dine projekter: {code}",
     errProjectRead: "Kunne ikke læse projektet: {code}",
@@ -813,13 +814,9 @@ const I18N = {
     errCreate: "Kunne ikke oprette projektet: {code}",
     errAddReq: "Kunne ikke tilføje kravet: {code}",
     errDeleteReq: "Kunne ikke slette: {code}",
-    errDeleteMember: "Kunne ikke fjerne medlemmet: {code}",
     errRemoveProject: "Kunne ikke fjerne projektet: {code}",
     errGithubSettings: "Kunne ikke gemme GitHub-indstillinger: {code}",
-    errOwnerCantLeave: "Du er ejer af projektet. Fjern de øvrige medlemmer, eller slet projektet helt.",
 
-    removeMemberBtn: "Fjern",
-    removeMemberConfirm: "Fjern dette medlem?",
     delReqConfirm: "Slet dette krav?\n\nKravets REQ-NNN pensioneres og kan ikke længere tildeles andre krav. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.",
     refUnlinkedTitle: "Standard repository er ikke sat — #123 vises som tekst. Sæt det under ⚙️ GitHub, hvis du vil have automatiske links, eller skriv ejer/repo#123.",
     copyLinkTitle: "Kopiér et link til dette krav — klar til at sætte i GitHub",
@@ -869,9 +866,12 @@ const I18N = {
     importDoneSkipped: "Importerede {n} krav. {skipped} rækker blev sprunget over som dubletter.",
     importAllDuplicates: "Alle {n} krav findes allerede (samme Krav-ID eller samme beskrivelse) — der er intet nyt at importere.",
     importStopped: "Importen stoppede efter {done} af {total} krav: {code}",
+    importErrCsvNoRows: "CSV-filen har ingen datarækker.",
+    importErrCsvNoDesc: "Ingen kolonne med kravbeskrivelse fundet.",
+    importErrJsonNotList: "JSON-filen skal være en liste af krav.",
 
     leaveConfirm: "Forlad projektet?\n\nDu mister adgangen til at se og redigere krav. Projektet og alle krav bliver liggende — de andre deltagere kan stadig se det.",
-    deleteProjectConfirm: "Slet projektet og alle krav permanent?\n\nDette kan ikke fortrydes.",
+    deleteProjectConfirm: "Slet projektet og alle krav permanent?\n\nDette kan ikke fortrydes. Eventuelle andre medlemmer mister også adgang.",
     projectRemoved: "Du er ikke længere medlem af projektet.",
     projectDeleted: "Projektet og alle krav er slettet.",
 
@@ -1083,6 +1083,7 @@ const I18N = {
 
     savedAt: "✓ Saved {time}",
     errRealtime: "Realtime update error: {code}",
+    errRealtimeAccess: "Access to the project was denied. You are probably no longer a member.",
     errSave: "Could not save: {code}",
     errProjects: "Could not load your projects: {code}",
     errProjectRead: "Could not read the project: {code}",
@@ -1090,13 +1091,9 @@ const I18N = {
     errCreate: "Could not create the project: {code}",
     errAddReq: "Could not add the requirement: {code}",
     errDeleteReq: "Could not delete: {code}",
-    errDeleteMember: "Could not remove the member: {code}",
     errRemoveProject: "Could not remove the project: {code}",
     errGithubSettings: "Could not save GitHub settings: {code}",
-    errOwnerCantLeave: "You are the owner of the project. Remove the other members, or delete the project entirely.",
 
-    removeMemberBtn: "Remove",
-    removeMemberConfirm: "Remove this member?",
     delReqConfirm: "Delete this requirement?\n\nThe requirement's REQ-NNN is retired and can no longer be assigned to other requirements. Only if the exact same requirement (same invisible ID) is imported again is the number resumed.",
     refUnlinkedTitle: "No default repository is set — #123 is shown as text. Set one under ⚙️ GitHub if you want automatic links, or write owner/repo#123.",
     copyLinkTitle: "Copy a link to this requirement — ready to paste into GitHub",
@@ -1146,9 +1143,12 @@ const I18N = {
     importDoneSkipped: "Imported {n} requirements. {skipped} rows were skipped as duplicates.",
     importAllDuplicates: "All {n} requirements already exist (same Req ID or same description) — nothing new to import.",
     importStopped: "The import stopped after {done} of {total} requirements: {code}",
+    importErrCsvNoRows: "The CSV file has no data rows.",
+    importErrCsvNoDesc: "No description column found.",
+    importErrJsonNotList: "The JSON file must be a list of requirements.",
 
     leaveConfirm: "Leave the project?\n\nYou lose access to view and edit the requirements. The project and all requirements remain — the other members can still see them.",
-    deleteProjectConfirm: "Delete the project and all requirements permanently?\n\nThis cannot be undone.",
+    deleteProjectConfirm: "Delete the project and all requirements permanently?\n\nThis cannot be undone. Any other members also lose access.",
     projectRemoved: "You are no longer a member of the project.",
     projectDeleted: "The project and all requirements have been deleted.",
 
@@ -1220,6 +1220,10 @@ let unsubReqs = null;
 let unsubMembers = null;
 let unsubTombstones = null;
 let visibleColumns = loadColumns();
+
+// Race-beskyttelse: hvert kald til openProject får et nummer.
+// Hvis et nyere kald starter, opgiver det gamle.
+let openToken = 0;
 
 let projectData = {};
 let pendingScrollToReq = null;
@@ -1343,8 +1347,6 @@ function parseHash() {
   return { pid: pid, reqid: reqid };
 }
 
-// Fix #12: undgå selector-injection fra URL-hash.
-// Iterér og sammenlign dataset.reqId i stedet for at bygge en selector.
 function findReqRow(reqId) {
   const rows = document.querySelectorAll("tr[data-req-id]");
   for (let i = 0; i < rows.length; i++) {
@@ -1457,12 +1459,18 @@ function stopListeners() {
   allTombstones = [];
 }
 
+// Blev kaldt af onSnapshot ved fejl. Ved mistet adgang forlader vi
+// projektet med en tydelig besked, så brugeren ikke sidder på en død skærm.
 function onListenError(err) {
-  showMessage(t("errRealtime", { code: err.code }));
+  const code = (err && err.code) ? err.code : "";
+  if (code === "permission-denied") {
+    showMessage(t("errRealtimeAccess"));
+    leaveProject();
+    return;
+  }
+  showMessage(t("errRealtime", { code: code }));
 }
 
-// Fix #6 + #10: gem både timer, værdi og element, så vi kan aflæse den
-// seneste værdi på scheduletidspunktet — ikke på fire-tidspunktet.
 function scheduleSave(el, field, id) {
   const key = id + "|" + field;
   const existing = saveTimers.get(key);
@@ -1585,7 +1593,6 @@ function normalizeRepo(text) {
   return String(text || "").trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/+$/, "");
 }
 
-// Fix #4: kun https://github.com/... accepteres.
 function isSafeBoardUrl(url) {
   return /^https:\/\/github\.com\//i.test(url);
 }
@@ -1622,7 +1629,6 @@ async function saveGithubSettings() {
 function openBoard() {
   const url = String(projectData.githubBoardUrl || "").trim();
   if (!url) { return; }
-  // Fix #4: dobbelttjek på klienten, selv om reglen også afviser.
   if (!isSafeBoardUrl(url)) {
     showMessage(t("ghBadBoardUrl"));
     return;
@@ -1704,7 +1710,6 @@ function buildRefsCell(r) {
 }
 
 function updateRefsCellFor(id) {
-  // id kommer fra Firestore (doc-id), ikke fra URL — sikker selector.
   const tr = document.querySelector('tr[data-req-id="' + id + '"]');
   if (!tr) { return; }
   const oldCell = tr.querySelector("td.refs");
@@ -1965,45 +1970,47 @@ async function joinFromInput() {
 }
 
 async function openProject(pid) {
+  // Hvert kald får et nummer. Starter et nyere kald, stopper dette.
+  const myToken = ++openToken;
+
+  // Gem det brugeren har skrevet, før vi skifter væk.
+  flushAllPendingSaves();
   stopListeners();
-  cancelPendingSaves();
+  isOwner = false;
   showMessage("");
 
   let snap;
   try {
     snap = await getDoc(doc(db, "projects", pid));
   } catch (err) {
+    if (myToken !== openToken) { return; }
     console.error("openProject: getDoc failed for", pid, err);
     showMessage(t("errProjectRead", { code: err.code || err.message }));
     showScreen("chooser");
     return;
   }
+  if (myToken !== openToken) { return; }
   if (!snap.exists()) {
     showMessage(t("projectNotExist"));
     showScreen("chooser");
     return;
   }
 
-  // Simpel join: opret egen member-doc hvis den ikke findes. Ingen memberCount.
+  // Simpel join: opret eller opdater vores egen member-doc.
+  // Ingen transaktion — setDoc med merge gør præcis det samme og undgår
+  // den kendte permission-denied-fejl ved exists() i transaction.
   try {
-    await runTransaction(db, async function (tx) {
-      const projRef = doc(db, "projects", pid);
-      const projSnap = await tx.get(projRef);
-      if (!projSnap.exists()) { throw new Error("project-missing"); }
-      const memberRef = doc(db, "projects", pid, "members", currentUser.uid);
-      const memberSnap = await tx.get(memberRef);
-      if (memberSnap.exists()) {
-        tx.set(memberRef, { name: userLabel(), uid: currentUser.uid }, { merge: true });
-      } else {
-        tx.set(memberRef, { name: userLabel(), uid: currentUser.uid });
-      }
-    });
+    await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
+                 { name: userLabel(), uid: currentUser.uid },
+                 { merge: true });
   } catch (err) {
-    console.error("openProject: join transaction failed for", pid, err);
+    if (myToken !== openToken) { return; }
+    console.error("openProject: join failed for", pid, err);
     showMessage(t("errMember", { code: err.code || err.message }));
     showScreen("chooser");
     return;
   }
+  if (myToken !== openToken) { return; }
 
   try {
     await setDoc(doc(db, "users", currentUser.uid, "projects", pid),
@@ -2012,6 +2019,7 @@ async function openProject(pid) {
   } catch (err) {
     console.warn("openProject: setDoc user project list failed:", err);
   }
+  if (myToken !== openToken) { return; }
 
   currentPid = pid;
   try { localStorage.setItem("lastProject", pid); } catch (err) { /* ignore */ }
@@ -2052,7 +2060,6 @@ function updateProjectButtons() {
 
 function onProjectSnapshot(snap) {
   if (!snap.exists()) {
-    // Projektet er slettet af ejeren (eller fra konsollen).
     showMessage(t("projectNotExist"));
     leaveProject();
     return;
@@ -2063,8 +2070,6 @@ function onProjectSnapshot(snap) {
   updateGithubUi();
   updateProjectButtons();
   renderMembers();
-  // Fix #6: brug safeRender, så vi ikke river DOM'en væk under en
-  // aktiv redigering når fx counter ændres af en anden bruger.
   safeRender();
 }
 
@@ -2085,51 +2090,28 @@ function onMembersSnapshot(snapshot) {
   renderMembers();
 }
 
+// Medlemmer er kun til visning. Der er ingen "fjern"-funktion —
+// projektkoden er adgangsnøglen, og den eneste måde at forlade er selv.
 function renderMembers() {
   const list = $("memberList");
   list.innerHTML = "";
   for (let i = 0; i < allMembers.length; i++) {
     const m = allMembers[i];
     const li = document.createElement("li");
-    li.textContent = m.name + " ";
-    if (isOwner && currentUser && m.uid !== currentUser.uid) {
-      const btn = document.createElement("button");
-      btn.textContent = t("removeMemberBtn");
-      btn.dataset.uid = m.uid;
-      li.appendChild(btn);
-    }
+    li.textContent = m.name;
     list.appendChild(li);
   }
 }
 
-async function onMemberListClick(event) {
-  const uid = event.target.dataset.uid;
-  if (!uid) { return; }
-  if (!confirm(t("removeMemberConfirm"))) { return; }
-  try {
-    await deleteDoc(doc(db, "projects", currentPid, "members", uid));
-  } catch (err) {
-    showMessage(t("errDeleteMember", { code: err.code }));
-  }
-}
-
-// Fix #9: stop lyttere først (undgå permission-denied), og ryd op i en
-// fornuftig rækkefølge. Kun ejeren kan slette projektet.
+// Sletter projektet (hvis ejer) eller forlader det (hvis ikke-ejer).
+// Slet projekt-doc FØR subcollections, så en afvist projekt-sletning
+// ikke efterlader et tomt projekt.
 async function removeProjectFromMyList() {
   if (!currentPid || !currentUser) { return; }
   const pid = currentPid;
   const wasOwner = isOwner;
 
   if (wasOwner) {
-    // Ejer: kan kun slette når de er alene — ellers må de fjerne medlemmer først.
-    let otherCount = 0;
-    for (let i = 0; i < allMembers.length; i++) {
-      if (allMembers[i].uid !== currentUser.uid) { otherCount++; }
-    }
-    if (otherCount > 0) {
-      showMessage(t("errOwnerCantLeave"));
-      return;
-    }
     if (!confirm(t("deleteProjectConfirm"))) { return; }
   } else {
     if (!confirm(t("leaveConfirm"))) { return; }
@@ -2140,29 +2122,25 @@ async function removeProjectFromMyList() {
 
   try {
     if (wasOwner) {
-      // Slet subcollections først — vi har stadig medlemskab via member-doc.
+      // Slet projekt-doc FØRST. Hvis dette fejler, er intet tabt.
+      await deleteDoc(doc(db, "projects", pid));
+
+      // Vores member-doc findes stadig, så subcollection-sletningerne
+      // er tilladte (reglen kræver kun isMember).
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
-      const reqDeletes = [];
-      reqSnap.forEach(function (d) { reqDeletes.push(deleteDoc(d.ref)); });
-      await Promise.all(reqDeletes);
+      await Promise.all(reqSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
 
       const tbSnap = await getDocs(collection(db, "projects", pid, "tombstones"));
-      const tbDeletes = [];
-      tbSnap.forEach(function (d) { tbDeletes.push(deleteDoc(d.ref)); });
-      await Promise.all(tbDeletes);
-
-      // Slet projekt-doc (kræver isOwner) og derefter egen member-doc.
-      await deleteDoc(doc(db, "projects", pid));
-      await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
-    } else {
-      // Ikke-ejer: fjern kun egen member-doc.
-      await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
+      await Promise.all(tbSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
     }
-
+    await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
     await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
   } catch (err) {
     console.error("removeProjectFromMyList failed:", err);
+    // Tilbage til listen, men behold fejlen synlig.
+    leaveProject();
     showMessage(t("errRemoveProject", { code: err.code || err.message }));
+    return;
   }
 
   leaveProject();
@@ -2174,7 +2152,7 @@ function emptyRecord() {
 }
 
 // Skriver nye krav. Nye krav får ALDRIG et pensioneret nummer.
-// Fix: assigned oprettes inde i callbacken, så transaktions-retries
+// assigned oprettes inde i callbacken, så transaktions-retries
 // ikke duplikerer listen.
 async function writeRequirements(records, usedSeqs) {
   return await runTransaction(db, async function (tx) {
@@ -2614,10 +2592,12 @@ function sortedBySeq() {
   return copy;
 }
 
-// Beskyt mod formel-injektion i Excel/Sheets.
+// Beskyt mod formel-injektion i Excel/Sheets. Dækker =, +, @, - (ikke
+// negativt tal), samt ledende tab og CR, som også er farlige i visse
+// regneark.
 function csvCell(value) {
   let text = String(value === undefined || value === null ? "" : value);
-  if (/^[=+@]/.test(text) || (/^-/.test(text) && !/^-\d/.test(text))) {
+  if (/^[=+@]/.test(text) || /^[\t\r]/.test(text) || (/^-/.test(text) && !/^-\d/.test(text))) {
     text = "'" + text;
   }
   return '"' + text.replace(/"/g, '""') + '"';
@@ -2945,11 +2925,11 @@ function parseCsv(text, delimiter) {
 
 function csvToObjects(text) {
   const table = parseCsv(text, detectDelimiter(text));
-  if (table.length < 2) { throw new Error("CSV file has no data rows."); }
+  if (table.length < 2) { throw new Error(t("importErrCsvNoRows")); }
   const fields = [];
   for (let c = 0; c < table[0].length; c++) { fields.push(fieldFromHeader(table[0][c])); }
   if (fields.indexOf("description") < 0) {
-    throw new Error("No description column found.");
+    throw new Error(t("importErrCsvNoDesc"));
   }
   const objects = [];
   for (let r = 1; r < table.length; r++) {
@@ -2971,7 +2951,7 @@ function csvToObjects(text) {
 
 function jsonToObjects(text) {
   const data = JSON.parse(text);
-  if (!Array.isArray(data)) { throw new Error("JSON file must be a list of requirements."); }
+  if (!Array.isArray(data)) { throw new Error(t("importErrJsonNotList")); }
   const objects = [];
   for (let i = 0; i < data.length; i++) {
     const item = data[i];
@@ -3100,10 +3080,21 @@ function cleanStatus(value) {
   }
 }
 
+// Excel viser en ledende apostrof som en del af teksten, hvis man
+// importerer vores egen CSV tilbage. Fjern den, hvis den beskyttede
+// en formel (dvs. resten starter med =, +, @, - (ikke tal), tab eller CR).
+function stripFormulaProtection(value) {
+  if (typeof value !== "string") { return value; }
+  if (value.length >= 2 && value[0] === "'") {
+    const rest = value.slice(1);
+    if (/^[=+@\t\r]/.test(rest) || (/^-/.test(rest) && !/^-\d/.test(rest))) {
+      return rest;
+    }
+  }
+  return value;
+}
+
 // Bygger records fra parsede objekter.
-// Fix #11: gem ikke REQ-NNN-formede filId'er som importedId — de er
-// appens egen nummerform og hører til i __desiredSeq. Ellers kan to
-// forskellige projekter få kolliderende importedId'er.
 function buildImportRecords(objects) {
   const records = [];
   let skipped = 0;
@@ -3111,7 +3102,7 @@ function buildImportRecords(objects) {
 
   for (let i = 0; i < objects.length; i++) {
     const o = objects[i];
-    const description = (o.description || "").trim();
+    const description = stripFormulaProtection((o.description || "").trim());
     if (description === "") { skipped++; continue; }
 
     const rec = emptyRecord();
@@ -3122,8 +3113,6 @@ function buildImportRecords(objects) {
     const fileIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(fileId);
     const extIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(extId);
 
-    // Stabilt ID foretrækker et rigtigt eksternt ID. REQ-NNN-former gemmes
-    // ikke — de er kun interessante som seq-hint.
     if (extId !== "" && !extIdIsOwnFormat) {
       rec.__importedId = extId;
     } else if (fileId !== "" && !fileIdIsOwnFormat) {
@@ -3150,14 +3139,14 @@ function buildImportRecords(objects) {
     if (status !== "") { rec.status = status; }
     else if (statusRaw.trim() !== "") { unrecognised++; }
 
-    let source = (o.source || "").trim();
+    let source = stripFormulaProtection((o.source || "").trim());
     const location = (o.sourceLocation || "").trim();
     if (location !== "") {
       source = (source !== "") ? (source + " (" + location + ")") : location;
     }
     rec.source = source;
 
-    let notes = (o.notes || "").trim();
+    let notes = stripFormulaProtection((o.notes || "").trim());
 
     const acceptance = (o.acceptance || "").trim();
     if (acceptance !== "") {
@@ -3217,9 +3206,6 @@ function formatTs(ts) {
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
 }
 
-// Klassificerer records op imod live krav OG tombstones.
-// Fix #11: seq-match kræver nu at beskrivelsen også matcher, så vi ikke
-// overskriver et andet projekts REQ-003 med vores eget REQ-003.
 function classifyImportRows(records, liveReqs, tombstones) {
   const liveByImportedId = {};
   const liveBySeq = {};
@@ -3276,7 +3262,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
     let live = null;
     let tomb = null;
 
-    // Trin 1+2: match på importedId (levende eller tombstone)
     if (iid !== "" && !seenFileImportedIds.has(iid)) {
       if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
         live = liveByImportedId[iid];
@@ -3286,8 +3271,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
     }
     if (iid !== "") { seenFileImportedIds.add(iid); }
 
-    // Trin 3: seq-match — kræver beskrivelses-match, så vi ikke rammer
-    // et andet projekts nummer. Fix #11.
     if (!live && !tomb) {
       const seq = rec.__desiredSeq;
       if (seq !== null && liveBySeq[seq] && !matchedLiveIds.has(liveBySeq[seq].id)) {
@@ -3300,7 +3283,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
       }
     }
 
-    // Trin 4: beskrivelses-match (uafhængigt af seq)
     if (!live && !tomb) {
       const key = normalizeDescriptionForMatch(rec.description);
       if (key !== "") {
@@ -3477,8 +3459,6 @@ function closeImportDiffDialog() {
   $("importDiffDialog").classList.add("hidden");
 }
 
-// Fix #8: regenerér stabilt ID for records der kolliderer med et
-// eksisterende krav, så "tilføj som nye" ikke skaber dubletter.
 async function regenerateCollidingImportedIds(records) {
   let liveReqs = [];
   try {
@@ -3504,8 +3484,6 @@ async function regenerateCollidingImportedIds(records) {
   }
 }
 
-// Fjern tombstones hvis importedId matcher en record vi er ved at
-// tilføje som nyt — så de ikke ligger og spærrer for nummeret.
 async function removeMatchedTombstones(restores, records) {
   const idsToRemove = new Set();
   if (restores) {
@@ -3516,7 +3494,6 @@ async function removeMatchedTombstones(restores, records) {
   for (let i = 0; i < records.length; i++) {
     const iid = records[i].__importedId;
     if (!iid) { continue; }
-    // Find evt. tombstone med samme importedId via allTombstones.
     for (let k = 0; k < allTombstones.length; k++) {
       if (allTombstones[k].importedId === iid && allTombstones[k].id) {
         idsToRemove.add(allTombstones[k].id);
@@ -3630,7 +3607,6 @@ async function onImportFileChosen(event) {
     return;
   }
 
-  // Hent friske data — både krav og tombstones.
   let liveReqs = [];
   try {
     const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
@@ -3722,8 +3698,6 @@ async function onImportFileChosen(event) {
   await applyImportUpdates([], restores, toInsert, skipped, seqs);
 }
 
-// Fix #7: brug dokumentreference til tombstone, ikke collection-query.
-// Tombstones har nu et id fra snapshot.
 async function restoreFromTombstone(tombstone, rec) {
   await runTransaction(db, async function (tx) {
     if (tombstone.id) {
@@ -3789,7 +3763,6 @@ async function applyImportUpdates(updates, restores, newRecords, skippedDuplicat
       if (typeof changes.notes === "string") {
         changes.notes = stripImportedIdMarker(changes.notes);
       }
-      // Giv eksisterende krav et importedId hvis de mangler det.
       if (u.rec && u.rec.__importedId) {
         let liveReq = null;
         for (let k = 0; k < allReqs.length; k++) {
@@ -3864,7 +3837,6 @@ $("btnRemoveProject").addEventListener("click", removeProjectFromMyList);
 $("btnPyt").addEventListener("click", onPytToggle);
 $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
-$("memberList").addEventListener("click", onMemberListClick);
 $("myProjectsList").addEventListener("click", onMyProjectsClick);
 
 const matrixBodies = [$("tbody"), $("matrixSections")];
@@ -3881,7 +3853,6 @@ document.addEventListener("visibilitychange", function () {
 });
 window.addEventListener("beforeunload", function () { flushAllPendingSaves(); });
 
-// Håndtér hashchange, så et nyt delingslink i samme tab virker.
 window.addEventListener("hashchange", function () {
   const parsed = parseHash();
   if (!parsed.pid) { return; }
