@@ -407,7 +407,7 @@
             <th data-col="updatedBy" style="width:100px" data-i18n="thUpdatedBy">Sidst rettet af</th>
             <th data-col="age" style="width:60px"
                 data-i18n="thAge" data-i18n-title="thAgeTitle"
-                title="Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter 14 og 28 dage.">Alder</th>
+                title="Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter de grænser, gruppen har sat under ⚙️ Indstillinger.">Alder</th>
             <th style="width:70px"></th>
           </tr>
         </thead>
@@ -494,7 +494,7 @@
       <p data-i18n-html="refsIntro">Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i
          Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.</p>
       <ul>
-        <li data-i18n-html="refsLi1"><code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ GitHub. Ellers vises det som tekst.</li>
+        <li data-i18n-html="refsLi1"><code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ Indstillinger. Ellers vises det som tekst.</li>
         <li data-i18n-html="refsLi2"><code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.</li>
         <li data-i18n="refsLi3">Står der flere referencer i samme krav, vises de under hinanden.</li>
         <li data-i18n-html="refsLi4">Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.</li>
@@ -1343,8 +1343,6 @@ function applyLanguage() {
   renderMembers();
   renderTable();
 
-  // Opdater "Gemt"-kvitteringen med den nye sprogvariant, men kun hvis
-  // der faktisk er noget at vise.
   if (lastSavedDate) {
     $("lastSaved").textContent = t("savedAt", { time: formatTime(lastSavedDate) });
   }
@@ -1536,11 +1534,6 @@ function stopListeners() {
   allTombstones = [];
 }
 
-// Blev kaldt af onSnapshot ved fejl. Ved mistet adgang forlader vi
-// projektet med en tydelig besked, så brugeren ikke sidder på en død
-// skærm. Vi kaster ventende saves væk først, ellers ville de forsøge
-// at skrive til et projekt brugeren ikke længere har adgang til, og
-// efterlade en forvirrende "Kunne ikke gemme"-besked oveni.
 function onListenError(err) {
   const code = (err && err.code) ? err.code : "";
   if (code === "permission-denied") {
@@ -2218,7 +2211,6 @@ async function removeProjectFromMyList() {
       // Derfor: andre medlemmer → requirements → tombstones → egen
       // member-doc → projektet → egen user-project-liste.
 
-      // 1. Slet alle andre medlemmers docs (kræver isOwner).
       const memSnap = await getDocs(collection(db, "projects", pid, "members"));
       await Promise.all(
         memSnap.docs
@@ -2226,7 +2218,6 @@ async function removeProjectFromMyList() {
           .map(function (d) { return deleteDoc(d.ref); })
       );
 
-      // 2. Slet krav og tombstones mens vi stadig er medlem.
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       await Promise.all(reqSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
 
@@ -2234,15 +2225,12 @@ async function removeProjectFromMyList() {
       await Promise.all(tbSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
     }
 
-    // 3. Egen member-doc (uid==uid tillades altid).
     await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
 
-    // 4. Selve projektet — kun owner (isOwner via project.ownerUid).
     if (wasOwner) {
       await deleteDoc(doc(db, "projects", pid));
     }
 
-    // 5. Egen liste over projekter.
     await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
   } catch (err) {
     console.error("removeProjectFromMyList failed:", err);
@@ -2265,9 +2253,6 @@ async function writeRequirements(records, usedSeqs) {
     const projRef = doc(db, "projects", currentPid);
     const projSnap = await tx.get(projRef);
 
-    // Hvis projektet er slettet samtidig med at vi forsøger at skrive
-    // (fx en anden bruger slettede det), ville .data() være undefined og
-    // kaste en TypeError. Giv i stedet en tydelig fejl.
     if (!projSnap.exists()) {
       const e = new Error("project-missing");
       e.code = "project-missing";
@@ -2611,8 +2596,6 @@ function buildRow(r, activeCol) {
     else { ageCell.classList.add("age-fresh"); }
     if (level !== 3) {
       const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
-      // Brug lokal dato, ikke UTC — ellers er tooltip og diff-dialog uenige
-      // omkring midnat i ikke-UTC-tidszoner.
       ageCell.title = t("ageTitleUpdated", { date: localDateString(d) });
     }
   }
@@ -3226,7 +3209,14 @@ function markdownToObjects(text) {
       if (currentSection === "PYT") { obj.status = "Parked"; }
       else if (currentSection === "Droppede") { obj.status = "Dropped"; }
     }
-    if (!obj.description || String(obj.description).trim() === "") { continue; }
+
+    // Behold rækken hvis den har et Krav-ID (som senere slås op i
+    // metadata-blokken for stabilt ID). Ellers ville krav med tom
+    // beskrivelse blive tabt ved round-trip eksport/import.
+    if ((!obj.description || String(obj.description).trim() === "")
+        && (!obj.fileId || String(obj.fileId).trim() === "")) {
+      continue;
+    }
 
     // Injicér stabilt ID fra metadata-blokken, hvis det findes.
     // Filen har kun REQ-NNN, så vi slår op på seq-nummeret.
@@ -3241,7 +3231,15 @@ function markdownToObjects(text) {
     objects.push(obj);
   }
 
-  if (objects.length === 0) { return textToObjects(text); }
+  // Fallback til ren tekst KUN hvis filen slet ikke indeholder
+  // markdown-struktur (hverken tabeller eller overskrifter). En .md-fil
+  // med tabeller men uden gyldige krav skal IKKE læses som én linje pr.
+  // krav — det var netop årsagen til at hele eksport-filen endte som
+  // skrald-rækker ved round-trip.
+  const hasMarkdownStructure = /^\s*\|/m.test(text) || /^#{1,6}\s/m.test(text);
+  if (objects.length === 0 && !hasMarkdownStructure) {
+    return textToObjects(text);
+  }
   return objects;
 }
 
@@ -3299,13 +3297,20 @@ function buildImportRecords(objects) {
   for (let i = 0; i < objects.length; i++) {
     const o = objects[i];
     const description = stripFormulaProtection((o.description || "").trim());
-    if (description === "") { skipped++; continue; }
+    const fileId = (o.fileId || "").trim();
+    const extId = (o.importedId || "").trim();
+
+    // Tillad tom beskrivelse hvis vi har et ID at matche på. Uden dette
+    // ville eksport/import af krav med tom beskrivelse tabe dem, og ved
+    // markdown-import ville de desuden risikere at blive læst som
+    // tekstlinjer.
+    if (description === "" && fileId === "" && extId === "") {
+      skipped++; continue;
+    }
 
     const rec = emptyRecord();
     rec.description = description;
 
-    const fileId = (o.fileId || "").trim();
-    const extId = (o.importedId || "").trim();
     const fileIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(fileId);
     const extIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(extId);
 
@@ -3401,15 +3406,6 @@ function formatTs(ts) {
   return localDateString(d);
 }
 
-// Klassificerer records op imod live krav OG tombstones.
-//
-// Match-rækkefølge:
-//   1. importedId (findes i .json, .csv fra ny version, samt .md fra ny version)
-//   2. seq + beskrivelse (fallback for .md og gamle .csv uden metadata)
-//   3. seq alene mod tombstone — fordi seq pensioneres ved sletning, kan
-//      et tombstone-seq aldrig referere til et andet krav. Vi logger en
-//      advarsel hvis beskrivelsen er ændret.
-//   4. beskrivelse alene (fanger "ny" fil hvor seq er ændret)
 function classifyImportRows(records, liveReqs, tombstones) {
   const liveByImportedId = {};
   const liveBySeq = {};
@@ -3479,7 +3475,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
     let live = null;
     let tomb = null;
 
-    // Trin 1: importedId (levende eller tombstone)
     if (iid !== "" && !seenFileImportedIds.has(iid)) {
       if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
         live = liveByImportedId[iid];
@@ -3489,13 +3484,11 @@ function classifyImportRows(records, liveReqs, tombstones) {
     }
     if (iid !== "") { seenFileImportedIds.add(iid); }
 
-    // Trin 2+3: seq-matchning
     if (!live && !tomb) {
       const seq = rec.__desiredSeq;
       if (seq !== null) {
         const recNorm = normalizeDescriptionForMatch(rec.description);
 
-        // 2a: live krav på seq + beskrivelse
         if (recNorm !== "") {
           const liveCand = liveBySeq[seq];
           if (liveCand && !matchedLiveIds.has(liveCand.id)) {
@@ -3504,7 +3497,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
           }
         }
 
-        // 2b + 3: tombstone på seq
         if (!live) {
           const tbCand = tbBySeq[seq];
           if (tbCand && !isTombstoneUsed(tbCand)) {
@@ -3530,7 +3522,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
       }
     }
 
-    // Trin 4: beskrivelse alene (uafhængigt af seq)
     if (!live && !tomb) {
       const key = normalizeDescriptionForMatch(rec.description);
       if (key !== "") {
@@ -3707,10 +3698,6 @@ function closeImportDiffDialog() {
   $("importDiffDialog").classList.add("hidden");
 }
 
-// Sikrer at et importeret ID ikke kolliderer med et levende krav, et
-// tombstone eller et andet ID i samme fil. Tombstones tæller med, fordi
-// et pensioneret ID ikke bør genbruges ved "Tilføj som nye krav" — det
-// ville gøre et efterfølgende import-match tvetydigt.
 async function regenerateCollidingImportedIds(records) {
   let liveReqs = [];
   try {
@@ -3740,10 +3727,6 @@ async function regenerateCollidingImportedIds(records) {
   }
 }
 
-// "Tilføj som nye krav"-stien. Vi fjerner IKKE tombstones her — de
-// repræsenterer pensionerede REQ-NNN, og brugeren har netop valgt ikke
-// at gendanne. Tombstone-seq er allerede i usedSeqs, så writeRequirements
-// tildeler friske numre.
 async function onImportAnyway() {
   const records = pendingImportAllRecords;
   const skipped = pendingImportSkippedDupes;
