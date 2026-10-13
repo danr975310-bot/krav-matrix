@@ -1207,10 +1207,12 @@ let filterMoscow = "all";
 let onlyPyt = false;
 let allReqs = [];
 let allMembers = [];
+let allTombstones = [];
 let renderPending = false;
 let unsubProject = null;
 let unsubReqs = null;
 let unsubMembers = null;
+let unsubTombstones = null;
 let visibleColumns = loadColumns();
 
 let projectData = {};
@@ -1431,8 +1433,10 @@ function stopListeners() {
   if (unsubProject) { unsubProject(); unsubProject = null; }
   if (unsubReqs) { unsubReqs(); unsubReqs = null; }
   if (unsubMembers) { unsubMembers(); unsubMembers = null; }
+  if (unsubTombstones) { unsubTombstones(); unsubTombstones = null; }
   allReqs = [];
   allMembers = [];
+  allTombstones = [];
 }
 
 function onListenError(err) {
@@ -1898,7 +1902,6 @@ async function createProject() {
       memberCount: 0,
       githubBoardUrl: "",
       defaultRepo: "",
-      tombstones: [],
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -1979,6 +1982,7 @@ async function openProject(pid) {
   unsubProject = onSnapshot(doc(db, "projects", pid), onProjectSnapshot, onListenError);
   unsubReqs = onSnapshot(collection(db, "projects", pid, "requirements"), onReqsSnapshot, onListenError);
   unsubMembers = onSnapshot(collection(db, "projects", pid, "members"), onMembersSnapshot, onListenError);
+  unsubTombstones = onSnapshot(collection(db, "projects", pid, "tombstones"), onTombstonesSnapshot, onListenError);
   showScreen("app");
 }
 
@@ -1995,13 +1999,26 @@ function leaveProject() {
 }
 
 function onProjectSnapshot(snap) {
-  if (!snap.exists()) { return; }
+  if (!snap.exists()) {
+    // Projektet er slettet (fx af den sidste deltager) — forlad pænt.
+    showMessage(t("projectNotExist"));
+    leaveProject();
+    return;
+  }
   projectData = snap.data() || {};
   $("projectName").textContent = projectData.name || "";
   isOwner = (projectData.ownerUid === currentUser.uid);
   updateGithubUi();
   renderMembers();
   renderTable();
+}
+
+function onTombstonesSnapshot(snapshot) {
+  allTombstones = [];
+  for (let i = 0; i < snapshot.docs.length; i++) {
+    const d = snapshot.docs[i];
+    allTombstones.push(Object.assign({ id: d.id }, d.data()));
+  }
 }
 
 function onMembersSnapshot(snapshot) {
@@ -2061,10 +2078,16 @@ async function removeProjectFromMyList() {
 
   try {
     if (lastOne) {
+      // Slet requirements, tombstones og til sidst projektet.
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       const reqDeletes = [];
       reqSnap.forEach(function (d) { reqDeletes.push(deleteDoc(d.ref)); });
       await Promise.all(reqDeletes);
+
+      const tbSnap = await getDocs(collection(db, "projects", pid, "tombstones"));
+      const tbDeletes = [];
+      tbSnap.forEach(function (d) { tbDeletes.push(deleteDoc(d.ref)); });
+      await Promise.all(tbDeletes);
 
       await deleteDoc(doc(db, "projects", pid));
       await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
@@ -2147,22 +2170,21 @@ async function addRequirement() {
 }
 
 async function deleteRequirement(reqId) {
-  const reqRef = doc(db, "projects", currentPid, "requirements", reqId);
-  const snap = await getDoc(reqRef);
-  if (!snap.exists()) { return; }
-  const data = snap.data();
-  const iid = data.importedId || ("REQ-" + String(data.seq || 0).padStart(3, "0"));
-  const tombstone = {
-    seq: data.seq || 0,
-    importedId: iid,
-    description: data.description || "",
-    deletedAt: Date.now()
-  };
+  // Læs og slet i én transaktion, så tombstonen bygges på det nyeste data.
   await runTransaction(db, async function (tx) {
-    const projRef = doc(db, "projects", currentPid);
-    const projSnap = await tx.get(projRef);
-    const tombstones = (projSnap.data().tombstones || []).concat([tombstone]);
-    tx.update(projRef, { tombstones: tombstones });
+    const reqRef = doc(db, "projects", currentPid, "requirements", reqId);
+    const snap = await tx.get(reqRef);
+    if (!snap.exists()) { return; }
+    const data = snap.data();
+    const iid = data.importedId || ("REQ-" + String(data.seq || 0).padStart(3, "0"));
+    // Tombstone gemmes som separat dokument i subcollection — ingen 1 MB-grænse.
+    const tbRef = doc(collection(db, "projects", currentPid, "tombstones"));
+    tx.set(tbRef, {
+      seq: data.seq || 0,
+      importedId: iid,
+      description: String(data.description || "").slice(0, 200),
+      deletedAt: Date.now()
+    });
     tx.delete(reqRef);
   });
 }
@@ -3125,7 +3147,7 @@ function formatTs(ts) {
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
 }
 
-// Klassificerer records op imod live krav OG tombstones.
+// Klassificerer records op imod live krav OG tombstones (subcollection).
 function classifyImportRows(records, liveReqs, tombstones) {
   const liveByImportedId = {};
   const liveBySeq = {};
@@ -3184,6 +3206,7 @@ function classifyImportRows(records, liveReqs, tombstones) {
     let live = null;
     let tomb = null;
 
+    // Trin 1+2: match på importedId (levende eller tombstone)
     if (iid !== "" && !seenFileImportedIds.has(iid)) {
       if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
         live = liveByImportedId[iid];
@@ -3193,14 +3216,18 @@ function classifyImportRows(records, liveReqs, tombstones) {
     }
     if (iid !== "") { seenFileImportedIds.add(iid); }
 
-    if (!live && !tomb && iid === "") {
-      const seq = rec.__desiredSeq;
+    // Trin 3: match på seq — tillades når importedId er tomt ELLER
+    // har appens egen REQ-NNN-form (fix #1: CSV round-trip).
+    const iidIsOwnFormat = iid === "" || /^REQ-?\s*0*\d+$/i.test(iid);
+    if (!live && !tomb && iidIsOwnFormat) {
+      const seq = parseImportedSeq(iid) || rec.__desiredSeq;
       if (seq !== null && liveBySeq[seq] && !matchedLiveIds.has(liveBySeq[seq].id)) {
         live = liveBySeq[seq];
       }
     }
 
-    if (!live && !tomb && iid === "") {
+    // Trin 4: match på beskrivelse (kun når intet ID)
+    if (!live && !tomb && iidIsOwnFormat) {
       const key = normalizeDescriptionForMatch(rec.description);
       if (key !== "") {
         for (let k = 0; k < liveReqs.length; k++) {
@@ -3380,9 +3407,37 @@ async function onImportAnyway() {
   const records = pendingImportAllRecords;
   const skipped = pendingImportSkippedDupes;
   const usedSeqs = pendingImportUsedSeqs;
+  const restores = pendingImportRestores;
   closeImportDiffDialog();
   if (!records || records.length === 0) { return; }
+  // Hvis vi har tombstones der matcher, fjern dem inden tilføjelse,
+  // så importedId ikke ligger dobbelt (fix #5).
+  await removeMatchedTombstones(restores, records);
   await importRecords(records, skipped, usedSeqs);
+}
+
+// Fjern tombstones hvis importedId matcher en record vi er ved at tilføje som nyt.
+async function removeMatchedTombstones(restores, records) {
+  const idsToRemove = new Set();
+  if (restores) {
+    for (let i = 0; i < restores.length; i++) {
+      idsToRemove.add(restores[i].tombstone.importedId);
+    }
+  }
+  for (let i = 0; i < records.length; i++) {
+    if (records[i].__importedId) { idsToRemove.add(records[i].__importedId); }
+  }
+  if (idsToRemove.size === 0) { return; }
+  try {
+    const snap = await getDocs(collection(db, "projects", currentPid, "tombstones"));
+    const deletes = [];
+    snap.forEach(function (d) {
+      if (idsToRemove.has(d.data().importedId)) { deletes.push(deleteDoc(d.ref)); }
+    });
+    await Promise.all(deletes);
+  } catch (err) {
+    console.warn("Could not remove matched tombstones:", err);
+  }
 }
 
 async function onImportUpdate() {
@@ -3415,7 +3470,6 @@ async function createProjectAndImport(name, records) {
       memberCount: 0,
       githubBoardUrl: "",
       defaultRepo: "",
-      tombstones: [],
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -3477,7 +3531,21 @@ async function onImportFileChosen(event) {
   } catch (err) {
     console.warn("Could not fetch live requirements for diff:", err);
   }
-  const tombstones = Array.isArray(projectData.tombstones) ? projectData.tombstones : [];
+
+  // Fix #4: læs projektet friskt for at få de nyeste tombstones.
+  let tombstones = [];
+  try {
+    const projSnap = await getDoc(doc(db, "projects", currentPid));
+    if (projSnap.exists()) {
+      // Bagudkompatibilitet: gamle projekter har tombstones som array.
+      const legacy = Array.isArray(projSnap.data().tombstones) ? projSnap.data().tombstones : [];
+      tombstones = legacy.slice();
+    }
+  } catch (err) {
+    console.warn("Could not fetch tombstones for diff:", err);
+  }
+  // Tilføj subcollection-tombstones (allTombstones holdes opdateret via snapshot).
+  for (let i = 0; i < allTombstones.length; i++) { tombstones.push(allTombstones[i]); }
 
   const usedSeqs = new Set();
   for (let i = 0; i < liveReqs.length; i++) {
@@ -3508,6 +3576,7 @@ async function onImportFileChosen(event) {
 
   pendingImportAllRecords = allNonDupes;
   pendingImportNewRecords = classified.newRecords;
+  pendingImportRestores = classified.restores;
   pendingImportSkippedDupes = skippedDuplicates;
   pendingImportUsedSeqs = usedSeqs;
 
@@ -3535,6 +3604,7 @@ async function onImportFileChosen(event) {
   if (!confirm(question)) {
     pendingImportAllRecords = null;
     pendingImportNewRecords = null;
+    pendingImportRestores = null;
     pendingImportSkippedDupes = 0;
     pendingImportUsedSeqs = null;
     return;
@@ -3546,23 +3616,23 @@ async function onImportFileChosen(event) {
   const seqs = usedSeqs;
   pendingImportAllRecords = null;
   pendingImportNewRecords = null;
+  pendingImportRestores = null;
   pendingImportSkippedDupes = 0;
   pendingImportUsedSeqs = null;
   await applyImportUpdates([], restores, toInsert, skipped, seqs);
 }
 
 async function restoreFromTombstone(tombstone, rec) {
+  // Tombstone ligger i subcollection — fjern den og opret kravet i én transaktion.
   await runTransaction(db, async function (tx) {
-    const projRef = doc(db, "projects", currentPid);
-    const projSnap = await tx.get(projRef);
-    const tombstones = projSnap.data().tombstones || [];
-    let foundIdx = -1;
-    for (let i = 0; i < tombstones.length; i++) {
-      if (tombstones[i].importedId === tombstone.importedId) { foundIdx = i; break; }
-    }
-    if (foundIdx < 0) { throw new Error("tombstone-missing"); }
-    const next = tombstones.slice(0, foundIdx).concat(tombstones.slice(foundIdx + 1));
-    tx.update(projRef, { tombstones: next });
+    // Find tombstone-dokumentet via importedId.
+    const tbCol = collection(db, "projects", currentPid, "tombstones");
+    const tbSnap = await tx.get(tbCol);
+    let tbRef = null;
+    tbSnap.forEach(function (d) {
+      if (d.data().importedId === tombstone.importedId) { tbRef = d.ref; }
+    });
+    if (tbRef) { tx.delete(tbRef); }
 
     const newRef = doc(collection(db, "projects", currentPid, "requirements"));
     tx.set(newRef, {
@@ -3622,6 +3692,16 @@ async function applyImportUpdates(updates, restores, newRecords, skippedDuplicat
       // Ryd en evt. gammel "[Imported ID: …]"-markør fra Noter.
       if (typeof changes.notes === "string") {
         changes.notes = stripImportedIdMarker(changes.notes);
+      }
+      // Fix #2: giv eksisterende krav et importedId hvis de mangler det.
+      if (u.rec && u.rec.__importedId) {
+        let liveReq = null;
+        for (let k = 0; k < allReqs.length; k++) {
+          if (allReqs[k].id === u.liveId) { liveReq = allReqs[k]; break; }
+        }
+        if (liveReq && !liveReq.importedId) {
+          changes.importedId = u.rec.__importedId;
+        }
       }
       changes.updatedBy = userLabel();
       changes.updatedAt = serverTimestamp();
