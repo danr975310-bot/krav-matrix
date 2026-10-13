@@ -904,7 +904,8 @@ const I18N = {
     csvStatus: "Status",
     csvNotes: "Noter",
     csvRefs: "Referencer",
-    csvUpdatedBy: "Sidst rettet af"
+    csvUpdatedBy: "Sidst rettet af",
+    csvImportedId: "Stabilt ID"
   },
 
   en: {
@@ -1181,7 +1182,8 @@ const I18N = {
     csvStatus: "Status",
     csvNotes: "Notes",
     csvRefs: "References",
-    csvUpdatedBy: "Last edited by"
+    csvUpdatedBy: "Last edited by",
+    csvImportedId: "Stable ID"
   }
 };
 
@@ -2151,9 +2153,6 @@ function emptyRecord() {
   return { description: "", furps: "F", moscow: "Should", source: "", status: "Proposed", notes: "" };
 }
 
-// Skriver nye krav. Nye krav får ALDRIG et pensioneret nummer.
-// assigned oprettes inde i callbacken, så transaktions-retries
-// ikke duplikerer listen.
 async function writeRequirements(records, usedSeqs) {
   return await runTransaction(db, async function (tx) {
     const assigned = [];
@@ -2606,7 +2605,8 @@ function csvCell(value) {
 function exportCsv() {
   let csv = "\uFEFF" + [
     t("csvId"), t("csvDescription"), t("csvFurps"), t("csvMoscow"),
-    t("csvSource"), t("csvStatus"), t("csvNotes"), t("csvRefs"), t("csvUpdatedBy")
+    t("csvSource"), t("csvStatus"), t("csvNotes"), t("csvRefs"),
+    t("csvUpdatedBy"), t("csvImportedId")
   ].join(";") + "\r\n";
   const rows = sortedBySeq();
   const defaultRepo = String(projectData.defaultRepo || "").trim();
@@ -2623,7 +2623,8 @@ function exportCsv() {
       csvCell(statusLabel(r.status)),
       csvCell(r.notes),
       csvCell(refsText),
-      csvCell(r.updatedBy)
+      csvCell(r.updatedBy),
+      csvCell(r.importedId || "")
     ];
     csv += cells.join(";") + "\r\n";
   }
@@ -3094,7 +3095,6 @@ function stripFormulaProtection(value) {
   return value;
 }
 
-// Bygger records fra parsede objekter.
 function buildImportRecords(objects) {
   const records = [];
   let skipped = 0;
@@ -3206,22 +3206,28 @@ function formatTs(ts) {
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
 }
 
+// Klassificerer records op imod live krav OG tombstones.
+//
+// Tombstone-matchning sker i tre trin:
+//   1. via importedId (fra CSV/JSON-eksport hvor den er med)
+//   2. via seq + beskrivelse (fallback — .md og gamle .csv-filer har
+//      kun REQ-NNN, ikke det stabile ID)
+//   3. via beskrivelse alene (fanger "ny" fil hvor seq er ændret)
 function classifyImportRows(records, liveReqs, tombstones) {
   const liveByImportedId = {};
   const liveBySeq = {};
-  const liveDescSet = new Set();
   for (let i = 0; i < liveReqs.length; i++) {
     const r = liveReqs[i];
     const iid = liveImportedId(r);
     if (iid !== "") { liveByImportedId[iid] = r; }
     if (typeof r.seq === "number") { liveBySeq[r.seq] = r; }
-    const key = normalizeDescriptionForMatch(r.description);
-    if (key !== "") { liveDescSet.add(key); }
   }
   const tbByImportedId = {};
+  const tbBySeq = {};
   for (let i = 0; i < (tombstones || []).length; i++) {
     const tb = tombstones[i];
     if (tb.importedId) { tbByImportedId[tb.importedId] = tb; }
+    if (typeof tb.seq === "number") { tbBySeq[tb.seq] = tb; }
   }
 
   const fields = ["description", "furps", "moscow", "source", "status", "notes"];
@@ -3232,7 +3238,22 @@ function classifyImportRows(records, liveReqs, tombstones) {
   const newRecords = [];
   const matchedLiveIds = new Set();
   const seenFileImportedIds = new Set();
+  // Tombstones spores via deres id (Firestore doc-id) så vi ikke gendanner
+  // den samme to gange.
   const usedTombstoneIds = new Set();
+
+  function markTombstoneUsed(tb) {
+    if (tb && tb.id) { usedTombstoneIds.add(tb.id); }
+    else if (tb && tb.importedId) { usedTombstoneIds.add("iid:" + tb.importedId); }
+    else if (tb && typeof tb.seq === "number") { usedTombstoneIds.add("seq:" + tb.seq); }
+  }
+  function isTombstoneUsed(tb) {
+    if (!tb) { return false; }
+    if (tb.id && usedTombstoneIds.has(tb.id)) { return true; }
+    if (tb.importedId && usedTombstoneIds.has("iid:" + tb.importedId)) { return true; }
+    if (typeof tb.seq === "number" && usedTombstoneIds.has("seq:" + tb.seq)) { return true; }
+    return false;
+  }
 
   function compareFields(rec, live) {
     const changes = [];
@@ -3262,27 +3283,46 @@ function classifyImportRows(records, liveReqs, tombstones) {
     let live = null;
     let tomb = null;
 
+    // Trin 1: match på importedId (levende eller tombstone)
     if (iid !== "" && !seenFileImportedIds.has(iid)) {
       if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
         live = liveByImportedId[iid];
-      } else if (tbByImportedId[iid] && !usedTombstoneIds.has(iid)) {
+      } else if (tbByImportedId[iid] && !isTombstoneUsed(tbByImportedId[iid])) {
         tomb = tbByImportedId[iid];
       }
     }
     if (iid !== "") { seenFileImportedIds.add(iid); }
 
+    // Trin 2: seq + beskrivelse. Tjek levende krav først, fald tilbage
+    // til tombstones. Det er denne fallback der redder .md og gamle
+    // .csv-filer, hvor det stabile ID ikke er med.
     if (!live && !tomb) {
       const seq = rec.__desiredSeq;
-      if (seq !== null && liveBySeq[seq] && !matchedLiveIds.has(liveBySeq[seq].id)) {
-        const cand = liveBySeq[seq];
-        const recKey = normalizeDescriptionForMatch(rec.description);
-        const candKey = normalizeDescriptionForMatch(cand.description);
-        if (recKey !== "" && recKey === candKey) {
-          live = cand;
+      if (seq !== null) {
+        const recNorm = normalizeDescriptionForMatch(rec.description);
+        if (recNorm !== "") {
+          const liveCand = liveBySeq[seq];
+          if (liveCand && !matchedLiveIds.has(liveCand.id)) {
+            const liveNorm = normalizeDescriptionForMatch(liveCand.description);
+            if (recNorm === liveNorm) { live = liveCand; }
+          }
+          if (!live) {
+            const tbCand = tbBySeq[seq];
+            if (tbCand && !isTombstoneUsed(tbCand)) {
+              const tbNorm = normalizeDescriptionForMatch(tbCand.description);
+              // Tombstone-beskrivelsen er trunkeret til 200 tegn ved
+              // sletning, så vi accepterer også et rent prefix-match.
+              if (tbNorm !== "" &&
+                  (recNorm === tbNorm || recNorm.indexOf(tbNorm) === 0)) {
+                tomb = tbCand;
+              }
+            }
+          }
         }
       }
     }
 
+    // Trin 3: beskrivelses-match (uafhængigt af seq)
     if (!live && !tomb) {
       const key = normalizeDescriptionForMatch(rec.description);
       if (key !== "") {
@@ -3320,7 +3360,7 @@ function classifyImportRows(records, liveReqs, tombstones) {
         });
       }
     } else if (tomb) {
-      usedTombstoneIds.add(tomb.importedId);
+      markTombstoneUsed(tomb);
       restores.push({ tombstone: tomb, rec: rec });
     } else {
       newRecords.push(rec);
