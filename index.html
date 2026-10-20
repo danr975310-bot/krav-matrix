@@ -803,6 +803,7 @@ const I18N = {
     transferConfirm: "Overdrag ejerskab til {name}?\n\nDu mister retten til at ændre indstillinger og slette projektet. {name} får dem i stedet.\n\nDen nye ejer kan overdrage ejerskabet tilbage til dig, hvis I fortryder.",
     transferDone: "Ejerskabet er overdraget til {name}.",
     transferFailed: "Kunne ikke overdrage ejerskab: {code}",
+    mustTransferFirst: "Du er ejer og der er stadig andre medlemmer ({names}). Overdrag ejerskabet til en af dem via ℹ️ Info → Medlemmer, før du kan forlade projektet.",
 
     settingsDialogTitle: "Projektindstillinger",
     settingsGithubSection: "GitHub-integration",
@@ -1116,6 +1117,7 @@ const I18N = {
     transferConfirm: "Transfer ownership to {name}?\n\nYou lose the right to change settings and delete the project. {name} gets them instead.\n\nThe new owner can transfer ownership back to you if you change your mind.",
     transferDone: "Ownership has been transferred to {name}.",
     transferFailed: "Could not transfer ownership: {code}",
+    mustTransferFirst: "You are the owner and there are still other members ({names}). Transfer ownership to one of them via ℹ️ Info → Members before you can leave the project.",
 
     settingsDialogTitle: "Project settings",
     settingsGithubSection: "GitHub integration",
@@ -2326,7 +2328,8 @@ function leaveProject() {
 function updateProjectButtons() {
   const btn = $("btnRemoveProject");
   if (!btn) { return; }
-  if (isOwner) {
+  // Ejer alene → "Slet projekt". Alle andre tilfælde → "Forlad projekt".
+  if (isOwner && allMembers.length <= 1) {
     btn.textContent = t("deleteProjectBtn");
     btn.title = t("deleteProjectTitle");
   } else {
@@ -2370,6 +2373,7 @@ function onMembersSnapshot(snapshot) {
     allMembers.push({ uid: d.id, name: d.data().name });
   }
   renderMembers();
+  updateProjectButtons();
 }
 
 function renderMembers() {
@@ -2440,6 +2444,28 @@ async function removeProjectFromMyList() {
   const wasOwner = isOwner;
 
   if (wasOwner) {
+    // Hent friske medlemsdata — allMembers kan være et øjeblik bagud.
+    let memSnap;
+    try {
+      memSnap = await getDocs(collection(db, "projects", pid, "members"));
+    } catch (err) {
+      showMessage(t("errRemoveProject", { code: err.code || err.message }));
+      return;
+    }
+    const otherMembers = memSnap.docs.filter(function (d) {
+      return d.id !== currentUser.uid;
+    });
+
+    if (otherMembers.length > 0) {
+      // Ejer med andre → forklar at ejerskabet skal overdrages først.
+      const names = otherMembers
+        .map(function (d) { return d.data().name || d.id; })
+        .join(", ");
+      showMessage(t("mustTransferFirst", { names: names }));
+      return;
+    }
+
+    // Ejer alene — bekræft med projektnavn.
     const projectName = String(projectData.name || "").trim();
     const answer = prompt(t("deleteProjectTypeName", { name: projectName }));
     if (answer === null) { return; }
@@ -2456,24 +2482,22 @@ async function removeProjectFromMyList() {
 
   try {
     if (wasOwner) {
-      const memSnap = await getDocs(collection(db, "projects", pid, "members"));
-      await Promise.all(
-        memSnap.docs
-          .filter(function (d) { return d.id !== currentUser.uid; })
-          .map(function (d) { return deleteDoc(d.ref); })
-      );
-
+      // 1. Slet krav (kræver isMember).
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       await Promise.all(reqSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
 
+      // 2. Slet tombstones (kræver isMember).
       const tbSnap = await getDocs(collection(db, "projects", pid, "tombstones"));
       await Promise.all(tbSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
-    }
 
-    await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
-
-    if (wasOwner) {
+      // 3. Slet projektet (kræver isOwner).
       await deleteDoc(doc(db, "projects", pid));
+
+      // 4. NU er isOwner(pid) = false (projektet findes ikke).
+      //    Så kan ejeren rydde sit eget member-doc op.
+      await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
+    } else {
+      await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
     }
 
     await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
