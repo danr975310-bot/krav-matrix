@@ -1,20 +1,4357 @@
-(async () => {
-  const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-  const { getFirestore, collection, getDocs, deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-  const app = getApps().length ? getApps()[0] : initializeApp({
-    apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4",
-    authDomain: "reqmatrix-fc50a.firebaseapp.com",
-    projectId: "reqmatrix-fc50a",
-    appId: "1:480693503390:web:d8c32525e3370b301a428f"
-  });
-  const db = getFirestore(app);
-  const snap = await getDocs(collection(db, "invites"));
-  let deleted = 0;
-  for (const d of snap.docs) {
-    if (typeof d.data().expiresAt === "number") {
-      try { await deleteDoc(d.ref); deleted++; }
-      catch (e) { console.warn("Kunne ikke slette:", d.id, e.code); }
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kravmatrix</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #f6f7f9; color: #1c1f24; }
+  header { display: flex; justify-content: space-between; align-items: center;
+           padding: 10px 16px; background: #1f2937; color: #fff; }
+  #userInfo button { margin-left: 8px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
+               transition: opacity 0.2s ease; }
+  #btnLang {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 500;
+    background: #2563eb;
+    color: #fff;
+    border: 2px solid #fff;
+    font-weight: 700;
+    min-width: 62px;
+    padding: 10px 18px;
+    border-radius: 999px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+    cursor: pointer;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    transition: background 0.12s ease, transform 0.12s ease;
+  }
+  #btnLang:hover { background: #1d4ed8; transform: translateY(-1px); }
+  #btnLang:active { transform: translateY(0); }
+  main { padding: 8px 16px 16px; }
+  .hidden { display: none; }
+  .card { background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
+          padding: 16px; max-width: 480px; margin: 24px auto; }
+  .card h2 { margin-top: 0; }
+  button { cursor: pointer; padding: 6px 12px; border-radius: 6px;
+           border: 1px solid #9aa3af; background: #fff; }
+  button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
+  button.danger { border-color: #dc2626; color: #b91c1c; background: #fff; }
+  button.danger:hover { background: #fef2f2; }
+  input[type=text], input[type=password], input[type=number], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
+  .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
+  #msg { color: #b91c1c; margin: 8px 0; }
+  #msg:empty { display: none; }
+  #projectName {
+    margin: 0 0 12px; font-size: 22px;
+    display: inline-block;
+    cursor: pointer;
+    color: #2563eb;
+    padding: 2px 6px 2px 4px;
+    border-radius: 4px;
+    transition: background-color 0.12s ease, color 0.12s ease;
+  }
+  #projectName:hover {
+    text-decoration: underline;
+    background: rgba(37, 99, 235, 0.08);
+  }
+  #projectName::before {
+    content: "← ";
+    opacity: 0.7;
+    transition: opacity 0.12s ease;
+    font-weight: normal;
+  }
+  #projectName:hover::before { opacity: 1; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 1240px; background: #fff; }
+  th, td { border: 1px solid #d9dde3; padding: 4px; vertical-align: top; font-size: 13px; }
+  th { background: #eef0f3; text-align: left; }
+  td textarea, td input[type=text], td select { width: 100%; }
+  td textarea { min-height: 48px; resize: vertical; }
+  tr.prio-1 { background: #fef2f2; } tr.prio-1 td:first-child { border-left: 6px solid #dc2626; }
+  tr.prio-2 { background: #fff7ed; } tr.prio-2 td:first-child { border-left: 6px solid #f59e0b; }
+  tr.prio-3 { background: #eff6ff; } tr.prio-3 td:first-child { border-left: 6px solid #3b82f6; }
+  tr.prio-4 { background: #f3f4f6; } tr.prio-4 td:first-child { border-left: 6px solid #9ca3af; }
+  tr.row-resolved { opacity: 0.5; transition: opacity 0.12s ease; }
+  tr.row-resolved:hover { opacity: 1; }
+  tr.row-flash td { background: #fef3c7; }
+  tr.row-flash td:first-child { border-left-color: #f59e0b; }
+  tr.group-header td { color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.04em;
+                       padding: 8px 10px; border-top: 4px solid #1c1f24; }
+  tr.group-1 td { background: #b91c1c; }
+  tr.group-2 td { background: #b45309; }
+  tr.group-3 td { background: #1d4ed8; }
+  tr.group-4 td { background: #4b5563; }
+  tr.group-furps td { background: #334155; }
+  tr.group-status-proposed td { background: #a16207; }
+  tr.group-status-agreed   td { background: #6d28d9; }
+  tr.group-status-done     td { background: #15803d; }
+  tr.group-status-parked   td { background: #c2410c; }
+  tr.group-status-dropped  td { background: #4b5563; }
+  th.sort-active {
+    background: #dbeafe;
+    border-bottom: 3px solid #2563eb;
+    font-weight: 700;
+  }
+  td.sort-active {
+    box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.08);
+  }
+  td.sort-active textarea,
+  td.sort-active select {
+    background: rgba(255, 255, 255, 0.65);
+  }
+  select.status-proposed { background: #fef9c3; }
+  select.status-agreed { background: #ddd6fe; }
+  select.status-done { background: #bbf7d0; }
+  select.status-parked { background: #fed7aa; }
+  select.status-dropped { background: #e5e7eb; color: #6b7280; }
+  details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
+            border-radius: 8px; padding: 8px 12px; }
+  details > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+  details[open] > summary { margin-bottom: 8px; }
+  .small { font-size: 12px; color: #4b5563; }
+  td.age { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.age-fresh  { color: #9ca3af; }
+  td.age-warn   { color: #b45309; font-weight: 600; }
+  td.age-urgent { color: #b91c1c; font-weight: 700; }
+  td.age-parked { color: #9ca3af; font-style: italic; }
+  td.age-none   { color: #d1d5db; }
+  td.refs { font-size: 12px; line-height: 1.5; word-break: break-all; }
+  td.refs a {
+    color: #2563eb; text-decoration: none;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  td.refs a:hover { text-decoration: underline; }
+  td.refs span.unlinked {
+    color: #9ca3af;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    cursor: help;
+  }
+  td.refs-empty { color: #d1d5db; text-align: center; }
+  td.actions { white-space: nowrap; text-align: right; }
+  td.actions button { padding: 4px 8px; }
+  td.actions button + button { margin-left: 4px; }
+  textarea.just-saved, select.just-saved {
+    box-shadow: 0 0 0 2px #86efac;
+    transition: box-shadow 0.2s ease;
+  }
+  th.hidden-col, td.hidden-col { display: none; }
+  .colprefs { position: relative; }
+  .colprefs-panel {
+    position: absolute; top: 100%; left: 0; z-index: 20;
+    background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
+    padding: 8px 12px; margin-top: 4px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    min-width: 200px;
+  }
+  .colprefs-panel label { display: block; font-size: 13px; padding: 3px 0; cursor: pointer; }
+  .colprefs-panel .small { margin: 6px 0 0; }
+  .matrix-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .matrix-section {
+    display: flex;
+    align-items: stretch;
+    background: #fff;
+    border: 1px solid #d9dde3;
+  }
+  .matrix-banner {
+    flex: 0 0 46px;
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.18em;
+    padding: 10px 0;
+  }
+  .matrix-banner-text {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    white-space: nowrap;
+  }
+  .matrix-banner.group-1 { background: #b91c1c; }
+  .matrix-banner.group-2 { background: #b45309; }
+  .matrix-banner.group-3 { background: #1d4ed8; }
+  .matrix-banner.group-4 { background: #4b5563; }
+  .matrix-section-body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .matrix-sections-empty {
+    padding: 16px;
+    font-size: 13px;
+    color: #4b5563;
+    background: #fff;
+    border: 1px solid #d9dde3;
+    border-radius: 8px;
+  }
+  .side-panel {
+    position: fixed; top: 0; right: 0;
+    height: 100vh; width: 440px; max-width: 92vw;
+    background: #fff;
+    box-shadow: -4px 0 16px rgba(0,0,0,0.12);
+    transform: translateX(100%);
+    transition: transform 0.22s ease;
+    z-index: 100;
+    display: flex; flex-direction: column;
+  }
+  .side-panel.open { transform: translateX(0); }
+  .side-panel-header {
+    padding: 12px 16px; border-bottom: 1px solid #d9dde3;
+    display: flex; justify-content: space-between; align-items: center;
+    background: #f6f7f9;
+  }
+  .side-panel-header strong { font-size: 15px; }
+  .side-panel-body { padding: 16px 20px 32px; overflow-y: auto; flex: 1; }
+  .side-panel-body section { margin-bottom: 24px; }
+  .side-panel-body section:last-child { margin-bottom: 0; }
+  .side-panel-body h3 {
+    margin: 0 0 6px; font-size: 14px; color: #1f2937;
+    padding-bottom: 4px; border-bottom: 1px solid #eef0f3;
+  }
+  .side-panel-body h4 { margin: 12px 0 4px; font-size: 13px; color: #1f2937; }
+  .side-panel-body ul { margin: 4px 0 8px; padding-left: 20px; }
+  .side-panel-body li { font-size: 13px; line-height: 1.5; }
+  .side-panel-body p { font-size: 13px; line-height: 1.5; }
+  .side-panel-body code {
+    background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
+  }
+  .panel-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.25);
+    z-index: 99;
+  }
+  #myProjectsList { list-style: none; padding: 0; margin: 8px 0 0; }
+  #myProjectsList li { margin-bottom: 6px; }
+  #myProjectsList button { width: 100%; text-align: left; }
+  #myProjectsSection hr { margin: 16px 0; border: 0; border-top: 1px solid #d9dde3; }
+  .modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .modal.hidden { display: none; }
+  .modal-content {
+    background: #fff; border-radius: 8px;
+    padding: 20px 24px; min-width: 420px; max-width: 92vw;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+  }
+  .modal-content h3 { margin: 0 0 16px; font-size: 16px; }
+  .modal-content h4 { margin: 16px 0 6px; font-size: 14px; color: #1f2937;
+                      padding-bottom: 4px; border-bottom: 1px solid #eef0f3; }
+  .modal-content h4:first-of-type { margin-top: 0; }
+  .modal-content label { display: block; margin-bottom: 6px; font-size: 13px; }
+  .modal-content label input {
+    width: 100%; padding: 6px; margin-top: 4px;
+    font: inherit; font-size: 13px; box-sizing: border-box;
+  }
+  .modal-content code {
+    background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
+  }
+  .field-hint { margin: 0 0 14px; font-size: 12px; color: #6b7280; line-height: 1.4; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
+  .modal-actions button { flex: 0 0 auto; }
+  .diff-item { margin-bottom: 12px; padding: 8px 10px; background: #f9fafb;
+               border: 1px solid #e5e7eb; border-radius: 6px; }
+  .diff-item h5 { margin: 0 0 6px; font-size: 13px; color: #1f2937;
+                  display: flex; justify-content: space-between; align-items: baseline; }
+  .diff-item h5 .ts { font-size: 11px; color: #6b7280; font-weight: normal; }
+  .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
+  .diff-table th, .diff-table td { border: 1px solid #e5e7eb; padding: 3px 6px;
+                                    vertical-align: top; text-align: left; }
+  .diff-table th { background: #eef0f3; font-weight: 600; width: auto; }
+  .diff-table td.old { color: #7f1d1d; background: #fef2f2; white-space: pre-wrap;
+                       word-break: break-word; }
+  .diff-table td.new { color: #14532d; background: #f0fdf4; white-space: pre-wrap;
+                       word-break: break-word; }
+  .diff-table td.fld { font-weight: 600; width: 20%; color: #1f2937; background: #fff; }
+  @media (max-width: 500px) {
+    .side-panel { width: 100vw; max-width: 100vw; }
+    .modal-content { min-width: 0; width: 92vw; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <strong data-i18n="appTitle">Kravmatrix · FURPS+ × MoSCoW</strong>
+  <div class="header-right">
+    <span id="lastSaved" class="hidden"></span>
+    <div id="userInfo" class="hidden">
+      <span id="userName"></span>
+      <button id="btnLink" class="hidden"></button>
+      <button id="btnLogout" data-i18n="logout">Log ud</button>
+    </div>
+  </div>
+</header>
+
+<button id="btnLang" data-i18n="langButton" data-i18n-title="langTitle" title="Skift sprog">EN</button>
+
+<main>
+  <div id="msg"></div>
+
+  <div id="screenLogin" class="card hidden">
+    <h2 data-i18n="loginTitle">Log ind</h2>
+    <p data-i18n="loginIntro">Log ind for at se og redigere jeres krav.</p>
+    <button id="btnGoogle" class="primary" data-i18n="loginGoogle">Log ind med Google</button>
+    <button id="btnGithubLogin" data-i18n="loginGithub">Log ind med GitHub</button>
+    <p class="small" data-i18n="loginHint">Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte
+       den anden metode (knappen øverst til højre), så begge virker.</p>
+  </div>
+
+  <div id="screenChooser" class="card hidden">
+    <section id="myProjectsSection">
+      <h2 data-i18n="yourProjects">Dine projekter</h2>
+      <p class="small" data-i18n="yourProjectsHint">Projekter du allerede er medlem af. Klik for at åbne.</p>
+      <ul id="myProjectsList"></ul>
+      <p id="myProjectsEmpty" class="small hidden" data-i18n="noProjects">Du er ikke medlem af nogen projekter endnu.</p>
+      <hr>
+    </section>
+
+    <h2 data-i18n="createProjectTitle">Opret nyt projekt</h2>
+    <input type="text" id="newProjectName" data-i18n-placeholder="newProjectPlaceholder" placeholder="Projektnavn, fx Reolmarked">
+    <button id="btnCreate" class="primary" data-i18n="createProjectBtn">Opret projekt</button>
+    <hr>
+    <h2 data-i18n="joinProjectTitle">Deltag i projekt</h2>
+    <input type="text" id="joinCode" data-i18n-placeholder="joinPlaceholder" placeholder="Invite-link eller projektkode">
+    <button id="btnJoin" data-i18n="joinBtn">Deltag</button>
+  </div>
+
+  <div id="screenApp" class="hidden">
+    <h2 id="projectName" data-i18n-title="backToProjectsTitle"></h2>
+
+    <div class="toolbar">
+      <label><span data-i18n="sortLabel">Sortér:</span>
+        <select id="sortSelect">
+          <option value="priority" data-i18n="sortPriority">Prioritet M &gt; S &gt; C &gt; W</option>
+          <option value="original" data-i18n="sortOriginal">Som de dukker op (oprettet)</option>
+          <option value="category" data-i18n="sortCategory">FURPS+ kategori</option>
+          <option value="status" data-i18n="sortStatus">Status</option>
+        </select>
+      </label>
+      <label><span data-i18n="filterLabel">Vis:</span>
+        <select id="filterSelect">
+          <option value="all" data-i18n="filterAll">Alle prioriteter</option>
+          <option value="Must">Must</option>
+          <option value="Should">Should</option>
+          <option value="Could">Could</option>
+          <option value="Won't">Won't</option>
+        </select>
+      </label>
+      <button id="btnPyt" data-i18n-title="pytTitle" title="Vis kun parkerede (PYT) krav — idéer der venter på review">PYT</button>
+      <button id="btnAdd" class="primary" data-i18n="addReq">+ Nyt krav</button>
+      <button id="btnImport" data-i18n="importBtn">Importér</button>
+      <input type="file" id="importFile" accept=".json,.csv,.txt,.md,text/markdown,text/plain" class="hidden">
+      <button id="btnCsv" data-i18n="exportCsv">Eksportér CSV</button>
+      <button id="btnJson" data-i18n="exportJson">Eksportér JSON</button>
+      <button id="btnMd" data-i18n="exportMd">Eksportér Markdown</button>
+      <button id="btnShare" data-i18n="shareBtn">Kopiér delingslink</button>
+      <button id="btnLeave" data-i18n="switchProject">Skift projekt</button>
+      <button id="btnRemoveProject" class="danger" data-i18n="leaveProjectBtn"
+              data-i18n-title="leaveProjectTitle">Forlad projekt</button>
+
+      <div class="colprefs">
+        <button id="btnCols" data-i18n="columnsBtn"
+                data-i18n-title="columnsBtnTitle"
+                title="Vælg hvilke kolonner du vil se. Gemmes kun i din browser.">Vis kolonner ▾</button>
+        <div id="colsPanel" class="colprefs-panel hidden">
+          <label><input type="checkbox" data-col="id"> <span data-i18n="colId">Krav-ID</span></label>
+          <label><input type="checkbox" data-col="description"> <span data-i18n="colDescription">Kravbeskrivelse</span></label>
+          <label><input type="checkbox" data-col="furps"> <span data-i18n="colFurps">FURPS+</span></label>
+          <label><input type="checkbox" data-col="moscow"> <span data-i18n="colMoscow">MoSCoW</span></label>
+          <label><input type="checkbox" data-col="source"> <span data-i18n="colSource">Kilde</span></label>
+          <label><input type="checkbox" data-col="status"> <span data-i18n="colStatus">Status</span></label>
+          <label><input type="checkbox" data-col="notes"> <span data-i18n="colNotes">Noter</span></label>
+          <label><input type="checkbox" data-col="refs"> <span data-i18n="colRefs">Referencer (GitHub)</span></label>
+          <label><input type="checkbox" data-col="updatedBy"> <span data-i18n="colUpdatedBy">Sidst rettet af</span></label>
+          <label><input type="checkbox" data-col="age"> <span data-i18n="colAge">Alder</span></label>
+          <p class="small" data-i18n="colsHint">Gemmes kun i din browser. Påvirker ikke andre i gruppen.</p>
+        </div>
+      </div>
+
+      <button id="btnGithubSettings" data-i18n-title="settingsBtnTitle"
+              title="Projektindstillinger: GitHub, aldersgrænser m.m.">⚙️ Indstillinger</button>
+      <button id="btnOpenBoard" class="hidden" data-i18n-title="boardBtnTitle"
+              title="Åbn Scrum board i ny fane">Scrum board ↗</button>
+      <button id="btnInfo" data-i18n-title="infoBtnTitle"
+              title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
+    </div>
+
+    <div class="table-wrap">
+      <table id="matrixTable">
+        <thead>
+          <tr>
+            <th data-col="id" style="width:70px" data-i18n="thId">Krav-ID</th>
+            <th data-col="description" style="width:300px" data-i18n="thDescription">Kravbeskrivelse</th>
+            <th data-col="furps" style="width:60px" data-i18n="thFurps">FURPS+</th>
+            <th data-col="moscow" style="width:90px" data-i18n="thMoscow">MoSCoW</th>
+            <th data-col="source" style="width:240px" data-i18n="thSource">Kilde (citat, dokument, side)</th>
+            <th data-col="status" style="width:110px" data-i18n="thStatus">Status</th>
+            <th data-col="notes" style="width:200px" data-i18n="thNotes">Noter</th>
+            <th data-col="refs" style="width:130px"
+                data-i18n="thRefs" data-i18n-title="thRefsTitle"
+                title="GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter. Skriv #123 eller ejer/repo#123.">Referencer</th>
+            <th data-col="updatedBy" style="width:100px" data-i18n="thUpdatedBy">Sidst rettet af</th>
+            <th data-col="age" style="width:60px"
+                data-i18n="thAge" data-i18n-title="thAgeTitle"
+                title="Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter de grænser, gruppen har sat under ⚙️ Indstillinger.">Alder</th>
+            <th style="width:70px"></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div id="matrixSections" class="matrix-sections hidden"></div>
+    </div>
+  </div>
+</main>
+
+<div id="sidePanel" class="side-panel" aria-hidden="true">
+  <div class="side-panel-header">
+    <strong data-i18n="panelTitle">Information</strong>
+    <button id="btnClosePanel" data-i18n-title="panelCloseTitle" title="Luk">✕</button>
+  </div>
+  <div class="side-panel-body">
+    <section>
+      <h3 data-i18n="panelFurpsTitle">FURPS+ (kravtype)</h3>
+      <ul>
+        <li data-i18n-html="furpsF"><strong>F</strong> Funktionalitet: funktioner, muligheder og adfærd.</li>
+        <li data-i18n-html="furpsU"><strong>U</strong> Brugbarhed (Usability): lethed i brug, tilgængelighed, brugeroplevelse.</li>
+        <li data-i18n-html="furpsR"><strong>R</strong> Pålidelighed (Reliability): tilgængelighed, nøjagtighed, genopretning.</li>
+        <li data-i18n-html="furpsP"><strong>P</strong> Ydeevne (Performance): svartid, kapacitet, ressourceforbrug.</li>
+        <li data-i18n-html="furpsS"><strong>S</strong> Vedligeholdelse (Supportability): vedligeholdelsesvenlighed, testbarhed, tilpasningsevne.</li>
+        <li data-i18n-html="furpsPlus"><strong>+</strong> Begrænsninger: design, implementering, grænseflader, jura (fx GDPR), fysiske krav.</li>
+      </ul>
+
+      <h3 data-i18n="panelMoscowTitle">MoSCoW (prioritet)</h3>
+      <ul>
+        <li data-i18n-html="moscowMust"><strong>Must</strong> Uundværlig for den aftalte løsning eller version.</li>
+        <li data-i18n-html="moscowShould"><strong>Should</strong> Vigtig, men en brugbar løsning findes uden.</li>
+        <li data-i18n-html="moscowCould"><strong>Could</strong> Ønskeligt, hvis tid og ressourcer rækker.</li>
+        <li data-i18n-html="moscowWont"><strong>Won't</strong> Bevidst fravalgt i denne version (skriv begrundelsen i Noter).</li>
+      </ul>
+
+      <h3 data-i18n="panelStatusTitle">Status</h3>
+      <ul>
+        <li data-i18n-html="stProposed"><strong>Foreslået</strong> Registreret, men endnu ikke bekræftet.</li>
+        <li data-i18n-html="stAgreed"><strong>Aftalt</strong> Bekræftet af gruppen eller kunden.</li>
+        <li data-i18n-html="stDone"><strong>Færdig</strong> Gennemført i løsningen.</li>
+        <li data-i18n-html="stParked"><strong>Parkeret (PYT)</strong> Idé der ikke besluttes nu — se nedenfor.</li>
+        <li data-i18n-html="stDropped"><strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).</li>
+      </ul>
+
+      <h3 data-i18n="panelPytTitle">PYT — Park Your Treasures</h3>
+      <p data-i18n-html="pytIntro">Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget
+         i denne omgang — eller kun hvis der bliver tid. Sæt status til
+         <strong>Parkeret (PYT)</strong>, så forsvinder de ikke, men fylder heller
+         ikke i den aktive liste.</p>
+      <ul>
+        <li data-i18n-html="pytLi1">PYT-krav tæller <em>ikke</em> med i alders-advarsler. De er bevidst parkeret.</li>
+        <li data-i18n-html="pytLi2">Brug <strong>PYT</strong>-knappen i værktøjslinjen for at se dem isoleret.</li>
+        <li data-i18n-html="pytLi3">Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret
+            — eller om de skal opgraderes til et rigtigt krav.</li>
+      </ul>
+      <p class="small" data-i18n="pytNote">Forskellen fra "Droppet": Droppet betyder "vi har besluttet ikke at gøre det".
+         Parkeret betyder "vi beslutter det ikke nu".</p>
+
+      <h3 data-i18n="panelAgeTitle">Alder</h3>
+      <ul>
+        <li data-i18n="ageLi1">Antal dage siden kravet sidst blev rettet.</li>
+        <li data-i18n-html="ageLi2">Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres med gul og rød, når de nærmer sig de grænser, gruppen har sat under ⚙️ Indstillinger.</li>
+        <li data-i18n="ageLi3">Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
+        <li data-i18n="ageLi4">Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.</li>
+      </ul>
+      <p class="small" data-i18n="ageNote">Færdige, parkerede og droppede rækker vises dæmpet, så de ikke
+         konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.</p>
+
+      <h3 data-i18n="panelStorageTitle">Lagring</h3>
+      <ul>
+        <li data-i18n="storageLi1">Ændringer gemmes automatisk — der er ingen gem-knap.</li>
+        <li data-i18n="storageLi2">Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast.
+            Forlader du feltet, gemmes med det samme.</li>
+        <li data-i18n="storageLi3">Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.</li>
+        <li data-i18n="storageLi4">Et grønt blink på feltet og en lille "Gemt"-kvittering øverst bekræfter
+            at ændringen er nået frem.</li>
+      </ul>
+      <p class="small" data-i18n="storageNote">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
+         Vælg én konvention, og brug den konsekvent.</p>
+    </section>
+
+    <section>
+      <h3 data-i18n="panelRefsTitle">Referencer (GitHub)</h3>
+      <p data-i18n-html="refsIntro">Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i
+         Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.</p>
+      <ul>
+        <li data-i18n-html="refsLi1"><code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ Indstillinger. Ellers vises det som tekst.</li>
+        <li data-i18n-html="refsLi2"><code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.</li>
+        <li data-i18n="refsLi3">Står der flere referencer i samme krav, vises de under hinanden.</li>
+        <li data-i18n-html="refsLi4">Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.</li>
+        <li data-i18n-html="refsLi5">Er repo'et <strong>privat</strong>, virker linket kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3 data-i18n="panelShareTitle">Del et krav via link 🔗</h3>
+      <p data-i18n-html="shareIntro1">Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til
+         det pågældende krav, fx:</p>
+      <p><code>https://…/#reolmarked-abc123&amp;req=xyz789</code></p>
+      <p data-i18n="shareIntro2">Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når
+         nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver
+         rækken et kort gult blink.</p>
+      <p class="small" data-i18n="shareNote">Invite-links udløber efter den tid, ejeren har sat i ⚙️ Indstillinger. Når først en person er medlem, har de permanent adgang. Del derfor kun invite-links med gruppen.</p>
+    </section>
+
+    <section>
+      <h3 data-i18n="panelGithubTitle">GitHub-integration</h3>
+      <p data-i18n-html="githubIntro">Klik <strong>⚙️ Indstillinger</strong> i værktøjslinjen for at sætte:</p>
+      <ul>
+        <li data-i18n-html="githubLi1"><strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.</li>
+        <li data-i18n-html="githubLi2"><strong>Standard repository</strong> — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h3 data-i18n="panelImportTitle">Import: filformater</h3>
+      <ul>
+        <li data-i18n-html="importLi1"><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten
+            (danske eller engelske). Semikolon, komma og tab virker.</li>
+        <li data-i18n-html="importLi2"><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
+        <li data-i18n-html="importLi3"><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps
+            egen Markdown-eksport og med håndskrevne tabeller.</li>
+        <li data-i18n-html="importLi4"><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
+      </ul>
+      <p class="small" data-i18n="importNote">Import tilføjer nye krav og overskriver aldrig eksisterende.</p>
+      <p class="small" data-i18n="importDuplicateNote">Dubletter springes over: først på stabilt ID (usynligt) eller Krav-ID (REQ-NNN), ellers på beskrivelsen alene (normaliseret for store/små bogstaver og ekstra mellemrum).</p>
+      <p class="small" data-i18n-html="importOutdatedNote">Hvis filen indeholder krav, hvor online-versionen er
+         ændret, viser appen forskellene og lader dig vælge mellem at opdatere, tilføje som nye eller oprette et nyt projekt.</p>
+      <p class="small" data-i18n="importSeqNote">Et slettet kravs REQ-NNN pensioneres: ingen andre krav kan overtage nummeret. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.</p>
+      <p class="small" data-i18n="importMdStableNote">Markdown-eksporten indeholder en skjult metadata-blok nederst med de stabile ID'er. Den er usynlig i renderet markdown, men gør at importen kan genkende kravet selv hvis beskrivelsen er ændret.</p>
+    </section>
+
+    <section>
+      <h3 data-i18n="panelMembersTitle">Medlemmer</h3>
+      <ul id="memberList"></ul>
+      <p class="small" data-i18n="membersNote">Invite-links giver adgang til projektet. Når først en person er medlem, har de permanent adgang, indtil de selv forlader projektet. Del derfor kun invite-links med gruppen.</p>
+    </section>
+  </div>
+</div>
+<div id="panelBackdrop" class="panel-backdrop hidden"></div>
+
+<div id="githubDialog" class="modal hidden">
+  <div class="modal-content" style="min-width: 560px;">
+    <h3 data-i18n="settingsDialogTitle">Projektindstillinger</h3>
+
+    <h4 data-i18n="settingsGithubSection">GitHub-integration</h4>
+
+    <label>
+      <span data-i18n="ghBoardLabel">Scrum board URL (valgfrit)</span>
+      <input type="text" id="githubBoardUrlInput"
+             placeholder="https://github.com/users/DGARosendal/projects/1">
+    </label>
+    <p class="field-hint" data-i18n="ghBoardHint">Vises som en knap i værktøjslinjen. Kan stå tom.</p>
+
+    <label>
+      <span data-i18n="ghRepoLabel">Standard repository</span>
+      <input type="text" id="defaultRepoInput"
+             placeholder="DGARosendal/reolmarked">
+    </label>
+    <p class="field-hint" data-i18n-html="ghRepoHint">Bruges til at gøre <code>#123</code> til klikbare links. Uden den virker kun <code>ejer/repo#123</code>.</p>
+
+    <p class="small" data-i18n="ghPrivateNote">Er repo'et privat, virker linkene kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.</p>
+
+    <h4 data-i18n="settingsAgeSection">Aldersgrænser</h4>
+    <p class="field-hint" data-i18n="settingsAgeHint">Krav der ikke er Færdige, Parkerede eller Droppede markeres med farve, når de ikke er blevet rettet i et stykke tid. Grænserne gælder for alle i gruppen.</p>
+
+    <label>
+      <span data-i18n="settingsWarnLabel">Gul efter (dage)</span>
+      <input type="number" id="staleWarnInput" min="1" max="999" step="1" inputmode="numeric">
+    </label>
+    <p class="field-hint" data-i18n="settingsAgeWarnHint">Skal være mindst 1.</p>
+
+    <label>
+      <span data-i18n="settingsUrgentLabel">Rød efter (dage)</span>
+      <input type="number" id="staleUrgentInput" min="2" max="999" step="1" inputmode="numeric">
+    </label>
+    <p class="field-hint" data-i18n="settingsAgeUrgentHint">Skal være større end den gule grænse.</p>
+
+    <h4 data-i18n="settingsInviteSection">Invite-links</h4>
+    <label>
+      <span data-i18n="inviteHoursLabel">Standard levetid for invite-links (timer)</span>
+      <input type="number" id="inviteHoursInput" min="1" max="168" step="1" inputmode="numeric">
+    </label>
+    <p class="field-hint" data-i18n="inviteHoursHint">1–168 timer. Når et invite-link er udløbet, kan det ikke bruges til at deltage — men eksisterende medlemmer har stadig adgang.</p>
+
+    <div class="modal-actions">
+      <button id="btnGithubCancel" data-i18n="cancelBtn">Annullér</button>
+      <button id="btnGithubSave" class="primary" data-i18n="saveBtn">Gem</button>
+    </div>
+  </div>
+</div>
+
+<div id="importDiffDialog" class="modal hidden">
+  <div class="modal-content" style="min-width: 620px;">
+    <h3 id="importDiffTitle"></h3>
+    <p id="importDiffIntro" class="small"></p>
+    <p id="importDiffDuplicates" class="small"></p>
+    <p id="importDiffRestores" class="small" style="display:none;"></p>
+    <p id="importDiffIdentical" class="small"></p>
+    <details id="importDiffDetails" open>
+      <summary id="importDiffSummary"></summary>
+      <div id="importDiffList" style="margin-top: 10px;"></div>
+    </details>
+    <div class="modal-actions">
+      <button id="btnImportCancel"></button>
+      <button id="btnImportCreateNew"></button>
+      <button id="btnImportForce"></button>
+      <button id="btnImportUpdate" class="primary"></button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
+         GoogleAuthProvider, GithubAuthProvider }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
+         getDocs, onSnapshot, runTransaction, serverTimestamp, Timestamp }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4",
+authDomain: "reqmatrix-fc50a.firebaseapp.com",
+projectId: "reqmatrix-fc50a",
+appId: "1:480693503390:web:d8c32525e3370b301a428f"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+const FURPS = ["F", "U", "R", "P", "S", "+"];
+const MOSCOW = ["Must", "Should", "Could", "Won't"];
+const STATUS = ["Proposed", "Agreed", "Done", "Parked", "Dropped"];
+
+const MAX_IMPORT_ROWS = 500;
+const IMPORT_CHUNK_SIZE = 100;
+const DEFAULT_STALE_WARN_DAYS = 14;
+const DEFAULT_STALE_URGENT_DAYS = 28;
+const DEFAULT_INVITE_HOURS = 1;
+
+const AUTOSAVE_DELAY_MS = 800;
+
+const COLUMNS = ["id", "description", "furps", "moscow", "source",
+                 "status", "notes", "refs", "updatedBy", "age"];
+
+// ---------- i18n ----------
+const I18N = {
+  da: {
+    appTitle: "Kravmatrix · FURPS+ × MoSCoW",
+    langButton: "EN",
+    langTitle: "Skift til engelsk",
+    logout: "Log ud",
+
+    loginTitle: "Log ind",
+    loginIntro: "Log ind for at se og redigere jeres krav.",
+    loginGoogle: "Log ind med Google",
+    loginGithub: "Log ind med GitHub",
+    loginHint: "Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte den anden metode (knappen øverst til højre), så begge virker.",
+
+    yourProjects: "Dine projekter",
+    yourProjectsHint: "Projekter du allerede er medlem af. Klik for at åbne.",
+    noProjects: "Du er ikke medlem af nogen projekter endnu.",
+    createProjectTitle: "Opret nyt projekt",
+    newProjectPlaceholder: "Projektnavn, fx Reolmarked",
+    createProjectBtn: "Opret projekt",
+    joinProjectTitle: "Deltag i projekt",
+    joinPlaceholder: "Invite-link eller projektkode",
+    joinBtn: "Deltag",
+
+    sortLabel: "Sortér:",
+    sortPriority: "Prioritet M > S > C > W",
+    sortOriginal: "Som de dukker op (oprettet)",
+    sortCategory: "FURPS+ kategori",
+    sortStatus: "Status",
+    filterLabel: "Vis:",
+    filterAll: "Alle prioriteter",
+    pytTitle: "Vis kun parkerede (PYT) krav — idéer der venter på review",
+    addReq: "+ Nyt krav",
+    importBtn: "Importér",
+    exportCsv: "Eksportér CSV",
+    exportJson: "Eksportér JSON",
+    exportMd: "Eksportér Markdown",
+    shareBtn: "Kopiér delingslink",
+    switchProject: "Skift projekt",
+    leaveProjectBtn: "Forlad projekt",
+    leaveProjectTitle: "Fjern dig selv som medlem (projektet bliver liggende)",
+    deleteProjectBtn: "Slet projekt",
+    deleteProjectTitle: "Slet projektet og alle krav permanent",
+    columnsBtn: "Vis kolonner ▾",
+    columnsBtnTitle: "Vælg hvilke kolonner du vil se. Gemmes kun i din browser.",
+    colId: "Krav-ID",
+    colDescription: "Kravbeskrivelse",
+    colFurps: "FURPS+",
+    colMoscow: "MoSCoW",
+    colSource: "Kilde",
+    colStatus: "Status",
+    colNotes: "Noter",
+    colRefs: "Referencer (GitHub)",
+    colUpdatedBy: "Sidst rettet af",
+    colAge: "Alder",
+    colsHint: "Gemmes kun i din browser. Påvirker ikke andre i gruppen.",
+    githubBtnTitle: "Indstil GitHub Scrum board og standard-repo",
+    boardBtnTitle: "Åbn Scrum board i ny fane",
+    infoBtnTitle: "Forklaring, PYT, import-info og medlemmer",
+    backToProjectsTitle: "Tilbage til projektlisten",
+    settingsBtnTitle: "Projektindstillinger: GitHub, aldersgrænser m.m.",
+
+    thId: "Krav-ID",
+    thDescription: "Kravbeskrivelse",
+    thFurps: "FURPS+",
+    thMoscow: "MoSCoW",
+    thSource: "Kilde (citat, dokument, side)",
+    thStatus: "Status",
+    thNotes: "Noter",
+    thRefs: "Referencer",
+    thRefsTitle: "GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter. Skriv #123 eller ejer/repo#123.",
+    thUpdatedBy: "Sidst rettet af",
+    thAge: "Alder",
+    thAgeTitle: "Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter de grænser, gruppen har sat under ⚙️ Indstillinger.",
+
+    panelTitle: "Information",
+    panelCloseTitle: "Luk",
+    panelFurpsTitle: "FURPS+ (kravtype)",
+    furpsF: "<strong>F</strong> Funktionalitet: funktioner, muligheder og adfærd.",
+    furpsU: "<strong>U</strong> Brugbarhed (Usability): lethed i brug, tilgængelighed, brugeroplevelse.",
+    furpsR: "<strong>R</strong> Pålidelighed (Reliability): tilgængelighed, nøjagtighed, genopretning.",
+    furpsP: "<strong>P</strong> Ydeevne (Performance): svartid, kapacitet, ressourceforbrug.",
+    furpsS: "<strong>S</strong> Vedligeholdelse (Supportability): vedligeholdelsesvenlighed, testbarhed, tilpasningsevne.",
+    furpsPlus: "<strong>+</strong> Begrænsninger: design, implementering, grænseflader, jura (fx GDPR), fysiske krav.",
+    panelMoscowTitle: "MoSCoW (prioritet)",
+    moscowMust: "<strong>Must</strong> Uundværlig for den aftalte løsning eller version.",
+    moscowShould: "<strong>Should</strong> Vigtig, men en brugbar løsning findes uden.",
+    moscowCould: "<strong>Could</strong> Ønskeligt, hvis tid og ressourcer rækker.",
+    moscowWont: "<strong>Won't</strong> Bevidst fravalgt i denne version (skriv begrundelsen i Noter).",
+    panelStatusTitle: "Status",
+    stProposed: "<strong>Foreslået</strong> Registreret, men endnu ikke bekræftet.",
+    stAgreed: "<strong>Aftalt</strong> Bekræftet af gruppen eller kunden.",
+    stDone: "<strong>Færdig</strong> Gennemført i løsningen.",
+    stParked: "<strong>Parkeret (PYT)</strong> Idé der ikke besluttes nu — se nedenfor.",
+    stDropped: "<strong>Droppet</strong> Ikke længere relevant (skriv hvorfor i Noter).",
+    panelPytTitle: "PYT — Park Your Treasures",
+    pytIntro: "Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget i denne omgang — eller kun hvis der bliver tid. Sæt status til <strong>Parkeret (PYT)</strong>, så forsvinder de ikke, men fylder heller ikke i den aktive liste.",
+    pytLi1: "PYT-krav tæller <em>ikke</em> med i alders-advarsler. De er bevidst parkeret.",
+    pytLi2: "Brug <strong>PYT</strong>-knappen i værktøjslinjen for at se dem isoleret.",
+    pytLi3: "Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret — eller om de skal opgraderes til et rigtigt krav.",
+    pytNote: "Forskellen fra \"Droppet\": Droppet betyder \"vi har besluttet ikke at gøre det\". Parkeret betyder \"vi beslutter det ikke nu\".",
+    panelAgeTitle: "Alder",
+    ageLi1: "Antal dage siden kravet sidst blev rettet.",
+    ageLi2: "Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres med gul og rød, når de nærmer sig de grænser, gruppen har sat under ⚙️ Indstillinger.",
+    ageLi3: "Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).",
+    ageLi4: "Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.",
+    ageNote: "Færdige, parkerede og droppede rækker vises dæmpet, så de ikke konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.",
+    panelStorageTitle: "Lagring",
+    storageLi1: "Ændringer gemmes automatisk — der er ingen gem-knap.",
+    storageLi2: "Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast. Forlader du feltet, gemmes med det samme.",
+    storageLi3: "Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.",
+    storageLi4: "Et grønt blink på feltet og en lille \"Gemt\"-kvittering øverst bekræfter at ændringen er nået frem.",
+    storageNote: "Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +. Vælg én konvention, og brug den konsekvent.",
+    panelRefsTitle: "Referencer (GitHub)",
+    refsIntro: "Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.",
+    refsLi1: "<code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ Indstillinger. Ellers vises det som tekst.",
+    refsLi2: "<code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.",
+    refsLi3: "Står der flere referencer i samme krav, vises de under hinanden.",
+    refsLi4: "Standard-repo'et er <strong>valgfrit</strong> — sæt det kun, hvis du ofte refererer til det samme repo.",
+    refsLi5: "Er repo'et <strong>privat</strong>, virker linket kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.",
+    panelShareTitle: "Del et krav via link 🔗",
+    shareIntro1: "Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til det pågældende krav, fx:",
+    shareIntro2: "Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver rækken et kort gult blink.",
+    shareNote: "Invite-links udløber efter den tid, ejeren har sat i ⚙️ Indstillinger. Når først en person er medlem, har de permanent adgang. Del derfor kun invite-links med gruppen.",
+    panelGithubTitle: "GitHub-integration",
+    githubIntro: "Klik <strong>⚙️ Indstillinger</strong> i værktøjslinjen for at sætte:",
+    githubLi1: "<strong>Scrum board URL</strong> (valgfrit) — fx <code>https://github.com/users/DGARosendal/projects/1</code>.",
+    githubLi2: "<strong>Standard repository</strong> — fx <code>DGARosendal/reolmarked</code>. Bruges til at gøre <code>#123</code> til links.",
+    panelImportTitle: "Import: filformater",
+    importLi1: "<strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten (danske eller engelske). Semikolon, komma og tab virker.",
+    importLi2: "<strong>.json</strong>: en liste af objekter, som i JSON-eksporten.",
+    importLi3: "<strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps egen Markdown-eksport og med håndskrevne tabeller.",
+    importLi4: "<strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.",
+    importNote: "Import tilføjer nye krav og overskriver aldrig eksisterende.",
+    importDuplicateNote: "Dubletter springes over: først på stabilt ID (usynligt) eller Krav-ID (REQ-NNN), ellers på beskrivelsen alene (normaliseret for store/små bogstaver og ekstra mellemrum).",
+    importOutdatedNote: "Hvis filen indeholder krav, hvor online-versionen er ændret, viser appen forskellene og lader dig vælge mellem at opdatere, tilføje som nye eller oprette et nyt projekt.",
+    importSeqNote: "Et slettet kravs REQ-NNN pensioneres: ingen andre krav kan overtage nummeret. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.",
+    importMdStableNote: "Markdown-eksporten indeholder en skjult metadata-blok nederst med de stabile ID'er. Den er usynlig i renderet markdown, men gør at importen kan genkende kravet selv hvis beskrivelsen er ændret.",
+    panelMembersTitle: "Medlemmer",
+    membersNote: "Invite-links giver adgang til projektet. Når først en person er medlem, har de permanent adgang, indtil de selv forlader projektet. Del derfor kun invite-links med gruppen.",
+
+    settingsDialogTitle: "Projektindstillinger",
+    settingsGithubSection: "GitHub-integration",
+    settingsAgeSection: "Aldersgrænser",
+    settingsAgeHint: "Krav der ikke er Færdige, Parkerede eller Droppede markeres med farve, når de ikke er blevet rettet i et stykke tid. Grænserne gælder for alle i gruppen.",
+    settingsWarnLabel: "Gul efter (dage)",
+    settingsUrgentLabel: "Rød efter (dage)",
+    settingsAgeWarnHint: "Skal være mindst 1.",
+    settingsAgeUrgentHint: "Skal være større end den gule grænse.",
+    settingsAgeBadWarn: "Den gule grænse skal være et helt tal på mindst 1.",
+    settingsAgeBadUrgent: "Den røde grænse skal være et helt tal, der er større end den gule grænse.",
+    settingsSaved: "Indstillinger gemt.",
+    settingsInviteSection: "Invite-links",
+    inviteHoursLabel: "Standard levetid for invite-links (timer)",
+    inviteHoursHint: "1–168 timer. Når et invite-link er udløbet, kan det ikke bruges til at deltage — men eksisterende medlemmer har stadig adgang.",
+    settingsAgeBadInviteHours: "Levetiden skal være et helt tal mellem 1 og 168 timer.",
+
+    ghBoardLabel: "Scrum board URL (valgfrit)",
+    ghBoardHint: "Vises som en knap i værktøjslinjen. Kan stå tom.",
+    ghRepoLabel: "Standard repository",
+    ghRepoHint: "Bruges til at gøre <code>#123</code> til klikbare links. Uden den virker kun <code>ejer/repo#123</code>.",
+    ghPrivateNote: "Er repo'et privat, virker linkene kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.",
+    ghRepoFormat: "Standard repository skal være på formen \"ejer/repo\".",
+    ghBadBoardUrl: "Scrum board URL skal starte med https://github.com/",
+
+    cancelBtn: "Annullér",
+    saveBtn: "Gem",
+
+    importDiffTitle: "Ældre fil opdaget",
+    importDiffIntro: "Filen indeholder krav, hvor online-versionen er blevet ændret. Vælg om de eksisterende krav skal opdateres, eller om filens rækker skal tilføjes som nye krav.",
+    importDiffDuplicates: "{n} rækker springes over som dubletter (samme Krav-ID eller samme beskrivelse).",
+    importDiffRestores: "{n} slettede krav gendannes (samme usynlige ID) og får deres oprindelige REQ-NNN tilbage.",
+    importDiffIdentical: "{n} krav er uændrede og springes over.",
+    importDiffSummary: "Vis forskelle ({n} krav)",
+    importDiffFld: "Felt",
+    importDiffFile: "Fil",
+    importDiffOnline: "Online",
+    importDiffForce: "Importér alle som nye",
+    importDiffUpdateExisting: "Opdatér og gendan",
+    importDiffCreateNew: "Opret som nyt projekt",
+    importDiffCancel: "Annullér",
+    importDiffNewProjectName: "Navn på det nye projekt:",
+    importDiffLastEdited: "Sidst rettet: {date}",
+    importUpdateProgress: "Opdaterer… {done} af {total}",
+    importUpdateDone: "Opdaterede {updated}, gendannede {restored} og tilføjede {inserted} nye krav.",
+    importRestoreProgress: "Gendanner… {done} af {total}",
+
+    statusProposed: "Foreslået",
+    statusAgreed: "Aftalt",
+    statusDone: "Færdig",
+    statusParked: "Parkeret (PYT)",
+    statusDropped: "Droppet",
+
+    savedAt: "✓ Gemt {time}",
+    errRealtime: "Fejl ved realtidsopdatering: {code}",
+    errRealtimeAccess: "Adgangen til projektet blev afvist. Du er sandsynligvis ikke længere medlem.",
+    errSave: "Kunne ikke gemme: {code}",
+    errProjects: "Kunne ikke hente dine projekter: {code}",
+    errProjectRead: "Kunne ikke læse projektet: {code}",
+    errMember: "Kunne ikke registrere medlemskab: {code}",
+    errCreate: "Kunne ikke oprette projektet: {code}",
+    errAddReq: "Kunne ikke tilføje kravet: {code}",
+    errDeleteReq: "Kunne ikke slette: {code}",
+    errRemoveProject: "Kunne ikke fjerne projektet: {code}",
+    errGithubSettings: "Kunne ikke gemme indstillinger: {code}",
+
+    delReqConfirm: "Slet dette krav?\n\nKravets REQ-NNN pensioneres og kan ikke længere tildeles andre krav. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.",
+    refUnlinkedTitle: "Standard repository er ikke sat — #123 vises som tekst. Sæt det under ⚙️ Indstillinger, hvis du vil have automatiske links, eller skriv ejer/repo#123.",
+    copyLinkTitle: "Kopiér et link til dette krav — klar til at sætte i GitHub",
+    deleteReqTitle: "Slet krav",
+    linkCopiedMsg: "Link til kravet kopieret — klar til at sætte ind i GitHub.",
+    copyLinkPrompt: "Kopiér linket:",
+
+    emptyPyt: "Ingen parkerede (PYT) krav endnu. Sæt status til \"Parkeret (PYT)\" på et krav for at se det her.",
+    emptyAll: "Ingen krav at vise.",
+
+    ageTitleDone: "Afsluttet – tæller ikke",
+    ageTitleNoTs: "Ingen tidsstempel",
+    ageTitleParked: "Parkeret (PYT) i {days} dage — venter på review",
+    ageTitleUpdated: "Sidst rettet: {date}",
+
+    addReqNameRequired: "Skriv et projektnavn.",
+    joinCodeRequired: "Indsæt et invite-link eller en projektkode.",
+    projectNotExist: "Projektet findes ikke. Tjek koden.",
+    loginInterrupted: "Login blev afbrudt.",
+    loginFailed: "Login fejlede: {code}",
+    emailUsedGoogle: "Din e-mail er allerede brugt med Google. Log ind med Google, og tryk så på 'Tilknyt GitHub' øverst til højre. Bagefter virker begge.",
+    emailUsedGithub: "Din e-mail er allerede brugt med GitHub. Log ind med GitHub, og tryk så på 'Tilknyt Google' øverst til højre. Bagefter virker begge.",
+    linkGoogle: "Tilknyt Google",
+    linkGithub: "Tilknyt GitHub",
+    linkInUse: "Den login-konto bruges allerede af en anden bruger i appen, så den kan ikke tilknyttes. Brug i stedet den metode, du er logget ind med nu.",
+    linkAlready: "Den login-metode er allerede tilknyttet.",
+    linkInterrupted: "Tilknytningen blev afbrudt.",
+    linkFailed: "Kunne ikke tilknytte login: {code}",
+    linkSuccess: "Login tilknyttet. Nu kan du logge ind med begge metoder.",
+
+    shareLinkCopied: "Link kopieret. Del det kun med gruppen.",
+    shareLinkPrompt: "Kopiér linket:",
+    shareInviteCopied: "Invite-link kopieret. Gyldigt i {hours} timer.",
+    errInviteRead: "Kunne ikke læse invite: {code}",
+    inviteNotFound: "Invite-linket findes ikke. Bed om et nyt fra en i gruppen.",
+    inviteExpired: "Invite-linket er udløbet. Bed om et nyt fra en i gruppen.",
+    inviteInvalid: "Invite-linket er ugyldigt.",
+    errJoinInvite: "Kunne ikke deltage via invite: {code}",
+    errInviteCreate: "Kunne ikke oprette invite-link: {code}",
+    needInviteLink: "Du er ikke medlem af dette projekt. Bed om et invite-link fra en i gruppen.",
+
+    importUnknownType: "Ukendt filtype. Brug .json, .csv, .txt eller .md.",
+    importReadError: "Kunne ikke læse filen: {msg}",
+    importOpenError: "Kunne ikke åbne filen.",
+    importEmpty: "Fandt ingen krav i filen.",
+    importTooMany: "Filen har {n} krav. Maks. er {max} pr. import.",
+    importConfirmHead: "Importér {n} krav i dette projekt?",
+    importConfirmRestores: "\n\n{n} slettede krav gendannes og får deres oprindelige REQ-NNN tilbage.",
+    importConfirmSkipped: "\n\n{n} rækker uden beskrivelse springes over.",
+    importConfirmDuplicates: "\n\n{n} rækker springes over som dubletter (samme Krav-ID eller samme beskrivelse).",
+    importConfirmUnrecognised: "\n\n{n} værdier i FURPS+, MoSCoW eller Status blev ikke genkendt og er sat til standardværdien (F / Should / Foreslået).",
+    importConfirmEncoding: "\n\nBemærk: filen ser ikke ud til at være gemt som UTF-8, så æøå kan være ødelagt.",
+    importProgress: "Importerer... {done} af {total}",
+    importDone: "Importerede {n} krav.",
+    importDoneSkipped: "Importerede {n} krav. {skipped} rækker blev sprunget over som dubletter.",
+    importAllDuplicates: "Alle {n} krav findes allerede (samme Krav-ID eller samme beskrivelse) — der er intet nyt at importere.",
+    importForced: "Importerede {n} krav som nye (kolliderende ID'er blev regenereret).",
+    importStopped: "Importen stoppede efter {done} af {total} krav: {code}",
+    importErrCsvNoRows: "CSV-filen har ingen datarækker.",
+    importErrCsvNoDesc: "Ingen kolonne med kravbeskrivelse fundet.",
+    importErrJsonNotList: "JSON-filen skal være en liste af krav.",
+
+    leaveConfirm: "Forlad projektet?\n\nDu mister adgangen til at se og redigere krav. Projektet og alle krav bliver liggende — de andre deltagere kan stadig se det.",
+    deleteProjectTypeName: "Slet projektet \"{name}\" og alle krav permanent?\n\nDette kan ikke fortrydes. Eventuelle andre medlemmer mister også adgang.\n\nSkriv projektets navn for at bekræfte:",
+    deleteProjectNameMismatch: "Navnet stemmer ikke. Sletningen blev annulleret.",
+    projectRemoved: "Du er ikke længere medlem af projektet.",
+    projectDeleted: "Projektet og alle krav er slettet.",
+
+    mdTitleSuffix: "Kravmatrix",
+    mdExported: "Eksporteret: {date}",
+    mdIntro: "FURPS+ angiver kravets type, MoSCoW angiver prioriteten. Aktive krav er grupperet efter prioritet. Parkerede (PYT), \"Won't\" og droppede vises i særskilte afsnit, fordi de ikke længere er aktive.",
+    mdScrumBoard: "Scrum board: {url}",
+    mdRefsNote: "Referencer på formen `#123` linker til `https://github.com/{repo}/issues/123`.",
+    mdSummary: "Oversigt",
+    mdColPriority: "Prioritet",
+    mdColTotal: "Krav i alt",
+    mdColDone: "Færdige",
+    mdColAgreed: "Aftalte",
+    mdColProposed: "Foreslåede",
+    mdColParked: "Parkerede",
+    mdColDropped: "Droppede",
+    mdColGrandTotal: "I alt",
+    mdParkedHeading: "PYT — Parkerede ({n})",
+    mdParkedIntro: "Idéer der er bevidst parkeret. Tag dem frem ved sprint-review, og beslut om de skal opgraderes eller droppes.",
+    mdWontHeading: "Won't — bevidst fravalgt ({n})",
+    mdWontIntro: "Krav der er bevidst valgt fra i denne version. Begrundelsen står under \"Noter\".",
+    mdDroppedHeading: "Droppede ({n})",
+    mdDroppedIntro: "Krav der ikke længere er relevante. Begrundelsen står under \"Noter\".",
+
+    csvId: "Krav-ID",
+    csvDescription: "Kravbeskrivelse",
+    csvFurps: "FURPS+",
+    csvMoscow: "MoSCoW",
+    csvSource: "Kilde",
+    csvStatus: "Status",
+    csvNotes: "Noter",
+    csvRefs: "Referencer",
+    csvUpdatedBy: "Sidst rettet af",
+    csvImportedId: "Stabilt ID"
+  },
+
+  en: {
+    appTitle: "Requirements matrix · FURPS+ × MoSCoW",
+    langButton: "DA",
+    langTitle: "Switch to Danish",
+    logout: "Log out",
+
+    loginTitle: "Sign in",
+    loginIntro: "Sign in to view and edit your requirements.",
+    loginGoogle: "Sign in with Google",
+    loginGithub: "Sign in with GitHub",
+    loginHint: "Sign in with the method you used the first time. Afterwards you can link the other method (button in the top right) so both work.",
+
+    yourProjects: "Your projects",
+    yourProjectsHint: "Projects you are already a member of. Click to open.",
+    noProjects: "You are not a member of any projects yet.",
+    createProjectTitle: "Create a new project",
+    newProjectPlaceholder: "Project name, e.g. Reolmarket",
+    createProjectBtn: "Create project",
+    joinProjectTitle: "Join a project",
+    joinPlaceholder: "Invite link or project code",
+    joinBtn: "Join",
+
+    sortLabel: "Sort:",
+    sortPriority: "Priority M > S > C > W",
+    sortOriginal: "As they appear (created)",
+    sortCategory: "FURPS+ category",
+    sortStatus: "Status",
+    filterLabel: "Show:",
+    filterAll: "All priorities",
+    pytTitle: "Show only parked (PYT) requirements — ideas waiting for review",
+    addReq: "+ New requirement",
+    importBtn: "Import",
+    exportCsv: "Export CSV",
+    exportJson: "Export JSON",
+    exportMd: "Export Markdown",
+    shareBtn: "Copy share link",
+    switchProject: "Switch project",
+    leaveProjectBtn: "Leave project",
+    leaveProjectTitle: "Remove yourself as a member (the project remains)",
+    deleteProjectBtn: "Delete project",
+    deleteProjectTitle: "Delete the project and all requirements permanently",
+    columnsBtn: "Columns ▾",
+    columnsBtnTitle: "Choose which columns to show. Stored only in your browser.",
+    colId: "Req ID",
+    colDescription: "Requirement",
+    colFurps: "FURPS+",
+    colMoscow: "MoSCoW",
+    colSource: "Source",
+    colStatus: "Status",
+    colNotes: "Notes",
+    colRefs: "References (GitHub)",
+    colUpdatedBy: "Last edited by",
+    colAge: "Age",
+    colsHint: "Stored only in your browser. Does not affect the rest of the group.",
+    githubBtnTitle: "Set up GitHub Scrum board and default repo",
+    boardBtnTitle: "Open Scrum board in a new tab",
+    infoBtnTitle: "Explanation, PYT, import info and members",
+    backToProjectsTitle: "Back to project list",
+    settingsBtnTitle: "Project settings: GitHub, age thresholds, etc.",
+
+    thId: "Req ID",
+    thDescription: "Requirement",
+    thFurps: "FURPS+",
+    thMoscow: "MoSCoW",
+    thSource: "Source (quote, document, page)",
+    thStatus: "Status",
+    thNotes: "Notes",
+    thRefs: "References",
+    thRefsTitle: "GitHub issues mentioned in Requirement, Source or Notes. Write #123 or owner/repo#123.",
+    thUpdatedBy: "Last edited by",
+    thAge: "Age",
+    thAgeTitle: "Days since the requirement was last edited. Requirements that are not Done or Dropped are highlighted according to the thresholds the group has set under ⚙️ Settings.",
+
+    panelTitle: "Information",
+    panelCloseTitle: "Close",
+    panelFurpsTitle: "FURPS+ (requirement type)",
+    furpsF: "<strong>F</strong> Functionality: features, capabilities and behaviour.",
+    furpsU: "<strong>U</strong> Usability: ease of use, accessibility, user experience.",
+    furpsR: "<strong>R</strong> Reliability: availability, accuracy, recoverability.",
+    furpsP: "<strong>P</strong> Performance: response time, capacity, resource usage.",
+    furpsS: "<strong>S</strong> Supportability: maintainability, testability, adaptability.",
+    furpsPlus: "<strong>+</strong> Constraints: design, implementation, interfaces, legal (e.g. GDPR), physical requirements.",
+    panelMoscowTitle: "MoSCoW (priority)",
+    moscowMust: "<strong>Must</strong> Indispensable for the agreed solution or release.",
+    moscowShould: "<strong>Should</strong> Important, but a usable solution exists without it.",
+    moscowCould: "<strong>Could</strong> Desirable if time and resources allow.",
+    moscowWont: "<strong>Won't</strong> Deliberately excluded from this release (write the reason in Notes).",
+    panelStatusTitle: "Status",
+    stProposed: "<strong>Proposed</strong> Registered, but not yet confirmed.",
+    stAgreed: "<strong>Agreed</strong> Confirmed by the group or the customer.",
+    stDone: "<strong>Done</strong> Implemented in the solution.",
+    stParked: "<strong>Parked (PYT)</strong> Idea not decided now — see below.",
+    stDropped: "<strong>Dropped</strong> No longer relevant (write why in Notes).",
+    panelPytTitle: "PYT — Park Your Treasures",
+    pytIntro: "Ideas that come up along the way but probably won't happen this time — or only if there is time. Set the status to <strong>Parked (PYT)</strong> and they won't disappear, but they won't clutter the active list either.",
+    pytLi1: "PYT requirements are <em>not</em> counted in the age warnings. They are deliberately parked.",
+    pytLi2: "Use the <strong>PYT</strong> button in the toolbar to see them on their own.",
+    pytLi3: "Bring them up at sprint review and decide whether they should stay parked — or be promoted to a real requirement.",
+    pytNote: "The difference from \"Dropped\": Dropped means \"we have decided not to do it\". Parked means \"we are not deciding now\".",
+    panelAgeTitle: "Age",
+    ageLi1: "Number of days since the requirement was last edited.",
+    ageLi2: "Requirements that are <em>not</em> Done, Parked or Dropped are highlighted with yellow and red as they approach the thresholds the group has set under ⚙️ Settings.",
+    ageLi3: "Parked and finished requirements are shown in a neutral colour (parked in italics).",
+    ageLi4: "The purpose is to make it visible when a Should/Could requirement is about to be forgotten.",
+    ageNote: "Done, parked and dropped rows are dimmed so they do not compete with the active requirements. Hover to see them at full strength.",
+    panelStorageTitle: "Saving",
+    storageLi1: "Changes are saved automatically — there is no save button.",
+    storageLi2: "When you type in a field it is saved about 1 second after the last keystroke. If you leave the field, it is saved immediately.",
+    storageLi3: "Dropdowns (FURPS+, MoSCoW, Status) are saved instantly on selection.",
+    storageLi4: "A green flash on the field and a small \"Saved\" confirmation at the top confirm that the change arrived.",
+    storageNote: "Security and other cross-cutting concerns can be classified under F or +. Pick one convention and use it consistently.",
+    panelRefsTitle: "References (GitHub)",
+    refsIntro: "The <strong>References</strong> column automatically finds GitHub issues mentioned in Requirement, Source or Notes and shows them as clickable links.",
+    refsLi1: "<code>#123</code> → links to the default repo, if one is set under ⚙️ Settings. Otherwise it is shown as text.",
+    refsLi2: "<code>owner/repo#123</code> → links to the specified repo. Works without setting anything.",
+    refsLi3: "If a requirement has several references, they are shown one below the other.",
+    refsLi4: "The default repository is <strong>optional</strong> — set it only if you frequently refer to the same repo.",
+    refsLi5: "If the repo is <strong>private</strong>, the link only works for people who have access to the repo on GitHub. No token is needed.",
+    panelShareTitle: "Share a requirement via link 🔗",
+    shareIntro1: "Each row has a <strong>🔗</strong> button. It copies a link straight to that requirement, e.g.:",
+    shareIntro2: "Paste the link into a GitHub issue comment (or anywhere else), and when someone clicks it, the requirements matrix opens, scrolls to the requirement and gives the row a short yellow flash.",
+    shareNote: "Invite links expire after the time set by the owner under ⚙️ Settings. Once someone is a member, they have permanent access. So share invite links only with the group.",
+    panelGithubTitle: "GitHub integration",
+    githubIntro: "Click <strong>⚙️ Settings</strong> in the toolbar to set:",
+    githubLi1: "<strong>Scrum board URL</strong> (optional) — e.g. <code>https://github.com/users/DGARosendal/projects/1</code>.",
+    githubLi2: "<strong>Default repository</strong> — e.g. <code>DGARosendal/reolmarked</code>. Used to turn <code>#123</code> into links.",
+    panelImportTitle: "Import: file formats",
+    importLi1: "<strong>.csv</strong>: the first row is headers, the same as in the CSV export (Danish or English). Semicolon, comma and tab all work.",
+    importLi2: "<strong>.json</strong>: a list of objects, as in the JSON export.",
+    importLi3: "<strong>.md</strong>: a Markdown file with tables. Works with this app's own Markdown export as well as hand-written tables.",
+    importLi4: "<strong>.txt</strong>: one requirement per line. All get F / Should / Proposed, which you can correct afterwards.",
+    importNote: "Import adds new requirements and never overwrites existing ones.",
+    importDuplicateNote: "Duplicates are skipped: first by stable (invisible) ID or Req ID (REQ-NNN), otherwise by description alone (normalised for case and extra whitespace).",
+    importOutdatedNote: "If the file contains requirements where the online version has changed, the app shows the differences and lets you choose between updating, adding as new, or creating a new project.",
+    importSeqNote: "A deleted requirement's REQ-NNN is retired: no other requirement can take that number. Only if the exact same requirement (same invisible ID) is imported again is the number resumed.",
+    importMdStableNote: "The Markdown export includes a hidden metadata block at the bottom with the stable IDs. It is invisible in rendered markdown, but lets the import recognise the requirement even if the description has changed.",
+    panelMembersTitle: "Members",
+    membersNote: "Invite links give access to the project. Once someone is a member, they have permanent access until they leave the project themselves. So share invite links only with the group.",
+
+    settingsDialogTitle: "Project settings",
+    settingsGithubSection: "GitHub integration",
+    settingsAgeSection: "Age thresholds",
+    settingsAgeHint: "Requirements that are not Done, Parked or Dropped are highlighted once they have not been edited for a while. The thresholds apply to everyone in the group.",
+    settingsWarnLabel: "Yellow after (days)",
+    settingsUrgentLabel: "Red after (days)",
+    settingsAgeWarnHint: "Must be at least 1.",
+    settingsAgeUrgentHint: "Must be greater than the yellow threshold.",
+    settingsAgeBadWarn: "The yellow threshold must be a whole number of at least 1.",
+    settingsAgeBadUrgent: "The red threshold must be a whole number greater than the yellow threshold.",
+    settingsSaved: "Settings saved.",
+    settingsInviteSection: "Invite links",
+    inviteHoursLabel: "Default lifetime for invite links (hours)",
+    inviteHoursHint: "1–168 hours. Once an invite link has expired, it cannot be used to join — but existing members still have access.",
+    settingsAgeBadInviteHours: "The lifetime must be a whole number between 1 and 168 hours.",
+
+    ghBoardLabel: "Scrum board URL (optional)",
+    ghBoardHint: "Shown as a button in the toolbar. May be left empty.",
+    ghRepoLabel: "Default repository",
+    ghRepoHint: "Used to turn <code>#123</code> into clickable links. Without it, only <code>owner/repo#123</code> works.",
+    ghPrivateNote: "If the repo is private, the links only work for people who have access to the repo on GitHub. No token is needed.",
+    ghRepoFormat: "The default repository must be in the form \"owner/repo\".",
+    ghBadBoardUrl: "The Scrum board URL must start with https://github.com/",
+
+    cancelBtn: "Cancel",
+    saveBtn: "Save",
+
+    importDiffTitle: "Outdated file detected",
+    importDiffIntro: "The file contains requirements where the online version has changed. Choose whether to update the existing requirements, or to add the file's rows as new requirements.",
+    importDiffDuplicates: "{n} rows are skipped as duplicates (same Req ID or same description).",
+    importDiffRestores: "{n} deleted requirements are restored (same invisible ID) and get their original REQ-NNN back.",
+    importDiffIdentical: "{n} requirements are unchanged and will be skipped.",
+    importDiffSummary: "Show differences ({n} requirements)",
+    importDiffFld: "Field",
+    importDiffFile: "File",
+    importDiffOnline: "Online",
+    importDiffForce: "Import all as new",
+    importDiffUpdateExisting: "Update and restore",
+    importDiffCreateNew: "Create as new project",
+    importDiffCancel: "Cancel",
+    importDiffNewProjectName: "Name of the new project:",
+    importDiffLastEdited: "Last edited: {date}",
+    importUpdateProgress: "Updating… {done} of {total}",
+    importUpdateDone: "Updated {updated}, restored {restored} and added {inserted} new requirements.",
+    importRestoreProgress: "Restoring… {done} of {total}",
+
+    statusProposed: "Proposed",
+    statusAgreed: "Agreed",
+    statusDone: "Done",
+    statusParked: "Parked (PYT)",
+    statusDropped: "Dropped",
+
+    savedAt: "✓ Saved {time}",
+    errRealtime: "Realtime update error: {code}",
+    errRealtimeAccess: "Access to the project was denied. You are probably no longer a member.",
+    errSave: "Could not save: {code}",
+    errProjects: "Could not load your projects: {code}",
+    errProjectRead: "Could not read the project: {code}",
+    errMember: "Could not register membership: {code}",
+    errCreate: "Could not create the project: {code}",
+    errAddReq: "Could not add the requirement: {code}",
+    errDeleteReq: "Could not delete: {code}",
+    errRemoveProject: "Could not remove the project: {code}",
+    errGithubSettings: "Could not save settings: {code}",
+
+    delReqConfirm: "Delete this requirement?\n\nThe requirement's REQ-NNN is retired and can no longer be assigned to other requirements. Only if the exact same requirement (same invisible ID) is imported again is the number resumed.",
+    refUnlinkedTitle: "No default repository is set — #123 is shown as text. Set one under ⚙️ Settings if you want automatic links, or write owner/repo#123.",
+    copyLinkTitle: "Copy a link to this requirement — ready to paste into GitHub",
+    deleteReqTitle: "Delete requirement",
+    linkCopiedMsg: "Link to the requirement copied — ready to paste into GitHub.",
+    copyLinkPrompt: "Copy the link:",
+
+    emptyPyt: "No parked (PYT) requirements yet. Set the status to \"Parked (PYT)\" on a requirement to see it here.",
+    emptyAll: "No requirements to show.",
+
+    ageTitleDone: "Finished – not counted",
+    ageTitleNoTs: "No timestamp",
+    ageTitleParked: "Parked (PYT) for {days} days — waiting for review",
+    ageTitleUpdated: "Last edited: {date}",
+
+    addReqNameRequired: "Enter a project name.",
+    joinCodeRequired: "Paste an invite link or a project code.",
+    projectNotExist: "The project does not exist. Check the code.",
+    loginInterrupted: "Sign-in was interrupted.",
+    loginFailed: "Sign-in failed: {code}",
+    emailUsedGoogle: "Your email is already used with Google. Sign in with Google, then press 'Link GitHub' in the top right. After that both will work.",
+    emailUsedGithub: "Your email is already used with GitHub. Sign in with GitHub, then press 'Link Google' in the top right. After that both will work.",
+    linkGoogle: "Link Google",
+    linkGithub: "Link GitHub",
+    linkInUse: "That sign-in account is already used by another user in this app, so it cannot be linked. Use the method you are signed in with now instead.",
+    linkAlready: "That sign-in method is already linked.",
+    linkInterrupted: "Linking was interrupted.",
+    linkFailed: "Could not link sign-in: {code}",
+    linkSuccess: "Sign-in linked. You can now sign in with both methods.",
+
+    shareLinkCopied: "Link copied. Share it only with the group.",
+    shareLinkPrompt: "Copy the link:",
+    shareInviteCopied: "Invite link copied. Valid for {hours} hours.",
+    errInviteRead: "Could not read invite: {code}",
+    inviteNotFound: "The invite link does not exist. Ask someone in the group for a new one.",
+    inviteExpired: "The invite link has expired. Ask someone in the group for a new one.",
+    inviteInvalid: "The invite link is invalid.",
+    errJoinInvite: "Could not join via invite: {code}",
+    errInviteCreate: "Could not create invite link: {code}",
+    needInviteLink: "You are not a member of this project. Ask someone in the group for an invite link.",
+
+    importUnknownType: "Unknown file type. Use .json, .csv, .txt or .md.",
+    importReadError: "Could not read the file: {msg}",
+    importOpenError: "Could not open the file.",
+    importEmpty: "No requirements found in the file.",
+    importTooMany: "The file contains {n} requirements. The maximum is {max} per import.",
+    importConfirmHead: "Import {n} requirements into this project?",
+    importConfirmRestores: "\n\n{n} deleted requirements are restored and get their original REQ-NNN back.",
+    importConfirmSkipped: "\n\n{n} rows without a description will be skipped.",
+    importConfirmDuplicates: "\n\n{n} rows are skipped as duplicates (same Req ID or same description).",
+    importConfirmUnrecognised: "\n\n{n} values in FURPS+, MoSCoW or Status were not recognised and were set to the default (F / Should / Proposed).",
+    importConfirmEncoding: "\n\nNote: the file does not look like it was saved as UTF-8, so special characters may be broken.",
+    importProgress: "Importing... {done} of {total}",
+    importDone: "Imported {n} requirements.",
+    importDoneSkipped: "Imported {n} requirements. {skipped} rows were skipped as duplicates.",
+    importAllDuplicates: "All {n} requirements already exist (same Req ID or same description) — nothing new to import.",
+    importForced: "Imported {n} requirements as new (colliding IDs were regenerated).",
+    importStopped: "The import stopped after {done} of {total} requirements: {code}",
+    importErrCsvNoRows: "The CSV file has no data rows.",
+    importErrCsvNoDesc: "No description column found.",
+    importErrJsonNotList: "The JSON file must be a list of requirements.",
+
+    leaveConfirm: "Leave the project?\n\nYou lose access to view and edit the requirements. The project and all requirements remain — the other members can still see them.",
+    deleteProjectTypeName: "Delete project \"{name}\" and all requirements permanently?\n\nThis cannot be undone. Any other members also lose access.\n\nType the project name to confirm:",
+    deleteProjectNameMismatch: "The name does not match. Deletion was cancelled.",
+    projectRemoved: "You are no longer a member of the project.",
+    projectDeleted: "The project and all requirements have been deleted.",
+
+    mdTitleSuffix: "Requirements matrix",
+    mdExported: "Exported: {date}",
+    mdIntro: "FURPS+ states the type of the requirement, MoSCoW states the priority. Active requirements are grouped by priority. Parked (PYT), \"Won't\" and dropped ones are shown in separate sections because they are no longer active.",
+    mdScrumBoard: "Scrum board: {url}",
+    mdRefsNote: "References in the form `#123` link to `https://github.com/{repo}/issues/123`.",
+    mdSummary: "Summary",
+    mdColPriority: "Priority",
+    mdColTotal: "Requirements",
+    mdColDone: "Done",
+    mdColAgreed: "Agreed",
+    mdColProposed: "Proposed",
+    mdColParked: "Parked",
+    mdColDropped: "Dropped",
+    mdColGrandTotal: "Total",
+    mdParkedHeading: "PYT — Parked ({n})",
+    mdParkedIntro: "Ideas that have been deliberately parked. Bring them up at sprint review and decide whether to promote or drop them.",
+    mdWontHeading: "Won't — deliberately excluded ({n})",
+    mdWontIntro: "Requirements deliberately left out of this release. The reason is under \"Notes\".",
+    mdDroppedHeading: "Dropped ({n})",
+    mdDroppedIntro: "Requirements that are no longer relevant. The reason is under \"Notes\".",
+
+    csvId: "Req ID",
+    csvDescription: "Requirement",
+    csvFurps: "FURPS+",
+    csvMoscow: "MoSCoW",
+    csvSource: "Source",
+    csvStatus: "Status",
+    csvNotes: "Notes",
+    csvRefs: "References",
+    csvUpdatedBy: "Last edited by",
+    csvImportedId: "Stable ID"
+  }
+};
+
+let lang = "da";
+try {
+  const stored = localStorage.getItem("lang");
+  if (stored === "en" || stored === "da") { lang = stored; }
+} catch (err) { /* ignore */ }
+
+function t(key, vars) {
+  const table = I18N[lang] || I18N.da;
+  let s = table[key];
+  if (s === undefined) { s = I18N.da[key]; }
+  if (s === undefined) { s = key; }
+  if (vars) {
+    const names = Object.keys(vars);
+    for (let i = 0; i < names.length; i++) {
+      s = s.split("{" + names[i] + "}").join(String(vars[names[i]]));
     }
   }
-  console.log("Slettede", deleted, "gamle invites");
-})();
+  return s;
+}
+
+let currentUser = null;
+let currentPid = null;
+let isOwner = false;
+let sortMode = "priority";
+let filterMoscow = "all";
+let onlyPyt = false;
+let allReqs = [];
+let allMembers = [];
+let allTombstones = [];
+let renderPending = false;
+let unsubProject = null;
+let unsubReqs = null;
+let unsubMembers = null;
+let unsubTombstones = null;
+let visibleColumns = loadColumns();
+
+let lastSavedDate = null;
+
+let openToken = 0;
+
+let projectData = {};
+let pendingScrollToReq = null;
+
+let pendingImportUpdates = null;
+let pendingImportRestores = null;
+let pendingImportNewRecords = null;
+let pendingImportAllRecords = null;
+let pendingImportSkippedDupes = 0;
+let pendingImportUsedSeqs = null;
+
+const saveTimers = new Map();
+
+function $(id) { return document.getElementById(id); }
+
+function localDateString(d) {
+  const pad = function (n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+function formatTime(d) {
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return hh + ":" + mm + ":" + ss;
+}
+
+function staleWarnDays() {
+  const n = projectData ? Number(projectData.staleWarnDays) : NaN;
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_STALE_WARN_DAYS;
+}
+function staleUrgentDays() {
+  const n = projectData ? Number(projectData.staleUrgentDays) : NaN;
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_STALE_URGENT_DAYS;
+}
+
+function showMessage(text, isGood) {
+  $("msg").textContent = text;
+  $("msg").style.color = isGood ? "#15803d" : "#b91c1c";
+}
+
+function applyLanguage() {
+  document.documentElement.lang = lang;
+
+  const plain = document.querySelectorAll("[data-i18n]");
+  for (let i = 0; i < plain.length; i++) {
+    plain[i].textContent = t(plain[i].dataset.i18n);
+  }
+  const html = document.querySelectorAll("[data-i18n-html]");
+  for (let i = 0; i < html.length; i++) {
+    html[i].innerHTML = t(html[i].dataset.i18nHtml);
+  }
+  const phs = document.querySelectorAll("[data-i18n-placeholder]");
+  for (let i = 0; i < phs.length; i++) {
+    phs[i].placeholder = t(phs[i].dataset.i18nPlaceholder);
+  }
+  const titles = document.querySelectorAll("[data-i18n-title]");
+  for (let i = 0; i < titles.length; i++) {
+    titles[i].title = t(titles[i].dataset.i18nTitle);
+  }
+
+  updateLinkButton();
+  updateGithubUi();
+  updateImportDiffDialogText();
+  updateProjectButtons();
+  renderMembers();
+  renderTable();
+
+  if (lastSavedDate) {
+    $("lastSaved").textContent = t("savedAt", { time: formatTime(lastSavedDate) });
+  }
+}
+
+function setLang(next) {
+  lang = (next === "en") ? "en" : "da";
+  try { localStorage.setItem("lang", lang); } catch (err) { /* ignore */ }
+  applyLanguage();
+}
+
+function showScreen(name) {
+  $("screenLogin").classList.add("hidden");
+  $("screenChooser").classList.add("hidden");
+  $("screenApp").classList.add("hidden");
+  switch (name) {
+    case "login": $("screenLogin").classList.remove("hidden"); break;
+    case "chooser":
+      $("screenChooser").classList.remove("hidden");
+      loadMyProjects();
+      break;
+    case "app": $("screenApp").classList.remove("hidden"); break;
+  }
+}
+
+function userLabel() {
+  if (currentUser.displayName) { return currentUser.displayName; }
+  if (currentUser.email) { return currentUser.email; }
+  return currentUser.uid.slice(0, 6);
+}
+
+function rankOf(moscow) {
+  switch (moscow) {
+    case "Must": return 1;
+    case "Should": return 2;
+    case "Could": return 3;
+    case "Won't": return 4;
+    default: return 5;
+  }
+}
+
+function reqLabel(seq) {
+  return "REQ-" + String(seq).padStart(3, "0");
+}
+
+function daysSince(ts) {
+  if (!ts) { return null; }
+  const date = (typeof ts.toDate === "function") ? ts.toDate() : new Date(ts);
+  if (isNaN(date.getTime())) { return null; }
+  const diff = Math.floor((Date.now() - date.getTime()) / 86400000);
+  return diff < 0 ? 0 : diff;
+}
+
+function staleness(req) {
+  if (req.status === "Done" || req.status === "Dropped") { return -1; }
+  if (req.status === "Parked") { return 3; }
+  const days = daysSince(req.updatedAt);
+  if (days === null) { return 0; }
+  if (days >= staleUrgentDays()) { return 2; }
+  if (days >= staleWarnDays()) { return 1; }
+  return 0;
+}
+
+function parseHash() {
+  const raw = location.hash.slice(1);
+  if (!raw) { return { pid: "", reqid: "", invite: "" }; }
+
+  // Format 1: #invite=TOKEN (ingen pid)
+  if (raw.indexOf("invite=") === 0) {
+    let token = raw.slice(7);
+    const amp = token.indexOf("&");
+    if (amp >= 0) { token = token.slice(0, amp); }
+    try { token = decodeURIComponent(token); } catch (e) { /* keep raw */ }
+    return { pid: "", reqid: "", invite: token };
+  }
+
+  // Format 2: #pid[&req=REQID][&invite=TOKEN]
+  const parts = raw.split("&");
+  const pid = parts[0] || "";
+  let reqid = "";
+  let invite = "";
+  for (let i = 1; i < parts.length; i++) {
+    if (parts[i].indexOf("req=") === 0) {
+      try { reqid = decodeURIComponent(parts[i].slice(4)); }
+      catch (e) { reqid = parts[i].slice(4); }
+    } else if (parts[i].indexOf("invite=") === 0) {
+      try { invite = decodeURIComponent(parts[i].slice(7)); }
+      catch (e) { invite = parts[i].slice(7); }
+    }
+  }
+  return { pid: pid, reqid: reqid, invite: invite };
+}
+
+function findReqRow(reqId) {
+  const rows = document.querySelectorAll("tr[data-req-id]");
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].dataset.reqId === reqId) { return rows[i]; }
+  }
+  return null;
+}
+
+function tryScrollToPendingReq() {
+  if (!pendingScrollToReq) { return; }
+  const tr = findReqRow(pendingScrollToReq);
+  if (!tr) { return; }
+  pendingScrollToReq = null;
+  try { tr.scrollIntoView({ behavior: "smooth", block: "center" }); }
+  catch (e) { tr.scrollIntoView(); }
+  tr.classList.add("row-flash");
+  setTimeout(function () { tr.classList.remove("row-flash"); }, 2500);
+}
+
+function defaultColumns() {
+  const o = {};
+  for (let i = 0; i < COLUMNS.length; i++) { o[COLUMNS[i]] = true; }
+  return o;
+}
+
+function hasAnyVisible(o) {
+  for (let i = 0; i < COLUMNS.length; i++) { if (o[COLUMNS[i]]) { return true; } }
+  return false;
+}
+
+function visibleCount() {
+  let n = 0;
+  for (let i = 0; i < COLUMNS.length; i++) { if (visibleColumns[COLUMNS[i]]) { n++; } }
+  return n;
+}
+
+function loadColumns() {
+  try {
+    const raw = localStorage.getItem("visibleColumns");
+    if (!raw) { return defaultColumns(); }
+    const parsed = JSON.parse(raw);
+    const o = defaultColumns();
+    for (let i = 0; i < COLUMNS.length; i++) {
+      if (typeof parsed[COLUMNS[i]] === "boolean") { o[COLUMNS[i]] = parsed[COLUMNS[i]]; }
+    }
+    if (!hasAnyVisible(o)) { return defaultColumns(); }
+    return o;
+  } catch (err) {
+    return defaultColumns();
+  }
+}
+
+function saveColumns() {
+  try { localStorage.setItem("visibleColumns", JSON.stringify(visibleColumns)); }
+  catch (err) { /* ignore */ }
+}
+
+function maybeHidden(el, col) {
+  el.classList.add("col-" + col);
+  if (!visibleColumns[col]) { el.classList.add("hidden-col"); }
+  return el;
+}
+
+function applyColumnPrefs() {
+  const ths = document.querySelectorAll("thead th[data-col]");
+  for (let i = 0; i < ths.length; i++) {
+    const col = ths[i].dataset.col;
+    if (visibleColumns[col]) { ths[i].classList.remove("hidden-col"); }
+    else { ths[i].classList.add("hidden-col"); }
+  }
+  const cbs = document.querySelectorAll("#colsPanel input[type=checkbox]");
+  for (let i = 0; i < cbs.length; i++) {
+    cbs[i].checked = !!visibleColumns[cbs[i].dataset.col];
+  }
+  renderTable();
+}
+
+function openPanel() {
+  $("sidePanel").classList.add("open");
+  $("sidePanel").setAttribute("aria-hidden", "false");
+  $("panelBackdrop").classList.remove("hidden");
+}
+
+function closePanel() {
+  $("sidePanel").classList.remove("open");
+  $("sidePanel").setAttribute("aria-hidden", "true");
+  $("panelBackdrop").classList.add("hidden");
+}
+
+function statusLabel(value) {
+  switch (value) {
+    case "Proposed": return t("statusProposed");
+    case "Agreed": return t("statusAgreed");
+    case "Done": return t("statusDone");
+    case "Parked": return t("statusParked");
+    case "Dropped": return t("statusDropped");
+    default: return value;
+  }
+}
+
+function plainLabel(value) { return value; }
+
+function stopListeners() {
+  if (unsubProject) { unsubProject(); unsubProject = null; }
+  if (unsubReqs) { unsubReqs(); unsubReqs = null; }
+  if (unsubMembers) { unsubMembers(); unsubMembers = null; }
+  if (unsubTombstones) { unsubTombstones(); unsubTombstones = null; }
+  allReqs = [];
+  allMembers = [];
+  allTombstones = [];
+}
+
+function onListenError(err) {
+  const code = (err && err.code) ? err.code : "";
+  if (code === "permission-denied") {
+    cancelPendingSaves();
+    showMessage(t("errRealtimeAccess"));
+    leaveProject();
+    return;
+  }
+  showMessage(t("errRealtime", { code: code }));
+}
+
+function scheduleSave(el, field, id) {
+  const key = id + "|" + field;
+  const existing = saveTimers.get(key);
+  if (existing) { clearTimeout(existing.timer); }
+  const value = el.value;
+  const timer = setTimeout(function () {
+    saveTimers.delete(key);
+    saveCellValue(value, field, id, el);
+  }, AUTOSAVE_DELAY_MS);
+  saveTimers.set(key, { timer: timer, value: value, el: el });
+}
+
+function flushSave(key) {
+  const pending = saveTimers.get(key);
+  if (!pending) { return; }
+  clearTimeout(pending.timer);
+  saveTimers.delete(key);
+  const parts = key.split("|");
+  const id = parts[0];
+  const field = parts[1];
+  saveCellValue(pending.value, field, id, pending.el);
+}
+
+function flushAllPendingSaves() {
+  const keys = Array.from(saveTimers.keys());
+  for (let i = 0; i < keys.length; i++) { flushSave(keys[i]); }
+}
+
+function cancelPendingSaves() {
+  const keys = Array.from(saveTimers.keys());
+  for (let i = 0; i < keys.length; i++) {
+    clearTimeout(saveTimers.get(keys[i]).timer);
+    saveTimers.delete(keys[i]);
+  }
+}
+
+async function saveCellValue(value, field, id, el) {
+  const changes = {};
+  changes[field] = value;
+  changes.updatedBy = userLabel();
+  changes.updatedAt = serverTimestamp();
+  try {
+    await updateDoc(doc(db, "projects", currentPid, "requirements", id), changes);
+    if (el && el.isConnected) { flashSaved(el); }
+    else { updateLastSaved(); }
+    for (let i = 0; i < allReqs.length; i++) {
+      if (allReqs[i].id === id) { allReqs[i][field] = value; break; }
+    }
+    if (field === "description" || field === "source" || field === "notes") {
+      updateRefsCellFor(id);
+    }
+  } catch (err) {
+    showMessage(t("errSave", { code: err.code }));
+  }
+}
+
+function flashSaved(el) {
+  el.classList.add("just-saved");
+  setTimeout(function () { el.classList.remove("just-saved"); }, 700);
+  updateLastSaved();
+}
+
+function updateLastSaved() {
+  const el = $("lastSaved");
+  if (!el) { return; }
+  lastSavedDate = new Date();
+  el.textContent = t("savedAt", { time: formatTime(lastSavedDate) });
+  el.classList.remove("hidden");
+}
+
+function onCellInput(event) {
+  const el = event.target;
+  const field = el.dataset.field;
+  if (!field) { return; }
+  const id = el.dataset.id;
+  if (el.tagName === "SELECT") {
+    el.blur();
+    saveCellValue(el.value, field, id, el);
+    return;
+  }
+  scheduleSave(el, field, id);
+}
+
+function onCellFocusOut(event) {
+  const el = event.target;
+  const field = el.dataset.field;
+  if (field && el.tagName !== "SELECT") {
+    flushSave(el.dataset.id + "|" + field);
+  }
+  if (renderPending) { setTimeout(safeRender, 0); }
+}
+
+// ---------- GitHub + indstillinger ----------
+function updateGithubUi() {
+  const url = String(projectData.githubBoardUrl || "").trim();
+  const btn = $("btnOpenBoard");
+  if (url) {
+    btn.classList.remove("hidden");
+    btn.title = t("boardBtnTitle") + " — " + url;
+  } else {
+    btn.classList.add("hidden");
+  }
+}
+
+function openGithubDialog() {
+  if (!isOwner) { return; }
+  $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
+  $("defaultRepoInput").value = projectData.defaultRepo || "";
+  $("staleWarnInput").value = staleWarnDays();
+  $("staleUrgentInput").value = staleUrgentDays();
+  $("inviteHoursInput").value = Number(projectData.defaultInviteHours) || DEFAULT_INVITE_HOURS;
+  $("githubDialog").classList.remove("hidden");
+  setTimeout(function () { $("githubBoardUrlInput").focus(); }, 0);
+}
+
+function closeGithubDialog() {
+  $("githubDialog").classList.add("hidden");
+}
+
+function normalizeRepo(text) {
+  return String(text || "").trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\/+$/, "");
+}
+
+function isSafeBoardUrl(url) {
+  return /^https:\/\/github\.com\//i.test(url);
+}
+
+async function saveGithubSettings() {
+  if (!isOwner) { return; }
+  const url = $("githubBoardUrlInput").value.trim();
+  const repo = normalizeRepo($("defaultRepoInput").value);
+
+  const warn = parseInt($("staleWarnInput").value, 10);
+  const urgent = parseInt($("staleUrgentInput").value, 10);
+  const inviteHours = parseInt($("inviteHoursInput").value, 10);
+
+  if (url !== "" && !isSafeBoardUrl(url)) {
+    showMessage(t("ghBadBoardUrl"));
+    return;
+  }
+  if (repo !== "" && repo.indexOf("/") < 0) {
+    showMessage(t("ghRepoFormat"));
+    return;
+  }
+  if (!Number.isInteger(warn) || warn < 1 || warn > 999) {
+    showMessage(t("settingsAgeBadWarn"));
+    return;
+  }
+  if (!Number.isInteger(urgent) || urgent <= warn || urgent > 999) {
+    showMessage(t("settingsAgeBadUrgent"));
+    return;
+  }
+  if (!Number.isInteger(inviteHours) || inviteHours < 1 || inviteHours > 168) {
+    showMessage(t("settingsAgeBadInviteHours"));
+    return;
+  }
+
+  try {
+    await updateDoc(doc(db, "projects", currentPid), {
+      githubBoardUrl: url,
+      defaultRepo: repo,
+      staleWarnDays: warn,
+      staleUrgentDays: urgent,
+      defaultInviteHours: inviteHours
+    });
+    projectData.githubBoardUrl = url;
+    projectData.defaultRepo = repo;
+    projectData.staleWarnDays = warn;
+    projectData.staleUrgentDays = urgent;
+    projectData.defaultInviteHours = inviteHours;
+    updateGithubUi();
+    renderTable();
+  } catch (err) {
+    showMessage(t("errGithubSettings", { code: err.code || err.message }));
+    return;
+  }
+
+  closeGithubDialog();
+  showMessage(t("settingsSaved"), true);
+}
+
+function openBoard() {
+  const url = String(projectData.githubBoardUrl || "").trim();
+  if (!url) { return; }
+  if (!isSafeBoardUrl(url)) {
+    showMessage(t("ghBadBoardUrl"));
+    return;
+  }
+  window.open(url, "_blank", "noopener");
+}
+
+// ---------- GitHub refs ----------
+function linkifyGitHubRefs(text, defaultRepo) {
+  if (!text) { return ""; }
+  const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
+  return text.replace(pattern, function (match, owner, repo, num) {
+    let target;
+    if (owner && repo) { target = owner + "/" + repo; }
+    else if (defaultRepo) { target = defaultRepo; }
+    else { return match; }
+    const url = "https://github.com/" + target + "/issues/" + num;
+    return "[" + match + "](" + url + ")";
+  });
+}
+
+function extractGithubRefs(req, defaultRepo) {
+  const refs = [];
+  const seen = new Set();
+  const fields = [req.description, req.source, req.notes];
+  const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
+  for (let i = 0; i < fields.length; i++) {
+    const text = String(fields[i] || "");
+    pattern.lastIndex = 0;
+    let m;
+    while ((m = pattern.exec(text)) !== null) {
+      const raw = m[0];
+      const owner = m[1];
+      const repo = m[2];
+      const num = m[3];
+      let url = "";
+      if (owner && repo) {
+        url = "https://github.com/" + owner + "/" + repo + "/issues/" + num;
+      } else if (defaultRepo) {
+        url = "https://github.com/" + defaultRepo + "/issues/" + num;
+      }
+      if (seen.has(raw)) { continue; }
+      seen.add(raw);
+      refs.push({ raw: raw, url: url });
+    }
+  }
+  return refs;
+}
+
+function buildRefsCell(r) {
+  const td = document.createElement("td");
+  td.className = "refs";
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
+  const refs = extractGithubRefs(r, defaultRepo);
+  if (refs.length === 0) {
+    td.textContent = "–";
+    td.classList.add("refs-empty");
+    return td;
+  }
+  for (let i = 0; i < refs.length; i++) {
+    if (i > 0) { td.appendChild(document.createElement("br")); }
+    const ref = refs[i];
+    if (ref.url) {
+      const a = document.createElement("a");
+      a.href = ref.url;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = ref.raw;
+      td.appendChild(a);
+    } else {
+      const span = document.createElement("span");
+      span.className = "unlinked";
+      span.textContent = ref.raw;
+      span.title = t("refUnlinkedTitle");
+      td.appendChild(span);
+    }
+  }
+  return td;
+}
+
+function updateRefsCellFor(id) {
+  const tr = document.querySelector('tr[data-req-id="' + id + '"]');
+  if (!tr) { return; }
+  const oldCell = tr.querySelector("td.refs");
+  if (!oldCell) { return; }
+  let req = null;
+  for (let i = 0; i < allReqs.length; i++) {
+    if (allReqs[i].id === id) { req = allReqs[i]; break; }
+  }
+  if (!req) { return; }
+  const newCell = buildRefsCell(req);
+  newCell.classList.add("col-refs");
+  if (!visibleColumns.refs) { newCell.classList.add("hidden-col"); }
+  oldCell.replaceWith(newCell);
+}
+
+async function copyReqLink(rid) {
+  if (!currentPid) { return; }
+  const link = location.origin + location.pathname + "#" + currentPid + "&req=" + rid;
+  try {
+    await navigator.clipboard.writeText(link);
+    showMessage(t("linkCopiedMsg"), true);
+  } catch (err) {
+    prompt(t("copyLinkPrompt"), link);
+  }
+}
+
+// ---------- Projects list ----------
+async function loadMyProjects() {
+  const list = $("myProjectsList");
+  const empty = $("myProjectsEmpty");
+  list.innerHTML = "";
+  if (!currentUser) {
+    empty.classList.remove("hidden");
+    return;
+  }
+  empty.classList.add("hidden");
+  try {
+    const snap = await getDocs(collection(db, "users", currentUser.uid, "projects"));
+    if (snap.empty) {
+      empty.classList.remove("hidden");
+      return;
+    }
+
+    const entries = [];
+    snap.forEach(function (d) {
+      entries.push({ pid: d.id, name: d.data().name || d.id, ref: d.ref });
+    });
+
+    const checks = entries.map(async function (e) {
+      try {
+        const projSnap = await getDoc(doc(db, "projects", e.pid));
+        if (!projSnap.exists()) {
+          try { await deleteDoc(e.ref); } catch (err) { /* ignore */ }
+          return null;
+        }
+        return {
+          pid: e.pid,
+          name: e.name,
+          createdAt: projSnap.data().createdAt || null,
+          ref: e.ref
+        };
+      } catch (err) {
+        console.warn("Could not check project", e.pid, err.code || err.message);
+        return e;
+      }
+    });
+
+    const results = await Promise.all(checks);
+    const items = results.filter(function (x) { return x !== null; });
+    items.sort(function (a, b) { return a.name.localeCompare(b.name, lang); });
+
+    if (items.length === 0) {
+      empty.classList.remove("hidden");
+      return;
+    }
+
+    for (let i = 0; i < items.length; i++) {
+      const li = document.createElement("li");
+      const btn = document.createElement("button");
+      btn.textContent = items[i].name;
+      if (items[i].createdAt) {
+        const d = (typeof items[i].createdAt.toDate === "function")
+          ? items[i].createdAt.toDate()
+          : new Date(items[i].createdAt);
+        if (!isNaN(d.getTime())) {
+          btn.textContent += "  ·  " + localDateString(d);
+        }
+      }
+      btn.dataset.pid = items[i].pid;
+      li.appendChild(btn);
+      list.appendChild(li);
+    }
+  } catch (err) {
+    console.error("loadMyProjects failed:", err);
+    showMessage(t("errProjects", { code: err.code || err.message }));
+    empty.classList.remove("hidden");
+  }
+}
+
+function onMyProjectsClick(event) {
+  const pid = event.target.dataset.pid;
+  if (!pid) { return; }
+  openProject(pid);
+}
+
+// ---------- Auth ----------
+async function loginWith(providerName) {
+  let provider;
+  switch (providerName) {
+    case "google": provider = new GoogleAuthProvider(); break;
+    case "github": provider = new GithubAuthProvider(); break;
+    default: return;
+  }
+  try {
+    showMessage("");
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    switch (err.code) {
+      case "auth/account-exists-with-different-credential":
+        showMessage(providerName === "github" ? t("emailUsedGoogle") : t("emailUsedGithub"));
+        break;
+      case "auth/popup-closed-by-user":
+        showMessage(t("loginInterrupted"));
+        break;
+      default:
+        showMessage(t("loginFailed", { code: err.code }));
+        break;
+    }
+  }
+}
+
+function hasProvider(providerId) {
+  for (let i = 0; i < currentUser.providerData.length; i++) {
+    if (currentUser.providerData[i].providerId === providerId) { return true; }
+  }
+  return false;
+}
+
+function updateLinkButton() {
+  const btn = $("btnLink");
+  if (!currentUser) { btn.classList.add("hidden"); return; }
+  if (!hasProvider("google.com")) {
+    btn.textContent = t("linkGoogle");
+    btn.dataset.provider = "google";
+    btn.classList.remove("hidden");
+  } else if (!hasProvider("github.com")) {
+    btn.textContent = t("linkGithub");
+    btn.dataset.provider = "github";
+    btn.classList.remove("hidden");
+  } else {
+    btn.classList.add("hidden");
+  }
+}
+
+async function linkLogin() {
+  const providerName = $("btnLink").dataset.provider;
+  let provider;
+  switch (providerName) {
+    case "google": provider = new GoogleAuthProvider(); break;
+    case "github": provider = new GithubAuthProvider(); break;
+    default: return;
+  }
+  try {
+    showMessage("");
+    await linkWithPopup(currentUser, provider);
+    updateLinkButton();
+    showMessage(t("linkSuccess"), true);
+  } catch (err) {
+    switch (err.code) {
+      case "auth/credential-already-in-use":
+        showMessage(t("linkInUse"));
+        break;
+      case "auth/provider-already-linked":
+        showMessage(t("linkAlready"));
+        updateLinkButton();
+        break;
+      case "auth/popup-closed-by-user":
+        showMessage(t("linkInterrupted"));
+        break;
+      default:
+        showMessage(t("linkFailed", { code: err.code }));
+        break;
+    }
+  }
+}
+
+function onAuthChanged(user) {
+  currentUser = user;
+  if (!user) {
+    stopListeners();
+    cancelPendingSaves();
+    currentPid = null;
+    projectData = {};
+    pendingScrollToReq = null;
+    lastSavedDate = null;
+    $("lastSaved").classList.add("hidden");
+    $("userInfo").classList.add("hidden");
+    updateLinkButton();
+    showScreen("login");
+    return;
+  }
+  $("userName").textContent = userLabel();
+  $("userInfo").classList.remove("hidden");
+  updateLinkButton();
+
+  const parsed = parseHash();
+  if (parsed.invite) {
+    openProjectByInvite(parsed.invite, parsed.reqid);
+    return;
+  }
+  let pid = parsed.pid;
+  if (!pid) {
+    try { pid = localStorage.getItem("lastProject") || ""; }
+    catch (err) { pid = ""; }
+  }
+  if (parsed.reqid) { pendingScrollToReq = parsed.reqid; }
+  if (pid) { openProject(pid); } else { showScreen("chooser"); }
+}
+
+// ---------- Project ids ----------
+function makeProjectId(name) {
+  let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  if (slug === "") { slug = "projekt"; }
+  slug = slug.slice(0, 30);
+  const bytes = new Uint8Array(8);
+  crypto.getRandomValues(bytes);
+  let suffix = "";
+  for (let i = 0; i < bytes.length; i++) {
+    suffix += bytes[i].toString(16).padStart(2, "0");
+  }
+  return slug + "-" + suffix;
+}
+
+function makeImportedId() {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return "u-" + crypto.randomUUID();
+  }
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) { s += bytes[i].toString(16).padStart(2, "0"); }
+  return "u-" + s;
+}
+
+function makeInviteToken() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) { s += bytes[i].toString(16).padStart(2, "0"); }
+  return s;
+}
+
+async function createProject() {
+  const name = $("newProjectName").value.trim();
+  if (name === "") { showMessage(t("addReqNameRequired")); return; }
+  const pid = makeProjectId(name);
+  try {
+    await setDoc(doc(db, "projects", pid), {
+      name: name,
+      ownerUid: currentUser.uid,
+      counter: 0,
+      githubBoardUrl: "",
+      defaultRepo: "",
+      staleWarnDays: DEFAULT_STALE_WARN_DAYS,
+      staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
+      defaultInviteHours: DEFAULT_INVITE_HOURS,
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.error("createProject: setDoc project failed:", err);
+    showMessage(t("errCreate", { code: err.code || err.message }));
+    return;
+  }
+  await openProject(pid);
+}
+
+async function joinFromInput() {
+  const input = $("joinCode").value.trim();
+  if (input === "") { showMessage(t("joinCodeRequired")); return; }
+
+  // 1. Fuld URL med #invite=...
+  const m = input.match(/[#&?]invite=([^&\s]+)/);
+  if (m) {
+    let token = m[1];
+    try { token = decodeURIComponent(token); } catch (e) { /* keep raw */ }
+    await openProjectByInvite(token, "");
+    return;
+  }
+
+  // 2. Rå hex-token (16+ tegn hex).
+  if (/^[0-9a-f]{16,}$/i.test(input)) {
+    await openProjectByInvite(input, "");
+    return;
+  }
+
+  // 3. Legacy: #pid (virker kun for eksisterende medlemmer).
+  let code = input;
+  const hashPos = code.indexOf("#");
+  if (hashPos >= 0) {
+    code = code.slice(hashPos + 1);
+    const ampPos = code.indexOf("&");
+    if (ampPos >= 0) { code = code.slice(0, ampPos); }
+  }
+  if (code === "") { showMessage(t("joinCodeRequired")); return; }
+  await openProject(code);
+}
+
+async function openProject(pid) {
+  const myToken = ++openToken;
+
+  flushAllPendingSaves();
+  stopListeners();
+  isOwner = false;
+  showMessage("");
+
+  let snap;
+  try {
+    snap = await getDoc(doc(db, "projects", pid));
+  } catch (err) {
+    if (myToken !== openToken) { return; }
+    console.error("openProject: getDoc failed for", pid, err);
+    if (err.code === "permission-denied") {
+      showMessage(t("needInviteLink"));
+    } else {
+      showMessage(t("errProjectRead", { code: err.code || err.message }));
+    }
+    showScreen("chooser");
+    return;
+  }
+  if (myToken !== openToken) { return; }
+  if (!snap.exists()) {
+    showMessage(t("projectNotExist"));
+    showScreen("chooser");
+    return;
+  }
+
+  try {
+    await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
+                 { name: userLabel(), uid: currentUser.uid, lastSeenAt: serverTimestamp() },
+                 { merge: true });
+  } catch (err) {
+    if (myToken !== openToken) { return; }
+    console.error("openProject: join failed for", pid, err);
+    showMessage(t("errMember", { code: err.code || err.message }));
+    showScreen("chooser");
+    return;
+  }
+  if (myToken !== openToken) { return; }
+
+  try {
+    await setDoc(doc(db, "users", currentUser.uid, "projects", pid),
+                 { pid: pid, name: snap.data().name || pid, joinedAt: serverTimestamp() },
+                 { merge: true });
+  } catch (err) {
+    console.warn("openProject: setDoc user project list failed:", err);
+  }
+  if (myToken !== openToken) { return; }
+
+  currentPid = pid;
+  try { localStorage.setItem("lastProject", pid); } catch (err) { /* ignore */ }
+  if (location.hash.slice(1).split("&")[0] !== pid) {
+    location.hash = pid;
+  }
+
+  unsubProject = onSnapshot(doc(db, "projects", pid), onProjectSnapshot, onListenError);
+  unsubReqs = onSnapshot(collection(db, "projects", pid, "requirements"), onReqsSnapshot, onListenError);
+  unsubMembers = onSnapshot(collection(db, "projects", pid, "members"), onMembersSnapshot, onListenError);
+  unsubTombstones = onSnapshot(collection(db, "projects", pid, "tombstones"), onTombstonesSnapshot, onListenError);
+  showScreen("app");
+}
+
+async function openProjectByInvite(token, reqid) {
+  const myToken = ++openToken;
+  flushAllPendingSaves();
+  stopListeners();
+  isOwner = false;
+  showMessage("");
+  if (reqid) { pendingScrollToReq = reqid; }
+
+  let inviteSnap;
+  try {
+    inviteSnap = await getDoc(doc(db, "invites", token));
+  } catch (err) {
+    if (myToken !== openToken) { return; }
+    showMessage(t("errInviteRead", { code: err.code || err.message }));
+    showScreen("chooser");
+    return;
+  }
+  if (myToken !== openToken) { return; }
+  if (!inviteSnap.exists()) {
+    showMessage(t("inviteNotFound"));
+    showScreen("chooser");
+    return;
+  }
+
+  const invite = inviteSnap.data();
+  const pid = invite.pid;
+  if (!pid) {
+    showMessage(t("inviteInvalid"));
+    showScreen("chooser");
+    return;
+  }
+
+  // Er vi allerede medlem? Så skal invite-udløb ikke blokere.
+  let memberSnap = null;
+  try {
+    memberSnap = await getDoc(doc(db, "projects", pid, "members", currentUser.uid));
+  } catch (err) { memberSnap = null; }
+  if (myToken !== openToken) { return; }
+
+  if (memberSnap && memberSnap.exists()) {
+    await openProject(pid);
+    return;
+  }
+
+  // Ikke medlem endnu — tjek expiry.
+  const expiresMs = (typeof invite.expiresAt === "number")
+    ? invite.expiresAt
+    : (invite.expiresAt && typeof invite.expiresAt.toMillis === "function")
+      ? invite.expiresAt.toMillis()
+      : 0;
+  if (!expiresMs || expiresMs <= Date.now()) {
+    showMessage(t("inviteExpired"));
+    showScreen("chooser");
+    return;
+  }
+
+  // Opret medlemskab med token'et.
+  try {
+    await setDoc(doc(db, "projects", pid, "members", currentUser.uid), {
+      name: userLabel(),
+      uid: currentUser.uid,
+      joinedVia: token,
+      joinedAt: serverTimestamp(),
+      lastSeenAt: serverTimestamp()
+    });
+  } catch (err) {
+    if (myToken !== openToken) { return; }
+    showMessage(t("errJoinInvite", { code: err.code || err.message }));
+    showScreen("chooser");
+    return;
+  }
+  if (myToken !== openToken) { return; }
+
+  await openProject(pid);
+}
+
+function leaveProject() {
+  flushAllPendingSaves();
+  stopListeners();
+  currentPid = null;
+  projectData = {};
+  pendingScrollToReq = null;
+  updateGithubUi();
+  try { localStorage.removeItem("lastProject"); } catch (err) { /* ignore */ }
+  history.replaceState(null, "", location.pathname);
+  showScreen("chooser");
+}
+
+function updateProjectButtons() {
+  const btn = $("btnRemoveProject");
+  if (!btn) { return; }
+  if (isOwner) {
+    btn.textContent = t("deleteProjectBtn");
+    btn.title = t("deleteProjectTitle");
+  } else {
+    btn.textContent = t("leaveProjectBtn");
+    btn.title = t("leaveProjectTitle");
+  }
+
+  const settingsBtn = $("btnGithubSettings");
+  if (settingsBtn) {
+    settingsBtn.classList.toggle("hidden", !isOwner);
+  }
+}
+
+function onProjectSnapshot(snap) {
+  if (!snap.exists()) {
+    showMessage(t("projectNotExist"));
+    leaveProject();
+    return;
+  }
+  projectData = snap.data() || {};
+  $("projectName").textContent = projectData.name || "";
+  isOwner = (projectData.ownerUid === currentUser.uid);
+  updateGithubUi();
+  updateProjectButtons();
+  renderMembers();
+  safeRender();
+}
+
+function onTombstonesSnapshot(snapshot) {
+  allTombstones = [];
+  for (let i = 0; i < snapshot.docs.length; i++) {
+    const d = snapshot.docs[i];
+    allTombstones.push(Object.assign({ id: d.id }, d.data()));
+  }
+}
+
+function onMembersSnapshot(snapshot) {
+  allMembers = [];
+  for (let i = 0; i < snapshot.docs.length; i++) {
+    const d = snapshot.docs[i];
+    allMembers.push({ uid: d.id, name: d.data().name });
+  }
+  renderMembers();
+}
+
+function renderMembers() {
+  const list = $("memberList");
+  list.innerHTML = "";
+  for (let i = 0; i < allMembers.length; i++) {
+    const m = allMembers[i];
+    const li = document.createElement("li");
+    li.textContent = m.name;
+    list.appendChild(li);
+  }
+}
+
+async function removeProjectFromMyList() {
+  if (!currentPid || !currentUser) { return; }
+  const pid = currentPid;
+  const wasOwner = isOwner;
+
+  if (wasOwner) {
+    const projectName = String(projectData.name || "").trim();
+    const answer = prompt(t("deleteProjectTypeName", { name: projectName }));
+    if (answer === null) { return; }
+    if (answer.trim() !== projectName) {
+      showMessage(t("deleteProjectNameMismatch"));
+      return;
+    }
+  } else {
+    if (!confirm(t("leaveConfirm"))) { return; }
+  }
+
+  cancelPendingSaves();
+  stopListeners();
+
+  try {
+    if (wasOwner) {
+      const memSnap = await getDocs(collection(db, "projects", pid, "members"));
+      await Promise.all(
+        memSnap.docs
+          .filter(function (d) { return d.id !== currentUser.uid; })
+          .map(function (d) { return deleteDoc(d.ref); })
+      );
+
+      const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
+      await Promise.all(reqSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
+
+      const tbSnap = await getDocs(collection(db, "projects", pid, "tombstones"));
+      await Promise.all(tbSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
+    }
+
+    await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
+
+    if (wasOwner) {
+      await deleteDoc(doc(db, "projects", pid));
+    }
+
+    await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
+  } catch (err) {
+    console.error("removeProjectFromMyList failed:", err);
+    leaveProject();
+    showMessage(t("errRemoveProject", { code: err.code || err.message }));
+    return;
+  }
+
+  leaveProject();
+  showMessage(wasOwner ? t("projectDeleted") : t("projectRemoved"), true);
+}
+
+function emptyRecord() {
+  return { description: "", furps: "F", moscow: "Should", source: "", status: "Proposed", notes: "" };
+}
+
+async function writeRequirements(records, usedSeqs) {
+  return await runTransaction(db, async function (tx) {
+    const assigned = [];
+    const projRef = doc(db, "projects", currentPid);
+    const projSnap = await tx.get(projRef);
+
+    if (!projSnap.exists()) {
+      const e = new Error("project-missing");
+      e.code = "project-missing";
+      throw e;
+    }
+
+    const storedCounter = projSnap.data().counter || 0;
+    let counter = storedCounter;
+
+    const taken = usedSeqs ? new Set(usedSeqs) : new Set();
+    const rows = [];
+
+    for (let i = 0; i < records.length; i++) {
+      const r = records[i];
+      let seq = null;
+      while (true) {
+        counter++;
+        if (!taken.has(counter)) { seq = counter; break; }
+      }
+      taken.add(seq);
+      rows.push({ rec: r, seq: seq });
+    }
+
+    tx.update(projRef, { counter: counter });
+
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i].rec;
+      const newRef = doc(collection(db, "projects", currentPid, "requirements"));
+      const data = {
+        seq: rows[i].seq,
+        description: r.description,
+        furps: r.furps,
+        moscow: r.moscow,
+        source: r.source,
+        status: r.status,
+        notes: r.notes,
+        updatedBy: userLabel(),
+        updatedAt: serverTimestamp()
+      };
+      const iid = r.__importedId || makeImportedId();
+      data.importedId = iid;
+      tx.set(newRef, data);
+      assigned.push(rows[i].seq);
+    }
+    return assigned;
+  });
+}
+
+async function addRequirement() {
+  const rec = emptyRecord();
+  rec.__importedId = makeImportedId();
+  try { await writeRequirements([rec]); }
+  catch (err) { showMessage(t("errAddReq", { code: err.code })); }
+}
+
+async function deleteRequirement(reqId) {
+  await runTransaction(db, async function (tx) {
+    const reqRef = doc(db, "projects", currentPid, "requirements", reqId);
+    const snap = await tx.get(reqRef);
+    if (!snap.exists()) { return; }
+    const data = snap.data();
+    const iid = data.importedId || ("REQ-" + String(data.seq || 0).padStart(3, "0"));
+    const tbRef = doc(collection(db, "projects", currentPid, "tombstones"));
+    tx.set(tbRef, {
+      seq: data.seq || 0,
+      importedId: iid,
+      description: String(data.description || "").slice(0, 200),
+      deletedAt: Date.now()
+    });
+    tx.delete(reqRef);
+  });
+}
+
+async function onTableClick(event) {
+  const el = event.target;
+  if (el.dataset.action === "copy-link") {
+    await copyReqLink(el.dataset.id);
+    return;
+  }
+  if (el.dataset.action !== "delete") { return; }
+  if (!confirm(t("delReqConfirm"))) { return; }
+  try {
+    await deleteRequirement(el.dataset.id);
+    if (document.activeElement === el) { el.blur(); }
+  } catch (err) {
+    showMessage(t("errDeleteReq", { code: err.code }));
+  }
+}
+
+function onReqsSnapshot(snapshot) {
+  allReqs = [];
+  for (let i = 0; i < snapshot.docs.length; i++) {
+    const d = snapshot.docs[i];
+    const req = Object.assign({ id: d.id }, d.data());
+    const cleaned = cleanStatus(req.status || "");
+    req.status = (cleaned !== "") ? cleaned : "Proposed";
+    allReqs.push(req);
+  }
+  safeRender();
+}
+
+function safeRender() {
+  const a = document.activeElement;
+  if ($("tbody").contains(a) || $("matrixSections").contains(a)) {
+    renderPending = true;
+  } else {
+    renderPending = false;
+    renderTable();
+  }
+}
+
+function compareReqs(a, b) {
+  let result = 0;
+  switch (sortMode) {
+    case "priority": result = rankOf(a.moscow) - rankOf(b.moscow); break;
+    case "category": result = FURPS.indexOf(a.furps) - FURPS.indexOf(b.furps); break;
+    case "status": result = STATUS.indexOf(a.status) - STATUS.indexOf(b.status); break;
+    default: result = 0; break;
+  }
+  if (result !== 0) { return result; }
+  return a.seq - b.seq;
+}
+
+function activeSortColumn() {
+  switch (sortMode) {
+    case "priority": return "moscow";
+    case "category": return "furps";
+    case "status":   return "status";
+    case "original": return "id";
+    default:         return "moscow";
+  }
+}
+
+function groupKeyForSortMode(req) {
+  switch (sortMode) {
+    case "priority": return req.moscow;
+    case "category": return req.furps;
+    case "status":   return req.status;
+    default:         return null;
+  }
+}
+
+function renderTable() {
+  const tbody = $("tbody");
+  const sections = $("matrixSections");
+  tbody.innerHTML = "";
+  sections.innerHTML = "";
+
+  const activeCol = activeSortColumn();
+  const ths = document.querySelectorAll("#matrixTable thead th[data-col]");
+  for (let i = 0; i < ths.length; i++) {
+    ths[i].classList.toggle("sort-active", ths[i].dataset.col === activeCol);
+  }
+
+  const visible = [];
+  for (let i = 0; i < allReqs.length; i++) {
+    const r = allReqs[i];
+    if (onlyPyt && r.status !== "Parked") { continue; }
+    if (filterMoscow === "all" || r.moscow === filterMoscow) {
+      visible.push(r);
+    }
+  }
+  visible.sort(compareReqs);
+
+  const useSections = (sortMode === "priority");
+
+  if (visible.length === 0) {
+    $("matrixTable").classList.toggle("hidden", useSections);
+    sections.classList.toggle("hidden", !useSections);
+    const emptyText = onlyPyt ? t("emptyPyt") : t("emptyAll");
+    if (useSections) {
+      const p = document.createElement("div");
+      p.className = "matrix-sections-empty";
+      p.textContent = emptyText;
+      sections.appendChild(p);
+    } else {
+      const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = visibleCount() + 1;
+      td.className = "small";
+      td.style.padding = "16px";
+      td.textContent = emptyText;
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    }
+    tryScrollToPendingReq();
+    return;
+  }
+
+  if (useSections) {
+    $("matrixTable").classList.add("hidden");
+    sections.classList.remove("hidden");
+    renderPrioritySections(visible, sections);
+  } else {
+    $("matrixTable").classList.remove("hidden");
+    sections.classList.add("hidden");
+    renderGroupedTable(visible, tbody);
+  }
+
+  tryScrollToPendingReq();
+}
+
+function renderPrioritySections(visible, container) {
+  const groups = ["Must", "Should", "Could", "Won't"];
+  const srcThead = document.querySelector("#matrixTable thead");
+  for (let g = 0; g < groups.length; g++) {
+    const key = groups[g];
+    const rows = [];
+    for (let i = 0; i < visible.length; i++) {
+      if (visible[i].moscow === key) { rows.push(visible[i]); }
+    }
+    if (rows.length === 0) { continue; }
+
+    const section = document.createElement("div");
+    section.className = "matrix-section";
+
+    const banner = document.createElement("div");
+    banner.className = "matrix-banner group-" + rankOf(key);
+    const bannerText = document.createElement("span");
+    bannerText.className = "matrix-banner-text";
+    bannerText.textContent = key.toUpperCase() + " (" + rows.length + ")";
+    banner.appendChild(bannerText);
+    section.appendChild(banner);
+
+    const body = document.createElement("div");
+    body.className = "matrix-section-body";
+
+    const table = document.createElement("table");
+    table.appendChild(srcThead.cloneNode(true));
+    const tbody = document.createElement("tbody");
+    for (let i = 0; i < rows.length; i++) {
+      tbody.appendChild(buildRow(rows[i], "moscow"));
+    }
+    table.appendChild(tbody);
+    body.appendChild(table);
+    section.appendChild(body);
+    container.appendChild(section);
+  }
+}
+
+function renderGroupedTable(visible, tbody) {
+  const groupCounts = {};
+  for (let i = 0; i < visible.length; i++) {
+    const key = groupKeyForSortMode(visible[i]);
+    if (key === null) { continue; }
+    groupCounts[key] = (groupCounts[key] || 0) + 1;
+  }
+
+  const activeCol = activeSortColumn();
+  let lastGroup = null;
+  for (let i = 0; i < visible.length; i++) {
+    const r = visible[i];
+    const key = groupKeyForSortMode(r);
+    if (key !== null && key !== lastGroup) {
+      lastGroup = key;
+      tbody.appendChild(buildGroupHeader(key, groupCounts[key]));
+    }
+    tbody.appendChild(buildRow(r, activeCol));
+  }
+}
+
+function buildGroupHeader(key, count) {
+  const tr = document.createElement("tr");
+  let label;
+  switch (sortMode) {
+    case "priority":
+      tr.className = "group-header group-" + rankOf(key);
+      label = key.toUpperCase() + " (" + count + ")";
+      break;
+    case "category":
+      tr.className = "group-header group-furps";
+      label = key + " (" + count + ")";
+      break;
+    case "status":
+      tr.className = "group-header group-status-" + key.toLowerCase();
+      label = statusLabel(key).toUpperCase() + " (" + count + ")";
+      break;
+    default:
+      tr.className = "group-header";
+      label = key + " (" + count + ")";
+      break;
+  }
+  const td = document.createElement("td");
+  td.colSpan = visibleCount() + 1;
+  td.textContent = label;
+  tr.appendChild(td);
+  return tr;
+}
+
+function buildRow(r, activeCol) {
+  const tr = document.createElement("tr");
+  tr.className = "prio-" + rankOf(r.moscow);
+  tr.dataset.reqId = r.id;
+  if (r.status === "Done" || r.status === "Parked" || r.status === "Dropped") {
+    tr.classList.add("row-resolved");
+  }
+
+  const idCell = document.createElement("td");
+  idCell.textContent = reqLabel(r.seq);
+  maybeHidden(idCell, "id");
+  tr.appendChild(idCell);
+
+  tr.appendChild(maybeHidden(wrapCell(makeTextarea("description", r)), "description"));
+  tr.appendChild(maybeHidden(wrapCell(makeSelect("furps", FURPS, r, plainLabel)), "furps"));
+  tr.appendChild(maybeHidden(wrapCell(makeSelect("moscow", MOSCOW, r, plainLabel)), "moscow"));
+  tr.appendChild(maybeHidden(wrapCell(makeTextarea("source", r)), "source"));
+
+  const statusSelect = makeSelect("status", STATUS, r, statusLabel);
+  statusSelect.className = "status-" + r.status.toLowerCase();
+  tr.appendChild(maybeHidden(wrapCell(statusSelect), "status"));
+
+  tr.appendChild(maybeHidden(wrapCell(makeTextarea("notes", r)), "notes"));
+
+  tr.appendChild(maybeHidden(buildRefsCell(r), "refs"));
+
+  const whoCell = document.createElement("td");
+  whoCell.className = "small";
+  whoCell.textContent = r.updatedBy || "";
+  maybeHidden(whoCell, "updatedBy");
+  tr.appendChild(whoCell);
+
+  const ageCell = document.createElement("td");
+  ageCell.className = "age";
+  const level = staleness(r);
+  const days = daysSince(r.updatedAt);
+  if (level === -1) {
+    ageCell.textContent = "–";
+    ageCell.classList.add("age-none");
+    ageCell.title = t("ageTitleDone");
+  } else if (days === null) {
+    ageCell.textContent = "?";
+    ageCell.classList.add("age-none");
+    ageCell.title = t("ageTitleNoTs");
+  } else {
+    ageCell.textContent = days + "d";
+    if (level === 3) {
+      ageCell.classList.add("age-parked");
+      ageCell.title = t("ageTitleParked", { days: days });
+    } else if (level === 2) { ageCell.classList.add("age-urgent"); }
+    else if (level === 1) { ageCell.classList.add("age-warn"); }
+    else { ageCell.classList.add("age-fresh"); }
+    if (level !== 3) {
+      const d = (typeof r.updatedAt.toDate === "function") ? r.updatedAt.toDate() : new Date(r.updatedAt);
+      ageCell.title = t("ageTitleUpdated", { date: localDateString(d) });
+    }
+  }
+  maybeHidden(ageCell, "age");
+  tr.appendChild(ageCell);
+
+  const actionsCell = document.createElement("td");
+  actionsCell.className = "actions";
+
+  const linkBtn = document.createElement("button");
+  linkBtn.textContent = "🔗";
+  linkBtn.title = t("copyLinkTitle");
+  linkBtn.dataset.action = "copy-link";
+  linkBtn.dataset.id = r.id;
+  actionsCell.appendChild(linkBtn);
+
+  const delBtn = document.createElement("button");
+  delBtn.textContent = "✕";
+  delBtn.title = t("deleteReqTitle");
+  delBtn.dataset.action = "delete";
+  delBtn.dataset.id = r.id;
+  actionsCell.appendChild(delBtn);
+
+  tr.appendChild(actionsCell);
+
+  if (activeCol) {
+    const cell = tr.querySelector("td.col-" + activeCol);
+    if (cell) { cell.classList.add("sort-active"); }
+  }
+
+  return tr;
+}
+
+function wrapCell(element) {
+  const td = document.createElement("td");
+  td.appendChild(element);
+  return td;
+}
+
+function makeTextarea(field, r) {
+  const el = document.createElement("textarea");
+  el.value = r[field] || "";
+  el.dataset.field = field;
+  el.dataset.id = r.id;
+  return el;
+}
+
+function makeSelect(field, options, r, labelFor) {
+  const el = document.createElement("select");
+  for (let i = 0; i < options.length; i++) {
+    const opt = document.createElement("option");
+    opt.value = options[i];
+    opt.textContent = labelFor(options[i]);
+    el.appendChild(opt);
+  }
+  el.value = r[field];
+  el.dataset.field = field;
+  el.dataset.id = r.id;
+  return el;
+}
+
+function onSortChange() { sortMode = $("sortSelect").value; renderTable(); }
+function onFilterChange() { filterMoscow = $("filterSelect").value; renderTable(); }
+
+function onPytToggle() {
+  onlyPyt = !onlyPyt;
+  $("btnPyt").classList.toggle("primary", onlyPyt);
+  renderTable();
+}
+
+// ---------- Export ----------
+function timestampSuffix() {
+  const d = new Date();
+  const pad = function (n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) +
+         "-" + pad(d.getHours()) + pad(d.getMinutes());
+}
+
+function downloadFile(filename, text, mimeType) {
+  const blob = new Blob([text], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function compareBySeq(a, b) { return a.seq - b.seq; }
+
+function sortedBySeq() {
+  const copy = allReqs.slice();
+  copy.sort(compareBySeq);
+  return copy;
+}
+
+function csvCell(value) {
+  let text = String(value === undefined || value === null ? "" : value);
+  if (/^[=+@]/.test(text) || /^[\t\r]/.test(text) || (/^-/.test(text) && !/^-\d/.test(text))) {
+    text = "'" + text;
+  }
+  return '"' + text.replace(/"/g, '""') + '"';
+}
+
+function exportCsv() {
+  let csv = "\uFEFF" + [
+    t("csvId"), t("csvDescription"), t("csvFurps"), t("csvMoscow"),
+    t("csvSource"), t("csvStatus"), t("csvNotes"), t("csvRefs"),
+    t("csvUpdatedBy"), t("csvImportedId")
+  ].join(";") + "\r\n";
+  const rows = sortedBySeq();
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const refs = extractGithubRefs(r, defaultRepo);
+    const refsText = refs.map(function (x) { return x.raw; }).join(" ");
+    const cells = [
+      csvCell(reqLabel(r.seq)),
+      csvCell(r.description),
+      csvCell(r.furps),
+      csvCell(r.moscow),
+      csvCell(r.source),
+      csvCell(statusLabel(r.status)),
+      csvCell(r.notes),
+      csvCell(refsText),
+      csvCell(r.updatedBy),
+      csvCell(r.importedId || "")
+    ];
+    csv += cells.join(";") + "\r\n";
+  }
+  downloadFile("krav-" + timestampSuffix() + ".csv", csv, "text/csv;charset=utf-8");
+}
+
+function exportJson() {
+  const rows = sortedBySeq();
+  const output = [];
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const refs = extractGithubRefs(r, defaultRepo).map(function (x) {
+      return { raw: x.raw, url: x.url };
+    });
+    const obj = {
+      id: reqLabel(r.seq), description: r.description, furps: r.furps,
+      moscow: r.moscow, source: r.source, status: r.status,
+      notes: r.notes, updatedBy: r.updatedBy, references: refs
+    };
+    if (r.importedId) { obj.importedId = r.importedId; }
+    output.push(obj);
+  }
+  downloadFile("krav-" + timestampSuffix() + ".json",
+               JSON.stringify(output, null, 2), "application/json");
+}
+
+function mdCell(value) {
+  let text = String(value === undefined || value === null ? "" : value);
+  text = text.replace(/\r?\n/g, "<br>");
+  text = text.replace(/\|/g, "\\|");
+  text = linkifyGitHubRefs(text, String(projectData.defaultRepo || "").trim());
+  return text.trim();
+}
+
+function exportMarkdown() {
+  const rows = sortedBySeq();
+  const pad = function (n) { return String(n).padStart(2, "0"); };
+  const now = new Date();
+  const today = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) +
+                " " + pad(now.getHours()) + ":" + pad(now.getMinutes());
+  const projName = $("projectName").textContent;
+  const defaultRepo = String(projectData.defaultRepo || "").trim();
+
+  let md = "# " + projName + " — " + t("mdTitleSuffix") + "\n\n";
+  md += t("mdExported", { date: today }) + "\n\n";
+  md += t("mdIntro") + "\n\n";
+
+  const boardUrl = String(projectData.githubBoardUrl || "").trim();
+  if (boardUrl) {
+    md += t("mdScrumBoard", { url: boardUrl }) + "\n\n";
+  }
+  if (defaultRepo) {
+    md += t("mdRefsNote", { repo: defaultRepo }) + "\n\n";
+  }
+
+  const moscowOrder = ["Must", "Should", "Could", "Won't"];
+  const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
+  let grandTotal = 0;
+  md += "## " + t("mdSummary") + "\n\n";
+  md += "| " + t("mdColPriority") + " | " + t("mdColTotal") + " | " + t("mdColDone") +
+        " | " + t("mdColAgreed") + " | " + t("mdColProposed") + " | " + t("mdColParked") +
+        " | " + t("mdColDropped") + " |\n";
+  md += "| --- | --- | --- | --- | --- | --- | --- |\n";
+  for (let p = 0; p < moscowOrder.length; p++) {
+    let n = 0, done = 0, agreed = 0, proposed = 0, parked = 0, dropped = 0;
+    for (let i = 0; i < rows.length; i++) {
+      if (rows[i].moscow !== moscowOrder[p]) { continue; }
+      n++;
+      switch (rows[i].status) {
+        case "Done": done++; break;
+        case "Agreed": agreed++; break;
+        case "Proposed": proposed++; break;
+        case "Parked": parked++; break;
+        case "Dropped": dropped++; break;
+      }
+    }
+    grandTotal += n;
+    totals.done += done; totals.agreed += agreed; totals.proposed += proposed;
+    totals.parked += parked; totals.dropped += dropped;
+    md += "| " + moscowOrder[p] + " | " + n + " | " + done + " | " + agreed +
+          " | " + proposed + " | " + parked + " | " + dropped + " |\n";
+  }
+  md += "| **" + t("mdColGrandTotal") + "** | **" + grandTotal + "** | **" + totals.done +
+        "** | **" + totals.agreed + "** | **" + totals.proposed + "** | **" +
+        totals.parked + "** | **" + totals.dropped + "** |\n\n";
+
+  const FULL_HEADER = "| " + t("thId") + " | " + t("thDescription") + " | " +
+    t("thFurps") + " | " + t("thMoscow") + " | " + t("thSource") + " | " +
+    t("thStatus") + " | " + t("thNotes") + " | " + t("thRefs") + " | " +
+    t("thUpdatedBy") + " |";
+  const FULL_SEP = "| --- | --- | --- | --- | --- | --- | --- | --- | --- |";
+
+  function refsCellFor(r) {
+    const refs = extractGithubRefs(r, defaultRepo);
+    if (refs.length === 0) { return "–"; }
+    const parts = [];
+    for (let i = 0; i < refs.length; i++) {
+      const ref = refs[i];
+      if (ref.url) { parts.push("[" + ref.raw + "](" + ref.url + ")"); }
+      else { parts.push("`" + ref.raw + "`"); }
+    }
+    return parts.join("<br>");
+  }
+
+  function fullRow(r) {
+    return "| " + mdCell(reqLabel(r.seq)) +
+           " | " + mdCell(r.description) +
+           " | " + mdCell(r.furps) +
+           " | " + mdCell(r.moscow) +
+           " | " + mdCell(r.source) +
+           " | " + mdCell(statusLabel(r.status)) +
+           " | " + mdCell(r.notes) +
+           " | " + refsCellFor(r) +
+           " | " + mdCell(r.updatedBy) + " |";
+  }
+
+  function fullTable(group) {
+    let out = FULL_HEADER + "\n" + FULL_SEP + "\n";
+    for (let i = 0; i < group.length; i++) {
+      out += fullRow(group[i]) + "\n";
+    }
+    return out;
+  }
+
+  const activePriorities = ["Must", "Should", "Could"];
+  for (let p = 0; p < activePriorities.length; p++) {
+    const group = [];
+    for (let i = 0; i < rows.length; i++) {
+      const r = rows[i];
+      if (r.moscow === activePriorities[p] && r.status !== "Parked" && r.status !== "Dropped") {
+        group.push(r);
+      }
+    }
+    if (group.length === 0) { continue; }
+    md += "## " + activePriorities[p] + " (" + group.length + ")\n\n";
+    md += fullTable(group);
+    md += "\n";
+  }
+
+  const parked = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].status === "Parked") { parked.push(rows[i]); }
+  }
+  if (parked.length > 0) {
+    md += "## " + t("mdParkedHeading", { n: parked.length }) + "\n\n";
+    md += t("mdParkedIntro") + "\n\n";
+    md += fullTable(parked);
+    md += "\n";
+  }
+
+  const wonts = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.moscow === "Won't" && r.status !== "Parked" && r.status !== "Dropped") {
+      wonts.push(r);
+    }
+  }
+  if (wonts.length > 0) {
+    md += "## " + t("mdWontHeading", { n: wonts.length }) + "\n\n";
+    md += t("mdWontIntro") + "\n\n";
+    md += fullTable(wonts);
+    md += "\n";
+  }
+
+  const dropped = [];
+  for (let i = 0; i < rows.length; i++) {
+    if (rows[i].status === "Dropped") { dropped.push(rows[i]); }
+  }
+  if (dropped.length > 0) {
+    md += "## " + t("mdDroppedHeading", { n: dropped.length }) + "\n\n";
+    md += t("mdDroppedIntro") + "\n\n";
+    md += fullTable(dropped);
+    md += "\n";
+  }
+
+  // Skjult metadata-blok med stabile ID'er.
+  const idLines = [];
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    if (r.importedId) {
+      idLines.push(reqLabel(r.seq) + "=" + r.importedId);
+    }
+  }
+  if (idLines.length > 0) {
+    md += "\n<!-- kravmatrix-stable-ids\n";
+    md += idLines.join("\n") + "\n";
+    md += "-->\n";
+  }
+
+  downloadFile("krav-" + timestampSuffix() + ".md", md, "text/markdown;charset=utf-8");
+}
+
+async function copyShareLink() {
+  if (!currentPid) { return; }
+
+  const token = makeInviteToken();
+  const hours = Math.max(1, Math.min(168, Number(projectData.defaultInviteHours) || DEFAULT_INVITE_HOURS));
+  const expiresAt = Timestamp.fromMillis(Date.now() + hours * 3600 * 1000);
+
+  try {
+    await setDoc(doc(db, "invites", token), {
+      pid: currentPid,
+      projectName: projectData.name || "",
+      token: token,
+      expiresAt: expiresAt,
+      createdBy: currentUser.uid,
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    showMessage(t("errInviteCreate", { code: err.code || err.message }));
+    return;
+  }
+
+  const link = location.origin + location.pathname + "#invite=" + token;
+  try {
+    await navigator.clipboard.writeText(link);
+    showMessage(t("shareInviteCopied", { hours: hours }), true);
+  } catch (err) {
+    prompt(t("shareLinkPrompt"), link);
+  }
+}
+
+// ---------- Import: parse helpers ----------
+function normalizeKey(text) {
+  return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
+}
+
+function fieldFromHeader(header) {
+  const key = normalizeKey(header);
+  switch (key) {
+    case "requirementid":
+    case "reqid":
+    case "kravid":
+    case "id":
+    case "fileid":
+      return "fileId";
+    case "importedid":
+    case "importid":
+    case "importeretid":
+    case "stabiltid":
+    case "stableid":
+      return "importedId";
+    case "requirementdescription":
+    case "description":
+    case "requirement":
+    case "krav":
+    case "kravbeskrivelse":
+      return "description";
+    case "furps":
+    case "furpscategory":
+    case "category":
+    case "kategori":
+      return "furps";
+    case "moscow":
+    case "moscowpriority":
+    case "priority":
+    case "prioritet":
+    case "oprindeligprioritet":
+      return "moscow";
+    case "sourcelocation":
+    case "kildeplacering":
+      return "sourceLocation";
+    case "acceptancecriteria":
+    case "acceptance":
+    case "acceptkriterier":
+      return "acceptance";
+    case "status":
+      return "status";
+    case "additionalnotes":
+    case "notes":
+    case "note":
+    case "noter":
+    case "evt":
+    case "begrundelse":
+    case "reason":
+      return "notes";
+    case "referencer":
+    case "references":
+      return "references";
+    default:
+      if (key.indexOf("source") === 0 || key.indexOf("kilde") === 0) { return "source"; }
+      return "";
+  }
+}
+
+function countChar(text, ch) {
+  let n = 0;
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === ch) { n++; }
+  }
+  return n;
+}
+
+function detectDelimiter(text) {
+  const firstLine = text.split("\n")[0];
+  let best = ";";
+  let bestCount = countChar(firstLine, ";");
+  const commas = countChar(firstLine, ",");
+  const tabs = countChar(firstLine, "\t");
+  if (commas > bestCount) { best = ","; bestCount = commas; }
+  if (tabs > bestCount) { best = "\t"; }
+  return best;
+}
+
+function parseCsv(text, delimiter) {
+  const table = [];
+  let row = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') { cell += '"'; i++; }
+        else { inQuotes = false; }
+      } else { cell += ch; }
+    } else {
+      switch (ch) {
+        case '"': inQuotes = true; break;
+        case delimiter: row.push(cell); cell = ""; break;
+        case "\n": row.push(cell); table.push(row); row = []; cell = ""; break;
+        case "\r": break;
+        default: cell += ch; break;
+      }
+    }
+  }
+  if (cell !== "" || row.length > 0) { row.push(cell); table.push(row); }
+  return table;
+}
+
+function csvToObjects(text) {
+  const table = parseCsv(text, detectDelimiter(text));
+  if (table.length < 2) { throw new Error(t("importErrCsvNoRows")); }
+  const fields = [];
+  for (let c = 0; c < table[0].length; c++) { fields.push(fieldFromHeader(table[0][c])); }
+  if (fields.indexOf("description") < 0) {
+    throw new Error(t("importErrCsvNoDesc"));
+  }
+  const objects = [];
+  for (let r = 1; r < table.length; r++) {
+    const obj = {};
+    let hasContent = false;
+    for (let c = 0; c < fields.length; c++) {
+      if (fields[c] === "") { continue; }
+      if (fields[c] === "references") { continue; }
+      let value = table[r][c];
+      if (value === undefined) { value = ""; }
+      value = value.trim();
+      obj[fields[c]] = value;
+      if (value !== "") { hasContent = true; }
+    }
+    if (hasContent) { objects.push(obj); }
+  }
+  return objects;
+}
+
+function jsonToObjects(text) {
+  const data = JSON.parse(text);
+  if (!Array.isArray(data)) { throw new Error(t("importErrJsonNotList")); }
+  const objects = [];
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    if (item === null || typeof item !== "object") { continue; }
+    const obj = {};
+    const keys = Object.keys(item);
+    for (let k = 0; k < keys.length; k++) {
+      const field = fieldFromHeader(keys[k]);
+      if (field === "") { continue; }
+      if (field === "references") { continue; }
+      let value = item[keys[k]];
+      if (value === null || value === undefined) { value = ""; }
+      obj[field] = String(value).trim();
+    }
+    objects.push(obj);
+  }
+  return objects;
+}
+
+function textToObjects(text) {
+  const lines = text.split(/\r?\n/);
+  const objects = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].replace(/^\s*([-*•]|\d+[.)])\s+/, "").trim();
+    if (line !== "") { objects.push({ description: line }); }
+  }
+  return objects;
+}
+
+function parseMarkdownStableIds(text) {
+  const map = {};
+  const match = text.match(/<!--\s*kravmatrix-stable-ids\s*\n([\s\S]*?)-->/i);
+  if (!match) { return map; }
+  const lines = match[1].split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i].trim();
+    if (!trimmed) { continue; }
+    const eq = trimmed.indexOf("=");
+    if (eq < 0) { continue; }
+    const key = trimmed.slice(0, eq).trim();
+    const val = trimmed.slice(eq + 1).trim();
+    if (!key || !val) { continue; }
+    const seqMatch = key.match(/(\d+)/);
+    if (seqMatch) { map[String(parseInt(seqMatch[1], 10))] = val; }
+  }
+  return map;
+}
+
+function splitMarkdownRow(inner) {
+  const cells = [];
+  let cur = "";
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (ch === "\\" && inner[i + 1] === "|") { cur += "|"; i++; continue; }
+    if (ch === "|") { cells.push(cur); cur = ""; continue; }
+    cur += ch;
+  }
+  cells.push(cur);
+  return cells;
+}
+
+function isMarkdownSeparatorRow(cells) {
+  if (cells.length === 0) { return false; }
+  for (let i = 0; i < cells.length; i++) {
+    if (!/^:?-{3,}:?$/.test(cells[i].trim())) { return false; }
+  }
+  return true;
+}
+
+function markdownToObjects(text) {
+  const stableIds = parseMarkdownStableIds(text);
+  text = text.replace(/<!--\s*kravmatrix-stable-ids[\s\S]*?-->\s*$/i, "");
+
+  const lines = text.split(/\r?\n/);
+  const objects = [];
+  let currentSection = null;
+  let headerCols = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+
+    const headingMatch = line.match(/^##\s+(.+?)\s*$/);
+    if (headingMatch) {
+      const name = headingMatch[1].trim();
+      if (name === "Oversigt" || name === "Summary") { currentSection = "Oversigt"; }
+      else if (name.indexOf("Must") === 0) { currentSection = "Must"; }
+      else if (name.indexOf("Should") === 0) { currentSection = "Should"; }
+      else if (name.indexOf("Could") === 0) { currentSection = "Could"; }
+      else if (name.indexOf("Won't") === 0 || name.indexOf("Won") === 0) { currentSection = "Won't"; }
+      else if (name.indexOf("PYT") === 0) { currentSection = "PYT"; }
+      else if (name.indexOf("Droppede") === 0 || name.indexOf("Dropped") === 0) { currentSection = "Droppede"; }
+      else { currentSection = null; }
+      headerCols = null;
+      continue;
+    }
+
+    if (currentSection === null || currentSection === "Oversigt") { continue; }
+    if (line.length < 2 || line[0] !== "|") { continue; }
+    const inner = line.slice(1, line.length - 1);
+    const cells = splitMarkdownRow(inner);
+    for (let c = 0; c < cells.length; c++) { cells[c] = cells[c].trim(); }
+
+    if (isMarkdownSeparatorRow(cells)) { continue; }
+
+    if (headerCols === null) {
+      headerCols = [];
+      for (let c = 0; c < cells.length; c++) { headerCols.push(fieldFromHeader(cells[c])); }
+      continue;
+    }
+
+    if (cells.length < 2) { continue; }
+    const obj = {};
+    for (let c = 0; c < headerCols.length && c < cells.length; c++) {
+      const field = headerCols[c];
+      if (field === "") { continue; }
+      if (field === "references") { continue; }
+      let value = cells[c].replace(/<br\s*\/?>/gi, "\n");
+      value = value.replace(/\[([^\]]+)\]\(https:\/\/github\.com\/[^)]+\)/g, "$1");
+      obj[field] = value;
+    }
+    if (!obj.moscow && (currentSection === "Must" || currentSection === "Should"
+                        || currentSection === "Could" || currentSection === "Won't")) {
+      obj.moscow = currentSection;
+    }
+    if (!obj.status) {
+      if (currentSection === "PYT") { obj.status = "Parked"; }
+      else if (currentSection === "Droppede") { obj.status = "Dropped"; }
+    }
+
+    if (obj.fileId) {
+      const seqMatch = String(obj.fileId).match(/(\d+)/);
+      if (seqMatch) {
+        const seqKey = String(parseInt(seqMatch[1], 10));
+        if (stableIds[seqKey]) { obj.importedId = stableIds[seqKey]; }
+      }
+    }
+
+    const hasDescription = obj.description && String(obj.description).trim() !== "";
+    const hasFileId = obj.fileId && String(obj.fileId).trim() !== "";
+    const hasImportedId = obj.importedId && String(obj.importedId).trim() !== "";
+    if (!hasDescription && !hasFileId && !hasImportedId) { continue; }
+
+    objects.push(obj);
+  }
+
+  const hasMarkdownStructure = /^\s*\|/m.test(text) || /^#{1,6}\s/m.test(text);
+  if (objects.length === 0 && !hasMarkdownStructure) {
+    return textToObjects(text);
+  }
+
+  console.log("[import] markdownToObjects: parsed", objects.length, "rows from markdown");
+  return objects;
+}
+
+function cleanFurps(value) {
+  switch (value.trim().toUpperCase()) {
+    case "F": case "FUNCTIONALITY": return "F";
+    case "U": case "USABILITY": return "U";
+    case "R": case "RELIABILITY": return "R";
+    case "P": case "PERFORMANCE": return "P";
+    case "S": case "SUPPORTABILITY": return "S";
+    case "+": case "CONSTRAINT": case "CONSTRAINTS": return "+";
+    default: return "";
+  }
+}
+
+function cleanMoscow(value) {
+  switch (value.trim().toLowerCase().replace(/’/g, "'")) {
+    case "must": case "must have": case "m": return "Must";
+    case "should": case "should have": case "s": return "Should";
+    case "could": case "could have": case "c": return "Could";
+    case "won't": case "wont": case "won't have": case "wont have":
+    case "won't have (this release)": case "w": return "Won't";
+    default: return "";
+  }
+}
+
+function cleanStatus(value) {
+  switch (value.trim().toLowerCase()) {
+    case "proposed": case "under review": case "draft": case "foreslået": return "Proposed";
+    case "agreed": case "approved": case "aftalt": return "Agreed";
+    case "done": case "implemented": case "verified": case "færdig": return "Done";
+    case "parked": case "parkeret": case "pyt":
+    case "park your treasures": case "parkeret (pyt)": return "Parked";
+    case "dropped": case "rejected": case "droppet": return "Dropped";
+    default: return "";
+  }
+}
+
+function stripFormulaProtection(value) {
+  if (typeof value !== "string") { return value; }
+  if (value.length >= 2 && value[0] === "'") {
+    const rest = value.slice(1);
+    if (/^[=+@\t\r]/.test(rest) || (/^-/.test(rest) && !/^-\d/.test(rest))) {
+      return rest;
+    }
+  }
+  return value;
+}
+
+function buildImportRecords(objects) {
+  const records = [];
+  let skipped = 0;
+  let unrecognised = 0;
+
+  for (let i = 0; i < objects.length; i++) {
+    const o = objects[i];
+    const description = stripFormulaProtection((o.description || "").trim());
+    const fileId = (o.fileId || "").trim();
+    const extId = (o.importedId || "").trim();
+
+    if (description === "" && fileId === "" && extId === "") {
+      skipped++; continue;
+    }
+
+    const rec = emptyRecord();
+    rec.description = description;
+
+    const fileIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(fileId);
+    const extIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(extId);
+
+    if (extId !== "" && !extIdIsOwnFormat) {
+      rec.__importedId = extId;
+    } else if (fileId !== "" && !fileIdIsOwnFormat) {
+      rec.__importedId = fileId;
+    } else {
+      rec.__importedId = "";
+    }
+
+    rec.__desiredSeq = parseImportedSeq(fileId);
+    if (rec.__desiredSeq === null) { rec.__desiredSeq = parseImportedSeq(extId); }
+
+    const furpsRaw = o.furps || "";
+    const furps = cleanFurps(furpsRaw);
+    if (furps !== "") { rec.furps = furps; }
+    else if (furpsRaw.trim() !== "") { unrecognised++; }
+
+    const moscowRaw = o.moscow || "";
+    const moscow = cleanMoscow(moscowRaw);
+    if (moscow !== "") { rec.moscow = moscow; }
+    else if (moscowRaw.trim() !== "") { unrecognised++; }
+
+    const statusRaw = o.status || "";
+    const status = cleanStatus(statusRaw);
+    if (status !== "") { rec.status = status; }
+    else if (statusRaw.trim() !== "") { unrecognised++; }
+
+    let source = stripFormulaProtection((o.source || "").trim());
+    const location = (o.sourceLocation || "").trim();
+    if (location !== "") {
+      source = (source !== "") ? (source + " (" + location + ")") : location;
+    }
+    rec.source = source;
+
+    let notes = stripFormulaProtection((o.notes || "").trim());
+
+    const acceptance = (o.acceptance || "").trim();
+    if (acceptance !== "") {
+      const marker = "[Acceptance: " + acceptance + "]";
+      if (notes.indexOf(marker) < 0) {
+        notes = (notes + " " + marker).trim();
+      }
+    }
+
+    notes = stripImportedIdMarker(notes);
+
+    rec.notes = notes;
+
+    records.push(rec);
+  }
+  console.log("[import] buildImportRecords:", records.length,
+              "records,", skipped, "skipped,", unrecognised, "unrecognised values");
+  return { records: records, skipped: skipped, unrecognised: unrecognised };
+}
+
+// ---------- Import diff + dublet-detektion ----------
+function parseImportedSeq(importedId) {
+  if (!importedId) { return null; }
+  const m = String(importedId).match(/REQ-?\s*0*(\d+)/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function extractImportedIdFromNotes(notes) {
+  if (!notes) { return ""; }
+  const m = String(notes).match(/\[Imported ID:\s*([^\]]+)\]/);
+  return m ? m[1].trim() : "";
+}
+
+function stripImportedIdMarker(notes) {
+  if (!notes) { return ""; }
+  return String(notes)
+    .replace(/\[Imported ID:\s*[^\]]+\]\s*/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+function liveImportedId(r) {
+  if (r.importedId) { return String(r.importedId).trim(); }
+  return extractImportedIdFromNotes(r.notes);
+}
+
+function normalizeDescriptionForMatch(text) {
+  return String(text || "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function formatTs(ts) {
+  if (!ts) { return ""; }
+  const d = (typeof ts.toDate === "function") ? ts.toDate() : new Date(ts);
+  if (isNaN(d.getTime())) { return ""; }
+  return localDateString(d);
+}
+
+function classifyImportRows(records, liveReqs, tombstones) {
+  const liveByImportedId = {};
+  const liveBySeq = {};
+  for (let i = 0; i < liveReqs.length; i++) {
+    const r = liveReqs[i];
+    const iid = liveImportedId(r);
+    if (iid !== "") { liveByImportedId[iid] = r; }
+    if (typeof r.seq === "number") { liveBySeq[r.seq] = r; }
+  }
+  const tbByImportedId = {};
+  const tbBySeq = {};
+  for (let i = 0; i < (tombstones || []).length; i++) {
+    const tb = tombstones[i];
+    if (tb.importedId) { tbByImportedId[tb.importedId] = tb; }
+    if (typeof tb.seq === "number") { tbBySeq[tb.seq] = tb; }
+  }
+
+  const fields = ["description", "furps", "moscow", "source", "status", "notes"];
+  const identicalSeqs = new Set();
+  const duplicateIndices = new Set();
+  const updates = [];
+  const restores = [];
+  const newRecords = [];
+  const matchedLiveIds = new Set();
+  const seenFileImportedIds = new Set();
+  const usedTombstoneKeys = new Set();
+
+  function markTombstoneUsed(tb) {
+    if (!tb) { return; }
+    if (tb.id) { usedTombstoneKeys.add("id:" + tb.id); }
+    if (tb.importedId) { usedTombstoneKeys.add("iid:" + tb.importedId); }
+    if (typeof tb.seq === "number") { usedTombstoneKeys.add("seq:" + tb.seq); }
+  }
+  function isTombstoneUsed(tb) {
+    if (!tb) { return false; }
+    if (tb.id && usedTombstoneKeys.has("id:" + tb.id)) { return true; }
+    if (tb.importedId && usedTombstoneKeys.has("iid:" + tb.importedId)) { return true; }
+    if (typeof tb.seq === "number" && usedTombstoneKeys.has("seq:" + tb.seq)) { return true; }
+    return false;
+  }
+
+  function compareFields(rec, live) {
+    const changes = [];
+    for (let f = 0; f < fields.length; f++) {
+      const fld = fields[f];
+      const fileVal = String(rec[fld] || "").trim();
+      const liveVal = String(live[fld] || "").trim();
+      if (fld === "notes") {
+        const fileClean = stripImportedIdMarker(fileVal);
+        const liveClean = stripImportedIdMarker(liveVal);
+        if (fileClean !== liveClean) {
+          changes.push({ field: fld, fileVal: fileClean, liveVal: liveClean });
+        }
+        continue;
+      }
+      if (fileVal !== liveVal) {
+        changes.push({ field: fld, fileVal: fileVal, liveVal: liveVal });
+      }
+    }
+    return changes;
+  }
+
+  for (let i = 0; i < records.length; i++) {
+    const rec = records[i];
+    const iid = rec.__importedId || "";
+
+    let live = null;
+    let tomb = null;
+
+    if (iid !== "" && !seenFileImportedIds.has(iid)) {
+      if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
+        live = liveByImportedId[iid];
+      } else if (tbByImportedId[iid] && !isTombstoneUsed(tbByImportedId[iid])) {
+        tomb = tbByImportedId[iid];
+      }
+    }
+    if (iid !== "") { seenFileImportedIds.add(iid); }
+
+    if (!live && !tomb) {
+      const seq = rec.__desiredSeq;
+      if (seq !== null) {
+        const recNorm = normalizeDescriptionForMatch(rec.description);
+
+        if (recNorm !== "") {
+          const liveCand = liveBySeq[seq];
+          if (liveCand && !matchedLiveIds.has(liveCand.id)) {
+            const liveNorm = normalizeDescriptionForMatch(liveCand.description);
+            if (recNorm === liveNorm) { live = liveCand; }
+          }
+        }
+
+        if (!live) {
+          const tbCand = tbBySeq[seq];
+          if (tbCand && !isTombstoneUsed(tbCand)) {
+            const tbNorm = normalizeDescriptionForMatch(tbCand.description);
+            const tbDescExists = tbNorm !== "";
+            const descMatch = tbDescExists &&
+              (recNorm === tbNorm || (recNorm !== "" && recNorm.indexOf(tbNorm) === 0));
+
+            if (!tbDescExists || descMatch) {
+              tomb = tbCand;
+            } else {
+              console.warn(
+                "[import] Tombstone seq=" + seq +
+                " matcher ikke filens beskrivelse. Gendanner alligevel.\n" +
+                "  Fil:       \"" + rec.description.slice(0, 100) + "\"\n" +
+                "  Tombstone: \"" + String(tbCand.description).slice(0, 100) + "\""
+              );
+              tomb = tbCand;
+            }
+          }
+        }
+      }
+    }
+
+    if (!live && !tomb) {
+      const key = normalizeDescriptionForMatch(rec.description);
+      if (key !== "") {
+        for (let k = 0; k < liveReqs.length; k++) {
+          const cand = liveReqs[k];
+          if (matchedLiveIds.has(cand.id)) { continue; }
+          if (normalizeDescriptionForMatch(cand.description) === key) {
+            live = cand;
+            break;
+          }
+        }
+        if (!live) {
+          let seenBefore = false;
+          for (let j = 0; j < i; j++) {
+            if (normalizeDescriptionForMatch(records[j].description) === key) {
+              seenBefore = true; break;
+            }
+          }
+          if (seenBefore) { duplicateIndices.add(i); continue; }
+        }
+      }
+    }
+
+    if (live) {
+      matchedLiveIds.add(live.id);
+      const changes = compareFields(rec, live);
+      if (changes.length === 0) {
+        identicalSeqs.add(live.seq);
+      } else {
+        updates.push({
+          liveId: live.id,
+          liveSeq: live.seq,
+          changes: changes,
+          rec: rec
+        });
+      }
+    } else if (tomb) {
+      markTombstoneUsed(tomb);
+      restores.push({ tombstone: tomb, rec: rec });
+    } else {
+      newRecords.push(rec);
+    }
+  }
+
+  console.log("[import] classifyImportRows:",
+              "updates=" + updates.length,
+              "restores=" + restores.length,
+              "new=" + newRecords.length,
+              "identical=" + identicalSeqs.size,
+              "dupes=" + duplicateIndices.size);
+  return {
+    identicalSeqs: identicalSeqs,
+    duplicateIndices: duplicateIndices,
+    updates: updates,
+    restores: restores,
+    newRecords: newRecords
+  };
+}
+
+function updateImportDiffDialogText() {
+  $("importDiffTitle").textContent = t("importDiffTitle");
+  $("importDiffIntro").textContent = t("importDiffIntro");
+  $("btnImportForce").textContent = t("importDiffForce");
+  $("btnImportUpdate").textContent = t("importDiffUpdateExisting");
+  $("btnImportCreateNew").textContent = t("importDiffCreateNew");
+  $("btnImportCancel").textContent = t("importDiffCancel");
+  const list = $("importDiffList");
+  if (list.dataset.diffCount) {
+    $("importDiffSummary").textContent =
+      t("importDiffSummary", { n: list.dataset.diffCount });
+  }
+  const dupEl = $("importDiffDuplicates");
+  const n = parseInt(list.dataset.dupeCount || "0", 10);
+  if (n > 0) {
+    dupEl.textContent = t("importDiffDuplicates", { n: n });
+    dupEl.style.display = "";
+  } else {
+    dupEl.textContent = "";
+    dupEl.style.display = "none";
+  }
+  const resEl = $("importDiffRestores");
+  const r = parseInt(list.dataset.restoreCount || "0", 10);
+  if (r > 0) {
+    resEl.textContent = t("importDiffRestores", { n: r });
+    resEl.style.display = "";
+  } else {
+    resEl.textContent = "";
+    resEl.style.display = "none";
+  }
+  const idEl = $("importDiffIdentical");
+  const ident = parseInt(list.dataset.identicalCount || "0", 10);
+  if (ident > 0) {
+    idEl.textContent = t("importDiffIdentical", { n: ident });
+    idEl.style.display = "";
+  } else {
+    idEl.textContent = "";
+    idEl.style.display = "none";
+  }
+}
+
+function openImportDiffDialog(updates, restores, duplicateCount, identicalCount) {
+  pendingImportUpdates = updates;
+  pendingImportRestores = restores;
+  const list = $("importDiffList");
+  list.innerHTML = "";
+  list.dataset.diffCount = String(updates.length);
+  list.dataset.restoreCount = String((restores || []).length);
+  list.dataset.dupeCount = String(duplicateCount || 0);
+  list.dataset.identicalCount = String(identicalCount || 0);
+  const fieldLabels = {
+    description: "colDescription",
+    furps: "colFurps",
+    moscow: "colMoscow",
+    source: "colSource",
+    status: "colStatus",
+    notes: "colNotes"
+  };
+  for (let i = 0; i < updates.length; i++) {
+    const u = updates[i];
+    const wrap = document.createElement("div");
+    wrap.className = "diff-item";
+
+    const h = document.createElement("h5");
+    const left = document.createElement("span");
+    left.textContent = reqLabel(u.liveSeq);
+    const right = document.createElement("span");
+    right.className = "ts";
+    let liveReq = null;
+    for (let k = 0; k < allReqs.length; k++) {
+      if (allReqs[k].id === u.liveId) { liveReq = allReqs[k]; break; }
+    }
+    right.textContent = (liveReq && liveReq.updatedAt)
+      ? t("importDiffLastEdited", { date: formatTs(liveReq.updatedAt) })
+      : "";
+    h.appendChild(left);
+    h.appendChild(right);
+    wrap.appendChild(h);
+
+    const table = document.createElement("table");
+    table.className = "diff-table";
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+    const thF = document.createElement("th");
+    thF.textContent = t("importDiffFld");
+    const thOld = document.createElement("th");
+    thOld.textContent = t("importDiffFile");
+    const thNew = document.createElement("th");
+    thNew.textContent = t("importDiffOnline");
+    headRow.appendChild(thF);
+    headRow.appendChild(thOld);
+    headRow.appendChild(thNew);
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    for (let c = 0; c < u.changes.length; c++) {
+      const ch = u.changes[c];
+      const tr = document.createElement("tr");
+      const tdF = document.createElement("td");
+      tdF.className = "fld";
+      const labelKey = fieldLabels[ch.field] || ch.field;
+      tdF.textContent = t(labelKey);
+      const tdOld = document.createElement("td");
+      tdOld.className = "old";
+      tdOld.textContent = ch.fileVal || "–";
+      const tdNew = document.createElement("td");
+      tdNew.className = "new";
+      tdNew.textContent = ch.liveVal || "–";
+      tr.appendChild(tdF);
+      tr.appendChild(tdOld);
+      tr.appendChild(tdNew);
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+
+    list.appendChild(wrap);
+  }
+  updateImportDiffDialogText();
+  $("importDiffDialog").classList.remove("hidden");
+}
+
+function closeImportDiffDialog() {
+  pendingImportUpdates = null;
+  pendingImportRestores = null;
+  pendingImportNewRecords = null;
+  pendingImportAllRecords = null;
+  pendingImportSkippedDupes = 0;
+  pendingImportUsedSeqs = null;
+  $("importDiffDialog").classList.add("hidden");
+}
+
+async function regenerateCollidingImportedIds(records) {
+  let liveReqs = [];
+  try {
+    const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
+    snap.forEach(function (d) { liveReqs.push(Object.assign({ id: d.id }, d.data())); });
+  } catch (err) {
+    console.warn("Could not fetch live reqs:", err);
+    return;
+  }
+  const liveIds = new Set();
+  for (let i = 0; i < liveReqs.length; i++) {
+    const iid = liveImportedId(liveReqs[i]);
+    if (iid) { liveIds.add(iid); }
+  }
+  const tombstoneIds = new Set();
+  for (let i = 0; i < allTombstones.length; i++) {
+    if (allTombstones[i].importedId) { tombstoneIds.add(allTombstones[i].importedId); }
+  }
+  const seenInFile = new Set();
+  for (let i = 0; i < records.length; i++) {
+    const iid = records[i].__importedId || "";
+    if (iid === "") { continue; }
+    if (liveIds.has(iid) || tombstoneIds.has(iid) || seenInFile.has(iid)) {
+      records[i].__importedId = makeImportedId();
+    }
+    seenInFile.add(records[i].__importedId);
+  }
+}
+
+async function onImportForce() {
+  const records = pendingImportAllRecords;
+  const skipped = pendingImportSkippedDupes;
+  const usedSeqs = pendingImportUsedSeqs;
+  closeImportDiffDialog();
+  if (!records || records.length === 0) { return; }
+  await regenerateCollidingImportedIds(records);
+  await importRecords(records, skipped, usedSeqs);
+}
+
+async function onImportUpdate() {
+  const updates = pendingImportUpdates;
+  const restores = pendingImportRestores;
+  const newRecords = pendingImportNewRecords;
+  const skipped = pendingImportSkippedDupes;
+  const usedSeqs = pendingImportUsedSeqs;
+  closeImportDiffDialog();
+  if (!updates) { return; }
+  await applyImportUpdates(updates, restores || [], newRecords || [], skipped, usedSeqs);
+}
+
+async function onImportAsNewProject() {
+  const records = pendingImportAllRecords;
+  if (!records || records.length === 0) { return; }
+  const name = prompt(t("importDiffNewProjectName"));
+  if (!name || !name.trim()) { return; }
+  closeImportDiffDialog();
+  await createProjectAndImport(name.trim(), records);
+}
+
+async function createProjectAndImport(name, records) {
+  const pid = makeProjectId(name);
+  try {
+    await setDoc(doc(db, "projects", pid), {
+      name: name,
+      ownerUid: currentUser.uid,
+      counter: 0,
+      githubBoardUrl: "",
+      defaultRepo: "",
+      staleWarnDays: DEFAULT_STALE_WARN_DAYS,
+      staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
+      defaultInviteHours: DEFAULT_INVITE_HOURS,
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    showMessage(t("errCreate", { code: err.code || err.message }));
+    return;
+  }
+  await openProject(pid);
+  if (currentPid !== pid) { return; }
+  await importRecords(records, 0, new Set());
+}
+
+// ---------- Import flow ----------
+function onImportClick() { $("importFile").click(); }
+
+async function onImportFileChosen(event) {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file) { return; }
+  showMessage("");
+
+  let text;
+  try { text = await file.text(); }
+  catch (err) { showMessage(t("importOpenError")); return; }
+  text = text.replace(/^\uFEFF/, "");
+
+  const dotPos = file.name.lastIndexOf(".");
+  const ext = dotPos >= 0 ? file.name.slice(dotPos + 1).toLowerCase() : "";
+
+  let objects = [];
+  try {
+    switch (ext) {
+      case "json": objects = jsonToObjects(text); break;
+      case "csv": objects = csvToObjects(text); break;
+      case "txt": objects = textToObjects(text); break;
+      case "md": case "markdown": objects = markdownToObjects(text); break;
+      default:
+        showMessage(t("importUnknownType"));
+        return;
+    }
+  } catch (err) {
+    showMessage(t("importReadError", { msg: err.message }));
+    return;
+  }
+  console.log("[import] file parsed:", objects.length, "objects (raw)");
+
+  const built = buildImportRecords(objects);
+  if (built.records.length === 0) {
+    showMessage(t("importEmpty"));
+    return;
+  }
+  if (built.records.length > MAX_IMPORT_ROWS) {
+    showMessage(t("importTooMany", { n: built.records.length, max: MAX_IMPORT_ROWS }));
+    return;
+  }
+
+  let liveReqs = [];
+  try {
+    const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
+    snap.forEach(function (d) { liveReqs.push(Object.assign({ id: d.id }, d.data())); });
+  } catch (err) {
+    console.warn("Could not fetch live requirements for diff:", err);
+  }
+
+  let tombstones = [];
+  try {
+    const snap = await getDocs(collection(db, "projects", currentPid, "tombstones"));
+    snap.forEach(function (d) { tombstones.push(Object.assign({ id: d.id }, d.data())); });
+  } catch (err) {
+    console.warn("Could not fetch tombstones for diff:", err);
+  }
+
+  const usedSeqs = new Set();
+  for (let i = 0; i < liveReqs.length; i++) {
+    if (typeof liveReqs[i].seq === "number") { usedSeqs.add(liveReqs[i].seq); }
+  }
+  for (let i = 0; i < tombstones.length; i++) {
+    if (typeof tombstones[i].seq === "number") { usedSeqs.add(tombstones[i].seq); }
+  }
+
+  const classified = classifyImportRows(built.records, liveReqs, tombstones);
+
+  const allNonDupes = [];
+  for (let i = 0; i < classified.updates.length; i++) {
+    allNonDupes.push(classified.updates[i].rec);
+  }
+  for (let i = 0; i < classified.restores.length; i++) {
+    allNonDupes.push(classified.restores[i].rec);
+  }
+  for (let i = 0; i < classified.newRecords.length; i++) {
+    allNonDupes.push(classified.newRecords[i]);
+  }
+  const skippedDuplicates = built.records.length - allNonDupes.length;
+
+  if (allNonDupes.length === 0) {
+    showMessage(t("importAllDuplicates", { n: skippedDuplicates }), true);
+    return;
+  }
+
+  pendingImportAllRecords = allNonDupes;
+  pendingImportNewRecords = classified.newRecords;
+  pendingImportRestores = classified.restores;
+  pendingImportSkippedDupes = skippedDuplicates;
+  pendingImportUsedSeqs = usedSeqs;
+
+  if (classified.updates.length > 0
+      || classified.restores.length > 0
+      || classified.identicalSeqs.size > 0) {
+    openImportDiffDialog(
+      classified.updates,
+      classified.restores,
+      skippedDuplicates,
+      classified.identicalSeqs.size
+    );
+    return;
+  }
+
+  let question = t("importConfirmHead", { n: classified.newRecords.length });
+  if (built.skipped > 0) {
+    question += t("importConfirmSkipped", { n: built.skipped });
+  }
+  if (skippedDuplicates > 0) {
+    question += t("importConfirmDuplicates", { n: skippedDuplicates });
+  }
+  if (built.unrecognised > 0) {
+    question += t("importConfirmUnrecognised", { n: built.unrecognised });
+  }
+  if (text.indexOf("\uFFFD") >= 0) {
+    question += t("importConfirmEncoding");
+  }
+  if (!confirm(question)) {
+    pendingImportAllRecords = null;
+    pendingImportNewRecords = null;
+    pendingImportRestores = null;
+    pendingImportSkippedDupes = 0;
+    pendingImportUsedSeqs = null;
+    return;
+  }
+
+  const restores = classified.restores;
+  const toInsert = classified.newRecords;
+  const skipped = skippedDuplicates;
+  const seqs = usedSeqs;
+  pendingImportAllRecords = null;
+  pendingImportNewRecords = null;
+  pendingImportRestores = null;
+  pendingImportSkippedDupes = 0;
+  pendingImportUsedSeqs = null;
+  await applyImportUpdates([], restores, toInsert, skipped, seqs);
+}
+
+async function restoreFromTombstone(tombstone, rec) {
+  await runTransaction(db, async function (tx) {
+    if (tombstone.id) {
+      const tbRef = doc(db, "projects", currentPid, "tombstones", tombstone.id);
+      const tbSnap = await tx.get(tbRef);
+      if (tbSnap.exists()) { tx.delete(tbRef); }
+    }
+    const newRef = doc(collection(db, "projects", currentPid, "requirements"));
+    tx.set(newRef, {
+      seq: tombstone.seq,
+      description: rec.description,
+      furps: rec.furps,
+      moscow: rec.moscow,
+      source: rec.source,
+      status: rec.status,
+      notes: stripImportedIdMarker(rec.notes),
+      importedId: rec.__importedId || tombstone.importedId,
+      updatedBy: userLabel(),
+      updatedAt: serverTimestamp()
+    });
+  });
+}
+
+async function importRecords(records, skippedDuplicates, usedSeqs) {
+  const skipped = skippedDuplicates || 0;
+  let done = 0;
+  const taken = usedSeqs ? new Set(usedSeqs) : new Set();
+  try {
+    for (let start = 0; start < records.length; start += IMPORT_CHUNK_SIZE) {
+      const chunk = records.slice(start, start + IMPORT_CHUNK_SIZE);
+      const assigned = await writeRequirements(chunk, taken);
+      for (let i = 0; i < assigned.length; i++) { taken.add(assigned[i]); }
+      done += chunk.length;
+      showMessage(t("importProgress", { done: done, total: records.length }), true);
+    }
+    if (skipped > 0) {
+      showMessage(t("importDoneSkipped", { n: done, skipped: skipped }), true);
+    } else {
+      showMessage(t("importDone", { n: done }), true);
+    }
+  } catch (err) {
+    showMessage(t("importStopped", {
+      done: done, total: records.length, code: (err.code || err.message)
+    }));
+  }
+}
+
+async function applyImportUpdates(updates, restores, newRecords, skippedDuplicates, usedSeqs) {
+  const skipped = skippedDuplicates || 0;
+  let updated = 0;
+  let restored = 0;
+  let inserted = 0;
+  const total = updates.length + restores.length + newRecords.length;
+  const taken = usedSeqs ? new Set(usedSeqs) : new Set();
+
+  try {
+    for (let i = 0; i < updates.length; i++) {
+      const u = updates[i];
+      const changes = {};
+      for (let c = 0; c < u.changes.length; c++) {
+        changes[u.changes[c].field] = u.changes[c].fileVal;
+      }
+      if (typeof changes.notes === "string") {
+        changes.notes = stripImportedIdMarker(changes.notes);
+      }
+      if (u.rec && u.rec.__importedId) {
+        let liveReq = null;
+        for (let k = 0; k < allReqs.length; k++) {
+          if (allReqs[k].id === u.liveId) { liveReq = allReqs[k]; break; }
+        }
+        if (liveReq && !liveReq.importedId) {
+          changes.importedId = u.rec.__importedId;
+        }
+      }
+      changes.updatedBy = userLabel();
+      changes.updatedAt = serverTimestamp();
+      await updateDoc(
+        doc(db, "projects", currentPid, "requirements", u.liveId),
+        changes
+      );
+      updated++;
+      showMessage(t("importUpdateProgress", { done: updated, total: updates.length }), true);
+    }
+
+    for (let i = 0; i < restores.length; i++) {
+      const r = restores[i];
+      await restoreFromTombstone(r.tombstone, r.rec);
+      restored++;
+      showMessage(t("importRestoreProgress", { done: restored, total: restores.length }), true);
+    }
+
+    if (newRecords.length > 0) {
+      for (let start = 0; start < newRecords.length; start += IMPORT_CHUNK_SIZE) {
+        const chunk = newRecords.slice(start, start + IMPORT_CHUNK_SIZE);
+        const assigned = await writeRequirements(chunk, taken);
+        for (let i = 0; i < assigned.length; i++) { taken.add(assigned[i]); }
+        inserted += chunk.length;
+      }
+    }
+
+    if (updated > 0 || restored > 0) {
+      showMessage(t("importUpdateDone", {
+        updated: updated, restored: restored, inserted: inserted
+      }), true);
+    } else if (inserted > 0) {
+      showMessage(t("importDoneSkipped", { n: inserted, skipped: skipped }), true);
+    }
+  } catch (err) {
+    showMessage(t("importStopped", {
+      done: updated + restored + inserted, total: total, code: (err.code || err.message)
+    }));
+  }
+}
+
+// ---------- Wire up ----------
+$("sortSelect").value = sortMode;
+$("filterSelect").value = filterMoscow;
+
+$("btnGoogle").addEventListener("click", function () { loginWith("google"); });
+$("btnGithubLogin").addEventListener("click", function () { loginWith("github"); });
+$("btnLink").addEventListener("click", linkLogin);
+$("btnLogout").addEventListener("click", function () { signOut(auth); });
+$("btnLang").addEventListener("click", function () {
+  setLang(lang === "da" ? "en" : "da");
+});
+$("btnCreate").addEventListener("click", createProject);
+$("btnJoin").addEventListener("click", joinFromInput);
+$("btnAdd").addEventListener("click", addRequirement);
+$("btnImport").addEventListener("click", onImportClick);
+$("importFile").addEventListener("change", onImportFileChosen);
+$("btnCsv").addEventListener("click", exportCsv);
+$("btnJson").addEventListener("click", exportJson);
+$("btnMd").addEventListener("click", exportMarkdown);
+$("btnShare").addEventListener("click", copyShareLink);
+$("btnLeave").addEventListener("click", leaveProject);
+$("btnRemoveProject").addEventListener("click", removeProjectFromMyList);
+$("btnPyt").addEventListener("click", onPytToggle);
+$("sortSelect").addEventListener("change", onSortChange);
+$("filterSelect").addEventListener("change", onFilterChange);
+$("myProjectsList").addEventListener("click", onMyProjectsClick);
+
+const matrixBodies = [$("tbody"), $("matrixSections")];
+for (let i = 0; i < matrixBodies.length; i++) {
+  matrixBodies[i].addEventListener("input", onCellInput);
+  matrixBodies[i].addEventListener("focusout", onCellFocusOut);
+  matrixBodies[i].addEventListener("click", onTableClick);
+}
+
+$("projectName").addEventListener("click", leaveProject);
+
+document.addEventListener("visibilitychange", function () {
+  if (document.visibilityState === "hidden") { flushAllPendingSaves(); }
+});
+window.addEventListener("beforeunload", function () { flushAllPendingSaves(); });
+
+window.addEventListener("hashchange", function () {
+  const parsed = parseHash();
+  if (parsed.invite) {
+    if (currentUser) { openProjectByInvite(parsed.invite, parsed.reqid); }
+    return;
+  }
+  if (!parsed.pid) { return; }
+  if (parsed.pid === currentPid) {
+    if (parsed.reqid) {
+      pendingScrollToReq = parsed.reqid;
+      tryScrollToPendingReq();
+    }
+    return;
+  }
+  if (currentUser) { openProject(parsed.pid); }
+});
+
+$("btnCols").addEventListener("click", function (e) {
+  e.stopPropagation();
+  $("colsPanel").classList.toggle("hidden");
+});
+document.addEventListener("click", function (e) {
+  const panel = $("colsPanel");
+  if (panel.classList.contains("hidden")) { return; }
+  if (panel.contains(e.target)) { return; }
+  if (e.target === $("btnCols")) { return; }
+  panel.classList.add("hidden");
+});
+const colBoxes = document.querySelectorAll("#colsPanel input[type=checkbox]");
+for (let i = 0; i < colBoxes.length; i++) {
+  colBoxes[i].addEventListener("change", function () {
+    const col = colBoxes[i].dataset.col;
+    const next = Object.assign({}, visibleColumns);
+    next[col] = colBoxes[i].checked;
+    if (!hasAnyVisible(next)) { colBoxes[i].checked = true; return; }
+    visibleColumns = next;
+    saveColumns();
+    applyColumnPrefs();
+  });
+}
+
+$("btnGithubSettings").addEventListener("click", openGithubDialog);
+$("btnOpenBoard").addEventListener("click", openBoard);
+$("btnGithubCancel").addEventListener("click", closeGithubDialog);
+$("btnGithubSave").addEventListener("click", saveGithubSettings);
+$("githubDialog").addEventListener("click", function (e) {
+  if (e.target === $("githubDialog")) { closeGithubDialog(); }
+});
+$("githubBoardUrlInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("defaultRepoInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("staleWarnInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("staleUrgentInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("inviteHoursInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+
+$("btnImportForce").addEventListener("click", onImportForce);
+$("btnImportUpdate").addEventListener("click", onImportUpdate);
+$("btnImportCreateNew").addEventListener("click", onImportAsNewProject);
+$("btnImportCancel").addEventListener("click", closeImportDiffDialog);
+$("importDiffDialog").addEventListener("click", function (e) {
+  if (e.target === $("importDiffDialog")) { closeImportDiffDialog(); }
+});
+
+$("btnInfo").addEventListener("click", openPanel);
+$("btnClosePanel").addEventListener("click", closePanel);
+$("panelBackdrop").addEventListener("click", closePanel);
+document.addEventListener("keydown", function (e) {
+  if (e.key === "Escape" && $("sidePanel").classList.contains("open")) { closePanel(); }
+  if (e.key === "Escape" && !$("githubDialog").classList.contains("hidden")) { closeGithubDialog(); }
+  if (e.key === "Escape" && !$("importDiffDialog").classList.contains("hidden")) { closeImportDiffDialog(); }
+});
+
+applyLanguage();
+applyColumnPrefs();
+
+onAuthStateChanged(auth, onAuthChanged);
+</script>
+</body>
+</html>
