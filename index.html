@@ -625,6 +625,8 @@ import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
          getDocs, onSnapshot, runTransaction, serverTimestamp, Timestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+ import { initializeAppCheck, ReCaptchaEnterpriseProvider }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
 
 const firebaseConfig = {
 apiKey: "AIzaSyAUU_YtpHSsrhITq1Jj9HWvQbsJ7vxwQD4",
@@ -632,7 +634,19 @@ authDomain: "reqmatrix-fc50a.firebaseapp.com",
 projectId: "reqmatrix-fc50a",
 appId: "1:480693503390:web:d8c32525e3370b301a428f"
 };
+  
 const app = initializeApp(firebaseConfig);
+
+// --- App Check ---
+if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+initializeAppCheck(app, {
+  provider: new ReCaptchaEnterpriseProvider('6Lf_VPgtAAAAALNa6xtqJxw0eWsN4oCx7qcLA5no'),
+  isTokenAutoRefreshEnabled: true
+});
+// --- /App Check ---
+
 const auth = getAuth(app);
 const db = getFirestore(app);
 
