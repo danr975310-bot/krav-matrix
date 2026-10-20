@@ -236,6 +236,7 @@
   #myProjectsList li { margin-bottom: 6px; }
   #myProjectsList button { width: 100%; text-align: left; }
   #myProjectsSection hr { margin: 16px 0; border: 0; border-top: 1px solid #d9dde3; }
+  #memberList { list-style: none; padding: 0; margin: 8px 0 0; }
   .modal {
     position: fixed; inset: 0;
     background: rgba(0,0,0,0.4);
@@ -795,6 +796,14 @@ const I18N = {
     panelMembersTitle: "Medlemmer",
     membersNote: "Invite-links giver adgang til projektet. Når først en person er medlem, har de permanent adgang, indtil de selv forlader projektet. Del derfor kun invite-links med gruppen.",
 
+    memberYou: "(dig)",
+    memberOwnerSuffix: "· ejer",
+    makeOwnerBtn: "Gør til ejer",
+    makeOwnerBtnTitle: "Overdrag ejerskab til dette medlem",
+    transferConfirm: "Overdrag ejerskab til {name}?\n\nDu mister retten til at ændre indstillinger og slette projektet. {name} får dem i stedet.\n\nDen nye ejer kan overdrage ejerskabet tilbage til dig, hvis I fortryder.",
+    transferDone: "Ejerskabet er overdraget til {name}.",
+    transferFailed: "Kunne ikke overdrage ejerskab: {code}",
+
     settingsDialogTitle: "Projektindstillinger",
     settingsGithubSection: "GitHub-integration",
     settingsAgeSection: "Aldersgrænser",
@@ -892,7 +901,7 @@ const I18N = {
 
     shareLinkCopied: "Link kopieret. Del det kun med gruppen.",
     shareLinkPrompt: "Kopiér linket:",
-    shareInviteCopied: "Invite-link kopieret. Gyldigt i {hours} time(r).",
+    shareInviteCopied: "Invite-link kopieret. Gyldigt i {hours} timer.",
     errInviteRead: "Kunne ikke læse invite: {code}",
     inviteNotFound: "Invite-linket findes ikke. Bed om et nyt fra en i gruppen.",
     inviteExpired: "Invite-linket er udløbet. Bed om et nyt fra en i gruppen.",
@@ -1099,6 +1108,14 @@ const I18N = {
     importMdStableNote: "The Markdown export includes a hidden metadata block at the bottom with the stable IDs. It is invisible in rendered markdown, but lets the import recognise the requirement even if the description has changed.",
     panelMembersTitle: "Members",
     membersNote: "Invite links give access to the project. Once someone is a member, they have permanent access until they leave the project themselves. So share invite links only with the group.",
+
+    memberYou: "(you)",
+    memberOwnerSuffix: "· owner",
+    makeOwnerBtn: "Make owner",
+    makeOwnerBtnTitle: "Transfer ownership to this member",
+    transferConfirm: "Transfer ownership to {name}?\n\nYou lose the right to change settings and delete the project. {name} gets them instead.\n\nThe new owner can transfer ownership back to you if you change your mind.",
+    transferDone: "Ownership has been transferred to {name}.",
+    transferFailed: "Could not transfer ownership: {code}",
 
     settingsDialogTitle: "Project settings",
     settingsGithubSection: "GitHub integration",
@@ -1441,7 +1458,6 @@ function parseHash() {
   const raw = location.hash.slice(1);
   if (!raw) { return { pid: "", reqid: "", invite: "" }; }
 
-  // Format 1: #invite=TOKEN (ingen pid)
   if (raw.indexOf("invite=") === 0) {
     let token = raw.slice(7);
     const amp = token.indexOf("&");
@@ -1450,7 +1466,6 @@ function parseHash() {
     return { pid: "", reqid: "", invite: token };
   }
 
-  // Format 2: #pid[&req=REQID][&invite=TOKEN]
   const parts = raw.split("&");
   const pid = parts[0] || "";
   let reqid = "";
@@ -2135,7 +2150,6 @@ async function joinFromInput() {
   const input = $("joinCode").value.trim();
   if (input === "") { showMessage(t("joinCodeRequired")); return; }
 
-  // 1. Fuld URL med #invite=...
   const m = input.match(/[#&?]invite=([^&\s]+)/);
   if (m) {
     let token = m[1];
@@ -2144,13 +2158,11 @@ async function joinFromInput() {
     return;
   }
 
-  // 2. Rå hex-token (16+ tegn hex).
   if (/^[0-9a-f]{16,}$/i.test(input)) {
     await openProjectByInvite(input, "");
     return;
   }
 
-  // 3. Legacy: #pid (virker kun for eksisterende medlemmer).
   let code = input;
   const hashPos = code.indexOf("#");
   if (hashPos >= 0) {
@@ -2258,7 +2270,6 @@ async function openProjectByInvite(token, reqid) {
     return;
   }
 
-  // Er vi allerede medlem? Så skal invite-udløb ikke blokere.
   let memberSnap = null;
   try {
     memberSnap = await getDoc(doc(db, "projects", pid, "members", currentUser.uid));
@@ -2270,7 +2281,6 @@ async function openProjectByInvite(token, reqid) {
     return;
   }
 
-  // Ikke medlem endnu — tjek expiry.
   const expiresMs = (typeof invite.expiresAt === "number")
     ? invite.expiresAt
     : (invite.expiresAt && typeof invite.expiresAt.toMillis === "function")
@@ -2282,7 +2292,6 @@ async function openProjectByInvite(token, reqid) {
     return;
   }
 
-  // Opret medlemskab med token'et.
   try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid), {
       name: userLabel(),
@@ -2369,9 +2378,60 @@ function renderMembers() {
   for (let i = 0; i < allMembers.length; i++) {
     const m = allMembers[i];
     const li = document.createElement("li");
-    li.textContent = m.name;
+    li.style.display = "flex";
+    li.style.alignItems = "center";
+    li.style.gap = "8px";
+    li.style.marginBottom = "4px";
+
+    const nameSpan = document.createElement("span");
+    const isSelf = m.uid === currentUser.uid;
+    const isCurrentOwner = projectData.ownerUid === m.uid;
+    nameSpan.textContent = m.name
+      + (isSelf ? " " + t("memberYou") : "")
+      + (isCurrentOwner ? " " + t("memberOwnerSuffix") : "");
+    if (isCurrentOwner) {
+      nameSpan.style.fontWeight = "600";
+    }
+    li.appendChild(nameSpan);
+
+    if (isOwner && !isSelf) {
+      const makeOwnerBtn = document.createElement("button");
+      makeOwnerBtn.textContent = t("makeOwnerBtn");
+      makeOwnerBtn.title = t("makeOwnerBtnTitle");
+      makeOwnerBtn.style.padding = "2px 6px";
+      makeOwnerBtn.style.fontSize = "11px";
+      makeOwnerBtn.style.marginLeft = "auto";
+      makeOwnerBtn.dataset.action = "make-owner";
+      makeOwnerBtn.dataset.uid = m.uid;
+      makeOwnerBtn.dataset.name = m.name;
+      li.appendChild(makeOwnerBtn);
+    }
+
     list.appendChild(li);
   }
+}
+
+async function transferOwnership(targetUid, targetName) {
+  if (!isOwner) { return; }
+  if (targetUid === currentUser.uid) { return; }
+  if (!confirm(t("transferConfirm", { name: targetName }))) { return; }
+
+  try {
+    await updateDoc(doc(db, "projects", currentPid), {
+      ownerUid: targetUid
+    });
+    showMessage(t("transferDone", { name: targetName }), true);
+  } catch (err) {
+    showMessage(t("transferFailed", { code: err.code || err.message }));
+  }
+}
+
+function onMemberListClick(event) {
+  const btn = event.target;
+  if (!btn.dataset || btn.dataset.action !== "make-owner") { return; }
+  const uid = btn.dataset.uid;
+  const name = btn.dataset.name || uid;
+  transferOwnership(uid, name);
 }
 
 async function removeProjectFromMyList() {
@@ -3084,7 +3144,6 @@ function exportMarkdown() {
     md += "\n";
   }
 
-  // Skjult metadata-blok med stabile ID'er.
   const idLines = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -4252,6 +4311,7 @@ $("btnPyt").addEventListener("click", onPytToggle);
 $("sortSelect").addEventListener("change", onSortChange);
 $("filterSelect").addEventListener("change", onFilterChange);
 $("myProjectsList").addEventListener("click", onMyProjectsClick);
+$("memberList").addEventListener("click", onMemberListClick);
 
 const matrixBodies = [$("tbody"), $("matrixSections")];
 for (let i = 0; i < matrixBodies.length; i++) {
