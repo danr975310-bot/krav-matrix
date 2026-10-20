@@ -326,7 +326,7 @@
     <button id="btnCreate" class="primary" data-i18n="createProjectBtn">Opret projekt</button>
     <hr>
     <h2 data-i18n="joinProjectTitle">Deltag i projekt</h2>
-    <input type="text" id="joinCode" data-i18n-placeholder="joinPlaceholder" placeholder="Projektkode eller delt link">
+    <input type="text" id="joinCode" data-i18n-placeholder="joinPlaceholder" placeholder="Invite-link eller projektkode">
     <button id="btnJoin" data-i18n="joinBtn">Deltag</button>
   </div>
 
@@ -586,6 +586,13 @@
     </label>
     <p class="field-hint" data-i18n="settingsAgeUrgentHint">Skal være større end den gule grænse.</p>
 
+    <h4 data-i18n="settingsInviteSection">Invite-links</h4>
+    <label>
+      <span data-i18n="inviteHoursLabel">Standard levetid for invite-links (timer)</span>
+      <input type="number" id="inviteHoursInput" min="1" max="168" step="1" inputmode="numeric">
+    </label>
+    <p class="field-hint" data-i18n="inviteHoursHint">1–168 timer. Når et invite-link er udløbet, kan det ikke bruges til at deltage — men eksisterende medlemmer har stadig adgang.</p>
+
     <div class="modal-actions">
       <button id="btnGithubCancel" data-i18n="cancelBtn">Annullér</button>
       <button id="btnGithubSave" class="primary" data-i18n="saveBtn">Gem</button>
@@ -640,6 +647,7 @@ const MAX_IMPORT_ROWS = 500;
 const IMPORT_CHUNK_SIZE = 100;
 const DEFAULT_STALE_WARN_DAYS = 14;
 const DEFAULT_STALE_URGENT_DAYS = 28;
+const DEFAULT_INVITE_HOURS = 1;
 
 const AUTOSAVE_DELAY_MS = 800;
 
@@ -667,7 +675,7 @@ const I18N = {
     newProjectPlaceholder: "Projektnavn, fx Reolmarked",
     createProjectBtn: "Opret projekt",
     joinProjectTitle: "Deltag i projekt",
-    joinPlaceholder: "Projektkode eller delt link",
+    joinPlaceholder: "Invite-link eller projektkode",
     joinBtn: "Deltag",
 
     sortLabel: "Sortér:",
@@ -785,7 +793,7 @@ const I18N = {
     importSeqNote: "Et slettet kravs REQ-NNN pensioneres: ingen andre krav kan overtage nummeret. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.",
     importMdStableNote: "Markdown-eksporten indeholder en skjult metadata-blok nederst med de stabile ID'er. Den er usynlig i renderet markdown, men gør at importen kan genkende kravet selv hvis beskrivelsen er ændret.",
     panelMembersTitle: "Medlemmer",
-    membersNote: "Projektkoden giver adgang til kravene. Alle, der kender den, kan se og redigere projektet — så del den kun med gruppen.",
+    membersNote: "Invite-links giver adgang til projektet. Når først en person er medlem, har de permanent adgang, indtil de selv forlader projektet. Del derfor kun invite-links med gruppen.",
 
     settingsDialogTitle: "Projektindstillinger",
     settingsGithubSection: "GitHub-integration",
@@ -798,6 +806,10 @@ const I18N = {
     settingsAgeBadWarn: "Den gule grænse skal være et helt tal på mindst 1.",
     settingsAgeBadUrgent: "Den røde grænse skal være et helt tal, der er større end den gule grænse.",
     settingsSaved: "Indstillinger gemt.",
+    settingsInviteSection: "Invite-links",
+    inviteHoursLabel: "Standard levetid for invite-links (timer)",
+    inviteHoursHint: "1–168 timer. Når et invite-link er udløbet, kan det ikke bruges til at deltage — men eksisterende medlemmer har stadig adgang.",
+    settingsAgeBadInviteHours: "Levetiden skal være et helt tal mellem 1 og 168 timer.",
 
     ghBoardLabel: "Scrum board URL (valgfrit)",
     ghBoardHint: "Vises som en knap i værktøjslinjen. Kan stå tom.",
@@ -864,7 +876,7 @@ const I18N = {
     ageTitleUpdated: "Sidst rettet: {date}",
 
     addReqNameRequired: "Skriv et projektnavn.",
-    joinCodeRequired: "Indsæt en projektkode.",
+    joinCodeRequired: "Indsæt et invite-link eller en projektkode.",
     projectNotExist: "Projektet findes ikke. Tjek koden.",
     loginInterrupted: "Login blev afbrudt.",
     loginFailed: "Login fejlede: {code}",
@@ -880,6 +892,14 @@ const I18N = {
 
     shareLinkCopied: "Link kopieret. Del det kun med gruppen.",
     shareLinkPrompt: "Kopiér linket:",
+    shareInviteCopied: "Invite-link kopieret. Gyldigt i {hours} timer.",
+    errInviteRead: "Kunne ikke læse invite: {code}",
+    inviteNotFound: "Invite-linket findes ikke. Bed om et nyt fra en i gruppen.",
+    inviteExpired: "Invite-linket er udløbet. Bed om et nyt fra en i gruppen.",
+    inviteInvalid: "Invite-linket er ugyldigt.",
+    errJoinInvite: "Kunne ikke deltage via invite: {code}",
+    errInviteCreate: "Kunne ikke oprette invite-link: {code}",
+    needInviteLink: "Du er ikke medlem af dette projekt. Bed om et invite-link fra en i gruppen.",
 
     importUnknownType: "Ukendt filtype. Brug .json, .csv, .txt eller .md.",
     importReadError: "Kunne ikke læse filen: {msg}",
@@ -960,7 +980,7 @@ const I18N = {
     newProjectPlaceholder: "Project name, e.g. Reolmarket",
     createProjectBtn: "Create project",
     joinProjectTitle: "Join a project",
-    joinPlaceholder: "Project code or shared link",
+    joinPlaceholder: "Invite link or project code",
     joinBtn: "Join",
 
     sortLabel: "Sort:",
@@ -1078,7 +1098,7 @@ const I18N = {
     importSeqNote: "A deleted requirement's REQ-NNN is retired: no other requirement can take that number. Only if the exact same requirement (same invisible ID) is imported again is the number resumed.",
     importMdStableNote: "The Markdown export includes a hidden metadata block at the bottom with the stable IDs. It is invisible in rendered markdown, but lets the import recognise the requirement even if the description has changed.",
     panelMembersTitle: "Members",
-    membersNote: "The project code gives access to the requirements. Anyone who knows it can view and edit the project — so share it only with the group.",
+    membersNote: "Invite links give access to the project. Once someone is a member, they have permanent access until they leave the project themselves. So share invite links only with the group.",
 
     settingsDialogTitle: "Project settings",
     settingsGithubSection: "GitHub integration",
@@ -1091,6 +1111,10 @@ const I18N = {
     settingsAgeBadWarn: "The yellow threshold must be a whole number of at least 1.",
     settingsAgeBadUrgent: "The red threshold must be a whole number greater than the yellow threshold.",
     settingsSaved: "Settings saved.",
+    settingsInviteSection: "Invite links",
+    inviteHoursLabel: "Default lifetime for invite links (hours)",
+    inviteHoursHint: "1–168 hours. Once an invite link has expired, it cannot be used to join — but existing members still have access.",
+    settingsAgeBadInviteHours: "The lifetime must be a whole number between 1 and 168 hours.",
 
     ghBoardLabel: "Scrum board URL (optional)",
     ghBoardHint: "Shown as a button in the toolbar. May be left empty.",
@@ -1157,7 +1181,7 @@ const I18N = {
     ageTitleUpdated: "Last edited: {date}",
 
     addReqNameRequired: "Enter a project name.",
-    joinCodeRequired: "Paste a project code.",
+    joinCodeRequired: "Paste an invite link or a project code.",
     projectNotExist: "The project does not exist. Check the code.",
     loginInterrupted: "Sign-in was interrupted.",
     loginFailed: "Sign-in failed: {code}",
@@ -1173,6 +1197,14 @@ const I18N = {
 
     shareLinkCopied: "Link copied. Share it only with the group.",
     shareLinkPrompt: "Copy the link:",
+    shareInviteCopied: "Invite link copied. Valid for {hours} hours.",
+    errInviteRead: "Could not read invite: {code}",
+    inviteNotFound: "The invite link does not exist. Ask someone in the group for a new one.",
+    inviteExpired: "The invite link has expired. Ask someone in the group for a new one.",
+    inviteInvalid: "The invite link is invalid.",
+    errJoinInvite: "Could not join via invite: {code}",
+    errInviteCreate: "Could not create invite link: {code}",
+    needInviteLink: "You are not a member of this project. Ask someone in the group for an invite link.",
 
     importUnknownType: "Unknown file type. Use .json, .csv, .txt or .md.",
     importReadError: "Could not read the file: {msg}",
@@ -1407,18 +1439,32 @@ function staleness(req) {
 
 function parseHash() {
   const raw = location.hash.slice(1);
-  if (!raw) { return { pid: "", reqid: "" }; }
+  if (!raw) { return { pid: "", reqid: "", invite: "" }; }
+
+  // Format 1: #invite=TOKEN (ingen pid)
+  if (raw.indexOf("invite=") === 0) {
+    let token = raw.slice(7);
+    const amp = token.indexOf("&");
+    if (amp >= 0) { token = token.slice(0, amp); }
+    try { token = decodeURIComponent(token); } catch (e) { /* keep raw */ }
+    return { pid: "", reqid: "", invite: token };
+  }
+
+  // Format 2: #pid[&req=REQID][&invite=TOKEN]
   const parts = raw.split("&");
   const pid = parts[0] || "";
   let reqid = "";
+  let invite = "";
   for (let i = 1; i < parts.length; i++) {
     if (parts[i].indexOf("req=") === 0) {
       try { reqid = decodeURIComponent(parts[i].slice(4)); }
       catch (e) { reqid = parts[i].slice(4); }
-      break;
+    } else if (parts[i].indexOf("invite=") === 0) {
+      try { invite = decodeURIComponent(parts[i].slice(7)); }
+      catch (e) { invite = parts[i].slice(7); }
     }
   }
-  return { pid: pid, reqid: reqid };
+  return { pid: pid, reqid: reqid, invite: invite };
 }
 
 function findReqRow(reqId) {
@@ -1649,14 +1695,12 @@ function updateGithubUi() {
 }
 
 function openGithubDialog() {
-  // Kun ejeren må ændre projektindstillinger. Knappen er også skjult i UI
-  // for andre, men dette er et ekstra sikkerhedsnet, hvis nogen åbner
-  // dialogen via dev-tools eller en genvej.
   if (!isOwner) { return; }
   $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
   $("defaultRepoInput").value = projectData.defaultRepo || "";
   $("staleWarnInput").value = staleWarnDays();
   $("staleUrgentInput").value = staleUrgentDays();
+  $("inviteHoursInput").value = Number(projectData.defaultInviteHours) || DEFAULT_INVITE_HOURS;
   $("githubDialog").classList.remove("hidden");
   setTimeout(function () { $("githubBoardUrlInput").focus(); }, 0);
 }
@@ -1680,6 +1724,7 @@ async function saveGithubSettings() {
 
   const warn = parseInt($("staleWarnInput").value, 10);
   const urgent = parseInt($("staleUrgentInput").value, 10);
+  const inviteHours = parseInt($("inviteHoursInput").value, 10);
 
   if (url !== "" && !isSafeBoardUrl(url)) {
     showMessage(t("ghBadBoardUrl"));
@@ -1697,18 +1742,24 @@ async function saveGithubSettings() {
     showMessage(t("settingsAgeBadUrgent"));
     return;
   }
+  if (!Number.isInteger(inviteHours) || inviteHours < 1 || inviteHours > 168) {
+    showMessage(t("settingsAgeBadInviteHours"));
+    return;
+  }
 
   try {
     await updateDoc(doc(db, "projects", currentPid), {
       githubBoardUrl: url,
       defaultRepo: repo,
       staleWarnDays: warn,
-      staleUrgentDays: urgent
+      staleUrgentDays: urgent,
+      defaultInviteHours: inviteHours
     });
     projectData.githubBoardUrl = url;
     projectData.defaultRepo = repo;
     projectData.staleWarnDays = warn;
     projectData.staleUrgentDays = urgent;
+    projectData.defaultInviteHours = inviteHours;
     updateGithubUi();
     renderTable();
   } catch (err) {
@@ -1859,7 +1910,12 @@ async function loadMyProjects() {
           try { await deleteDoc(e.ref); } catch (err) { /* ignore */ }
           return null;
         }
-        return e;
+        return {
+          pid: e.pid,
+          name: e.name,
+          createdAt: projSnap.data().createdAt || null,
+          ref: e.ref
+        };
       } catch (err) {
         console.warn("Could not check project", e.pid, err.code || err.message);
         return e;
@@ -1879,6 +1935,14 @@ async function loadMyProjects() {
       const li = document.createElement("li");
       const btn = document.createElement("button");
       btn.textContent = items[i].name;
+      if (items[i].createdAt) {
+        const d = (typeof items[i].createdAt.toDate === "function")
+          ? items[i].createdAt.toDate()
+          : new Date(items[i].createdAt);
+        if (!isNaN(d.getTime())) {
+          btn.textContent += "  ·  " + localDateString(d);
+        }
+      }
       btn.dataset.pid = items[i].pid;
       li.appendChild(btn);
       list.appendChild(li);
@@ -1997,6 +2061,10 @@ function onAuthChanged(user) {
   updateLinkButton();
 
   const parsed = parseHash();
+  if (parsed.invite) {
+    openProjectByInvite(parsed.invite, parsed.reqid);
+    return;
+  }
   let pid = parsed.pid;
   if (!pid) {
     try { pid = localStorage.getItem("lastProject") || ""; }
@@ -2031,6 +2099,14 @@ function makeImportedId() {
   return "u-" + s;
 }
 
+function makeInviteToken() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let s = "";
+  for (let i = 0; i < bytes.length; i++) { s += bytes[i].toString(16).padStart(2, "0"); }
+  return s;
+}
+
 async function createProject() {
   const name = $("newProjectName").value.trim();
   if (name === "") { showMessage(t("addReqNameRequired")); return; }
@@ -2044,6 +2120,7 @@ async function createProject() {
       defaultRepo: "",
       staleWarnDays: DEFAULT_STALE_WARN_DAYS,
       staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
+      defaultInviteHours: DEFAULT_INVITE_HOURS,
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -2055,7 +2132,26 @@ async function createProject() {
 }
 
 async function joinFromInput() {
-  let code = $("joinCode").value.trim();
+  const input = $("joinCode").value.trim();
+  if (input === "") { showMessage(t("joinCodeRequired")); return; }
+
+  // 1. Fuld URL med #invite=...
+  const m = input.match(/[#&?]invite=([^&\s]+)/);
+  if (m) {
+    let token = m[1];
+    try { token = decodeURIComponent(token); } catch (e) { /* keep raw */ }
+    await openProjectByInvite(token, "");
+    return;
+  }
+
+  // 2. Rå hex-token (16+ tegn hex).
+  if (/^[0-9a-f]{16,}$/i.test(input)) {
+    await openProjectByInvite(input, "");
+    return;
+  }
+
+  // 3. Legacy: #pid (virker kun for eksisterende medlemmer).
+  let code = input;
   const hashPos = code.indexOf("#");
   if (hashPos >= 0) {
     code = code.slice(hashPos + 1);
@@ -2080,7 +2176,11 @@ async function openProject(pid) {
   } catch (err) {
     if (myToken !== openToken) { return; }
     console.error("openProject: getDoc failed for", pid, err);
-    showMessage(t("errProjectRead", { code: err.code || err.message }));
+    if (err.code === "permission-denied") {
+      showMessage(t("needInviteLink"));
+    } else {
+      showMessage(t("errProjectRead", { code: err.code || err.message }));
+    }
     showScreen("chooser");
     return;
   }
@@ -2093,7 +2193,7 @@ async function openProject(pid) {
 
   try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
-                 { name: userLabel(), uid: currentUser.uid },
+                 { name: userLabel(), uid: currentUser.uid, lastSeenAt: serverTimestamp() },
                  { merge: true });
   } catch (err) {
     if (myToken !== openToken) { return; }
@@ -2126,6 +2226,82 @@ async function openProject(pid) {
   showScreen("app");
 }
 
+async function openProjectByInvite(token, reqid) {
+  const myToken = ++openToken;
+  flushAllPendingSaves();
+  stopListeners();
+  isOwner = false;
+  showMessage("");
+  if (reqid) { pendingScrollToReq = reqid; }
+
+  let inviteSnap;
+  try {
+    inviteSnap = await getDoc(doc(db, "invites", token));
+  } catch (err) {
+    if (myToken !== openToken) { return; }
+    showMessage(t("errInviteRead", { code: err.code || err.message }));
+    showScreen("chooser");
+    return;
+  }
+  if (myToken !== openToken) { return; }
+  if (!inviteSnap.exists()) {
+    showMessage(t("inviteNotFound"));
+    showScreen("chooser");
+    return;
+  }
+
+  const invite = inviteSnap.data();
+  const pid = invite.pid;
+  if (!pid) {
+    showMessage(t("inviteInvalid"));
+    showScreen("chooser");
+    return;
+  }
+
+  // Er vi allerede medlem? Så skal invite-udløb ikke blokere.
+  let memberSnap = null;
+  try {
+    memberSnap = await getDoc(doc(db, "projects", pid, "members", currentUser.uid));
+  } catch (err) { memberSnap = null; }
+  if (myToken !== openToken) { return; }
+
+  if (memberSnap && memberSnap.exists()) {
+    await openProject(pid);
+    return;
+  }
+
+  // Ikke medlem endnu — tjek expiry.
+  const expiresMs = (typeof invite.expiresAt === "number")
+    ? invite.expiresAt
+    : (invite.expiresAt && typeof invite.expiresAt.toMillis === "function")
+      ? invite.expiresAt.toMillis()
+      : 0;
+  if (!expiresMs || expiresMs <= Date.now()) {
+    showMessage(t("inviteExpired"));
+    showScreen("chooser");
+    return;
+  }
+
+  // Opret medlemskab med token'et.
+  try {
+    await setDoc(doc(db, "projects", pid, "members", currentUser.uid), {
+      name: userLabel(),
+      uid: currentUser.uid,
+      joinedVia: token,
+      joinedAt: serverTimestamp(),
+      lastSeenAt: serverTimestamp()
+    });
+  } catch (err) {
+    if (myToken !== openToken) { return; }
+    showMessage(t("errJoinInvite", { code: err.code || err.message }));
+    showScreen("chooser");
+    return;
+  }
+  if (myToken !== openToken) { return; }
+
+  await openProject(pid);
+}
+
 function leaveProject() {
   flushAllPendingSaves();
   stopListeners();
@@ -2149,8 +2325,6 @@ function updateProjectButtons() {
     btn.title = t("leaveProjectTitle");
   }
 
-  // Kun ejeren må ændre projektindstillinger. Skjul knappen for alle
-  // andre, så de ikke får en permission-denied fra Firestore.
   const settingsBtn = $("btnGithubSettings");
   if (settingsBtn) {
     settingsBtn.classList.toggle("hidden", !isOwner);
@@ -2928,11 +3102,30 @@ function exportMarkdown() {
 }
 
 async function copyShareLink() {
-  const link = location.origin + location.pathname + "#" + currentPid;
+  if (!currentPid) { return; }
+
+  const token = makeInviteToken();
+  const hours = Math.max(1, Math.min(168, Number(projectData.defaultInviteHours) || DEFAULT_INVITE_HOURS));
+  const expiresAt = Date.now() + hours * 3600 * 1000;
+
+  try {
+    await setDoc(doc(db, "invites", token), {
+      pid: currentPid,
+      projectName: projectData.name || "",
+      token: token,
+      expiresAt: expiresAt,
+      createdBy: currentUser.uid,
+      createdAt: serverTimestamp()
+    });
+  } catch (err) {
+    showMessage(t("errInviteCreate", { code: err.code || err.message }));
+    return;
+  }
+
+  const link = location.origin + location.pathname + "#invite=" + token;
   try {
     await navigator.clipboard.writeText(link);
-    showMessage("");
-    alert(t("shareLinkCopied"));
+    showMessage(t("shareInviteCopied", { hours: hours }), true);
   } catch (err) {
     prompt(t("shareLinkPrompt"), link);
   }
@@ -3146,8 +3339,6 @@ function isMarkdownSeparatorRow(cells) {
 }
 
 function markdownToObjects(text) {
-  // Læs skjulte stabile ID'er FØRST, og fjern metadata-blokken fra
-  // teksten, så tabel-parseren ikke forvirres.
   const stableIds = parseMarkdownStableIds(text);
   text = text.replace(/<!--\s*kravmatrix-stable-ids[\s\S]*?-->\s*$/i, "");
 
@@ -3207,9 +3398,6 @@ function markdownToObjects(text) {
       else if (currentSection === "Droppede") { obj.status = "Dropped"; }
     }
 
-    // Injicér stabilt ID fra metadata-blokken FØR vi beslutter om rækken
-    // skal beholdes. Ellers ville krav med tom beskrivelse blive droppet
-    // her og aldrig nå frem til buildImportRecords.
     if (obj.fileId) {
       const seqMatch = String(obj.fileId).match(/(\d+)/);
       if (seqMatch) {
@@ -3218,9 +3406,6 @@ function markdownToObjects(text) {
       }
     }
 
-    // Behold rækken hvis den har en beskrivelse ELLER et Krav-ID ELLER et
-    // injiceret stabilt ID. Uden dette ville krav med tom beskrivelse
-    // blive tabt ved round-trip eksport/import.
     const hasDescription = obj.description && String(obj.description).trim() !== "";
     const hasFileId = obj.fileId && String(obj.fileId).trim() !== "";
     const hasImportedId = obj.importedId && String(obj.importedId).trim() !== "";
@@ -3229,11 +3414,6 @@ function markdownToObjects(text) {
     objects.push(obj);
   }
 
-  // Fallback til ren tekst KUN hvis filen slet ikke indeholder
-  // markdown-struktur (hverken tabeller eller overskrifter). En .md-fil
-  // med tabeller men uden gyldige krav skal IKKE læses som én linje pr.
-  // krav — det var netop årsagen til at hele eksport-filen endte som
-  // skrald-rækker ved round-trip.
   const hasMarkdownStructure = /^\s*\|/m.test(text) || /^#{1,6}\s/m.test(text);
   if (objects.length === 0 && !hasMarkdownStructure) {
     return textToObjects(text);
@@ -3300,8 +3480,6 @@ function buildImportRecords(objects) {
     const fileId = (o.fileId || "").trim();
     const extId = (o.importedId || "").trim();
 
-    // Tillad tom beskrivelse hvis vi har et ID at matche på. Uden dette
-    // ville eksport/import af krav med tom beskrivelse tabe dem.
     if (description === "" && fileId === "" && extId === "") {
       skipped++; continue;
     }
@@ -3742,9 +3920,6 @@ async function regenerateCollidingImportedIds(records) {
   }
 }
 
-// "Importér alle som nye"-stien. Bypasser matching; alle rækker oprettes
-// som nye krav med friske REQ-numre og regenererede stabile ID'er hvor
-// de ville kollidere.
 async function onImportForce() {
   const records = pendingImportAllRecords;
   const skipped = pendingImportSkippedDupes;
@@ -3786,6 +3961,7 @@ async function createProjectAndImport(name, records) {
       defaultRepo: "",
       staleWarnDays: DEFAULT_STALE_WARN_DAYS,
       staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
+      defaultInviteHours: DEFAULT_INVITE_HOURS,
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -3890,8 +4066,6 @@ async function onImportFileChosen(event) {
   pendingImportSkippedDupes = skippedDuplicates;
   pendingImportUsedSeqs = usedSeqs;
 
-  // Vis altid diff-dialogen hvis der er noget at fortælle. Også når der
-  // kun er identiske krav — så brugeren kan se hvad der sker.
   if (classified.updates.length > 0
       || classified.restores.length > 0
       || classified.identicalSeqs.size > 0) {
@@ -4095,6 +4269,10 @@ window.addEventListener("beforeunload", function () { flushAllPendingSaves(); })
 
 window.addEventListener("hashchange", function () {
   const parsed = parseHash();
+  if (parsed.invite) {
+    if (currentUser) { openProjectByInvite(parsed.invite, parsed.reqid); }
+    return;
+  }
   if (!parsed.pid) { return; }
   if (parsed.pid === currentPid) {
     if (parsed.reqid) {
@@ -4147,6 +4325,9 @@ $("staleWarnInput").addEventListener("keydown", function (e) {
   if (e.key === "Enter") { saveGithubSettings(); }
 });
 $("staleUrgentInput").addEventListener("keydown", function (e) {
+  if (e.key === "Enter") { saveGithubSettings(); }
+});
+$("inviteHoursInput").addEventListener("keydown", function (e) {
   if (e.key === "Enter") { saveGithubSettings(); }
 });
 
