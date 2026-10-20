@@ -1649,6 +1649,10 @@ function updateGithubUi() {
 }
 
 function openGithubDialog() {
+  // Kun ejeren må ændre projektindstillinger. Knappen er også skjult i UI
+  // for andre, men dette er et ekstra sikkerhedsnet, hvis nogen åbner
+  // dialogen via dev-tools eller en genvej.
+  if (!isOwner) { return; }
   $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
   $("defaultRepoInput").value = projectData.defaultRepo || "";
   $("staleWarnInput").value = staleWarnDays();
@@ -1670,6 +1674,7 @@ function isSafeBoardUrl(url) {
 }
 
 async function saveGithubSettings() {
+  if (!isOwner) { return; }
   const url = $("githubBoardUrlInput").value.trim();
   const repo = normalizeRepo($("defaultRepoInput").value);
 
@@ -2142,6 +2147,13 @@ function updateProjectButtons() {
   } else {
     btn.textContent = t("leaveProjectBtn");
     btn.title = t("leaveProjectTitle");
+  }
+
+  // Kun ejeren må ændre projektindstillinger. Skjul knappen for alle
+  // andre, så de ikke får en permission-denied fra Firestore.
+  const settingsBtn = $("btnGithubSettings");
+  if (settingsBtn) {
+    settingsBtn.classList.toggle("hidden", !isOwner);
   }
 }
 
