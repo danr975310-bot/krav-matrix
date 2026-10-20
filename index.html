@@ -318,17 +318,13 @@
       <h2 data-i18n="yourProjects">Dine projekter</h2>
       <p class="small" data-i18n="yourProjectsHint">Projekter du allerede er medlem af. Klik for at åbne.</p>
       <ul id="myProjectsList"></ul>
-      <p id="myProjectsEmpty" class="small hidden" data-i18n="noProjects">Du er ikke medlem af nogen projekter endnu.</p>
+      <p id="myProjectsEmpty" class="small hidden" data-i18n="noProjects">Du er ikke medlem af nogen projekter endnu. Har du fået et invite-link? Klik på det for at deltage.</p>
       <hr>
     </section>
 
     <h2 data-i18n="createProjectTitle">Opret nyt projekt</h2>
     <input type="text" id="newProjectName" data-i18n-placeholder="newProjectPlaceholder" placeholder="Projektnavn, fx Reolmarked">
     <button id="btnCreate" class="primary" data-i18n="createProjectBtn">Opret projekt</button>
-    <hr>
-    <h2 data-i18n="joinProjectTitle">Deltag i projekt</h2>
-    <input type="text" id="joinCode" data-i18n-placeholder="joinPlaceholder" placeholder="Invite-link eller projektkode">
-    <button id="btnJoin" data-i18n="joinBtn">Deltag</button>
   </div>
 
   <div id="screenApp" class="hidden">
@@ -667,17 +663,14 @@ const I18N = {
     loginIntro: "Log ind for at se og redigere jeres krav.",
     loginGoogle: "Log ind med Google",
     loginGithub: "Log ind med GitHub",
-    loginHint: "Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte den anden metode (knappen øverst til højre), så begge virker.",
+    loginHint: "Log ind med den metode, du brugte første gang. Bagefter du kan tilknytte den anden metode (knappen øverst til højre), så begge virker.",
 
     yourProjects: "Dine projekter",
     yourProjectsHint: "Projekter du allerede er medlem af. Klik for at åbne.",
-    noProjects: "Du er ikke medlem af nogen projekter endnu.",
+    noProjects: "Du er ikke medlem af nogen projekter endnu. Har du fået et invite-link? Klik på det for at deltage.",
     createProjectTitle: "Opret nyt projekt",
     newProjectPlaceholder: "Projektnavn, fx Reolmarked",
     createProjectBtn: "Opret projekt",
-    joinProjectTitle: "Deltag i projekt",
-    joinPlaceholder: "Invite-link eller projektkode",
-    joinBtn: "Deltag",
 
     sortLabel: "Sortér:",
     sortPriority: "Prioritet M > S > C > W",
@@ -886,7 +879,6 @@ const I18N = {
     ageTitleUpdated: "Sidst rettet: {date}",
 
     addReqNameRequired: "Skriv et projektnavn.",
-    joinCodeRequired: "Indsæt et invite-link eller en projektkode.",
     projectNotExist: "Projektet findes ikke. Tjek koden.",
     loginInterrupted: "Login blev afbrudt.",
     loginFailed: "Login fejlede: {code}",
@@ -985,13 +977,10 @@ const I18N = {
 
     yourProjects: "Your projects",
     yourProjectsHint: "Projects you are already a member of. Click to open.",
-    noProjects: "You are not a member of any projects yet.",
+    noProjects: "You are not a member of any projects yet. Have you received an invite link? Click it to join.",
     createProjectTitle: "Create a new project",
     newProjectPlaceholder: "Project name, e.g. Reolmarket",
     createProjectBtn: "Create project",
-    joinProjectTitle: "Join a project",
-    joinPlaceholder: "Invite link or project code",
-    joinBtn: "Join",
 
     sortLabel: "Sort:",
     sortPriority: "Priority M > S > C > W",
@@ -1200,7 +1189,6 @@ const I18N = {
     ageTitleUpdated: "Last edited: {date}",
 
     addReqNameRequired: "Enter a project name.",
-    joinCodeRequired: "Paste an invite link or a project code.",
     projectNotExist: "The project does not exist. Check the code.",
     loginInterrupted: "Sign-in was interrupted.",
     loginFailed: "Sign-in failed: {code}",
@@ -2146,34 +2134,6 @@ async function createProject() {
     return;
   }
   await openProject(pid);
-}
-
-async function joinFromInput() {
-  const input = $("joinCode").value.trim();
-  if (input === "") { showMessage(t("joinCodeRequired")); return; }
-
-  const m = input.match(/[#&?]invite=([^&\s]+)/);
-  if (m) {
-    let token = m[1];
-    try { token = decodeURIComponent(token); } catch (e) { /* keep raw */ }
-    await openProjectByInvite(token, "");
-    return;
-  }
-
-  if (/^[0-9a-f]{16,}$/i.test(input)) {
-    await openProjectByInvite(input, "");
-    return;
-  }
-
-  let code = input;
-  const hashPos = code.indexOf("#");
-  if (hashPos >= 0) {
-    code = code.slice(hashPos + 1);
-    const ampPos = code.indexOf("&");
-    if (ampPos >= 0) { code = code.slice(0, ampPos); }
-  }
-  if (code === "") { showMessage(t("joinCodeRequired")); return; }
-  await openProject(code);
 }
 
 async function openProject(pid) {
@@ -4321,7 +4281,6 @@ $("btnLang").addEventListener("click", function () {
   setLang(lang === "da" ? "en" : "da");
 });
 $("btnCreate").addEventListener("click", createProject);
-$("btnJoin").addEventListener("click", joinFromInput);
 $("btnAdd").addEventListener("click", addRequirement);
 $("btnImport").addEventListener("click", onImportClick);
 $("importFile").addEventListener("change", onImportFileChosen);
