@@ -13,21 +13,11 @@
   #lastSaved { font-size: 12px; opacity: 0.85; color: #bbf7d0;
                transition: opacity 0.2s ease; }
   #btnLang {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 500;
-    background: #2563eb;
-    color: #fff;
-    border: 2px solid #fff;
-    font-weight: 700;
-    min-width: 62px;
-    padding: 10px 18px;
-    border-radius: 999px;
-    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
-    cursor: pointer;
-    font-size: 14px;
-    letter-spacing: 0.08em;
+    position: fixed; bottom: 20px; right: 20px; z-index: 500;
+    background: #2563eb; color: #fff; border: 2px solid #fff;
+    font-weight: 700; min-width: 62px; padding: 10px 18px;
+    border-radius: 999px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+    cursor: pointer; font-size: 14px; letter-spacing: 0.08em;
     transition: background 0.12s ease, transform 0.12s ease;
   }
   #btnLang:hover { background: #1d4ed8; transform: translateY(-1px); }
@@ -42,31 +32,39 @@
   button.primary { background: #2563eb; color: #fff; border-color: #2563eb; }
   button.danger { border-color: #dc2626; color: #b91c1c; background: #fff; }
   button.danger:hover { background: #fef2f2; }
-  input[type=text], input[type=password], input[type=number], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
+  input[type=text], input[type=password], input[type=number], input[type=date], select, textarea { font: inherit; font-size: 13px; box-sizing: border-box; }
   .card input[type=text] { width: 100%; padding: 6px; margin: 6px 0; }
   #msg { color: #b91c1c; margin: 8px 0; }
   #msg:empty { display: none; }
   #projectName {
     margin: 0 0 12px; font-size: 22px;
-    display: inline-block;
-    cursor: pointer;
-    color: #2563eb;
-    padding: 2px 6px 2px 4px;
-    border-radius: 4px;
+    display: inline-block; cursor: pointer; color: #2563eb;
+    padding: 2px 6px 2px 4px; border-radius: 4px;
     transition: background-color 0.12s ease, color 0.12s ease;
   }
-  #projectName:hover {
-    text-decoration: underline;
-    background: rgba(37, 99, 235, 0.08);
-  }
-  #projectName::before {
-    content: "← ";
-    opacity: 0.7;
-    transition: opacity 0.12s ease;
-    font-weight: normal;
-  }
+  #projectName:hover { text-decoration: underline; background: rgba(37, 99, 235, 0.08); }
+  #projectName::before { content: "← "; opacity: 0.7; transition: opacity 0.12s ease; font-weight: normal; }
   #projectName:hover::before { opacity: 1; }
   .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .project-health {
+    display: flex; align-items: center; gap: 12px;
+    margin: 0 0 12px; font-size: 13px;
+  }
+  .project-health-bar {
+    display: flex; flex: 1 1 auto; height: 8px;
+    background: #e5e7eb; border-radius: 4px;
+    overflow: hidden; max-width: 400px;
+  }
+  .project-health-seg {
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+  .project-health-seg.seg-done   { background: #15803d; }
+  .project-health-seg.seg-must   { background: #dc2626; }
+  .project-health-seg.seg-should { background: #f59e0b; }
+  .project-health-seg.seg-could  { background: #3b82f6; }
+  .project-health-text { flex: 0 0 auto; color: #4b5563; white-space: nowrap; }
+  .project-health-text.overdue { color: #b91c1c; font-weight: 600; }
   .table-wrap { overflow-x: auto; }
   table { border-collapse: collapse; width: 100%; min-width: 1240px; background: #fff; }
   th, td { border: 1px solid #d9dde3; padding: 4px; vertical-align: top; font-size: 13px; }
@@ -93,25 +91,15 @@
   tr.group-status-done     td { background: #15803d; }
   tr.group-status-parked   td { background: #c2410c; }
   tr.group-status-dropped  td { background: #4b5563; }
-  th.sort-active {
-    background: #dbeafe;
-    border-bottom: 3px solid #2563eb;
-    font-weight: 700;
-  }
-  td.sort-active {
-    box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.08);
-  }
-  td.sort-active textarea,
-  td.sort-active select {
-    background: rgba(255, 255, 255, 0.65);
-  }
+  th.sort-active { background: #dbeafe; border-bottom: 3px solid #2563eb; font-weight: 700; }
+  td.sort-active { box-shadow: inset 0 0 0 9999px rgba(37, 99, 235, 0.08); }
+  td.sort-active textarea, td.sort-active select { background: rgba(255, 255, 255, 0.65); }
   select.status-proposed { background: #fef9c3; }
   select.status-agreed { background: #ddd6fe; }
   select.status-done { background: #bbf7d0; }
   select.status-parked { background: #fed7aa; }
   select.status-dropped { background: #e5e7eb; color: #6b7280; }
-  details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3;
-            border-radius: 8px; padding: 8px 12px; }
+  details { margin-bottom: 12px; background: #fff; border: 1px solid #d9dde3; border-radius: 8px; padding: 8px 12px; }
   details > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
   details[open] > summary { margin-bottom: 8px; }
   .small { font-size: 12px; color: #4b5563; }
@@ -122,162 +110,91 @@
   td.age-parked { color: #9ca3af; font-style: italic; }
   td.age-none   { color: #d1d5db; }
   td.refs { font-size: 12px; line-height: 1.5; word-break: break-all; }
-  td.refs a {
-    color: #2563eb; text-decoration: none;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  }
+  td.refs a { color: #2563eb; text-decoration: none; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
   td.refs a:hover { text-decoration: underline; }
-  td.refs span.unlinked {
-    color: #9ca3af;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    cursor: help;
-  }
+  td.refs span.unlinked { color: #9ca3af; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; cursor: help; }
   td.refs-empty { color: #d1d5db; text-align: center; }
   td.actions { white-space: nowrap; text-align: right; }
   td.actions button { padding: 4px 8px; }
   td.actions button + button { margin-left: 4px; }
-  textarea.just-saved, select.just-saved {
-    box-shadow: 0 0 0 2px #86efac;
-    transition: box-shadow 0.2s ease;
-  }
+  textarea.just-saved, select.just-saved { box-shadow: 0 0 0 2px #86efac; transition: box-shadow 0.2s ease; }
   th.hidden-col, td.hidden-col { display: none; }
   .colprefs { position: relative; }
   .colprefs-panel {
     position: absolute; top: 100%; left: 0; z-index: 20;
     background: #fff; border: 1px solid #d9dde3; border-radius: 8px;
     padding: 8px 12px; margin-top: 4px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    min-width: 200px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1); min-width: 200px;
   }
   .colprefs-panel label { display: block; font-size: 13px; padding: 3px 0; cursor: pointer; }
   .colprefs-panel .small { margin: 6px 0 0; }
-  .matrix-sections {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-  .matrix-section {
-    display: flex;
-    align-items: stretch;
-    background: #fff;
-    border: 1px solid #d9dde3;
-  }
+  .matrix-sections { display: flex; flex-direction: column; gap: 16px; }
+  .matrix-section { display: flex; align-items: stretch; background: #fff; border: 1px solid #d9dde3; }
   .matrix-banner {
-    flex: 0 0 46px;
-    position: sticky;
-    left: 0;
-    z-index: 5;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #fff;
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 0.18em;
-    padding: 10px 0;
+    flex: 0 0 46px; position: sticky; left: 0; z-index: 5;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 14px; letter-spacing: 0.18em; padding: 10px 0;
   }
-  .matrix-banner-text {
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
-    white-space: nowrap;
-  }
+  .matrix-banner-text { writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; }
   .matrix-banner.group-1 { background: #b91c1c; }
   .matrix-banner.group-2 { background: #b45309; }
   .matrix-banner.group-3 { background: #1d4ed8; }
   .matrix-banner.group-4 { background: #4b5563; }
-  .matrix-section-body {
-    flex: 1 1 auto;
-    min-width: 0;
-  }
-  .matrix-sections-empty {
-    padding: 16px;
-    font-size: 13px;
-    color: #4b5563;
-    background: #fff;
-    border: 1px solid #d9dde3;
-    border-radius: 8px;
-  }
+  .matrix-section-body { flex: 1 1 auto; min-width: 0; }
+  .matrix-sections-empty { padding: 16px; font-size: 13px; color: #4b5563; background: #fff; border: 1px solid #d9dde3; border-radius: 8px; }
   .side-panel {
-    position: fixed; top: 0; right: 0;
-    height: 100vh; width: 440px; max-width: 92vw;
-    background: #fff;
-    box-shadow: -4px 0 16px rgba(0,0,0,0.12);
-    transform: translateX(100%);
-    transition: transform 0.22s ease;
-    z-index: 100;
-    display: flex; flex-direction: column;
+    position: fixed; top: 0; right: 0; height: 100vh; width: 440px; max-width: 92vw;
+    background: #fff; box-shadow: -4px 0 16px rgba(0,0,0,0.12);
+    transform: translateX(100%); transition: transform 0.22s ease;
+    z-index: 100; display: flex; flex-direction: column;
   }
   .side-panel.open { transform: translateX(0); }
-  .side-panel-header {
-    padding: 12px 16px; border-bottom: 1px solid #d9dde3;
-    display: flex; justify-content: space-between; align-items: center;
-    background: #f6f7f9;
-  }
+  .side-panel-header { padding: 12px 16px; border-bottom: 1px solid #d9dde3;
+    display: flex; justify-content: space-between; align-items: center; background: #f6f7f9; }
   .side-panel-header strong { font-size: 15px; }
   .side-panel-body { padding: 16px 20px 32px; overflow-y: auto; flex: 1; }
   .side-panel-body section { margin-bottom: 24px; }
   .side-panel-body section:last-child { margin-bottom: 0; }
-  .side-panel-body h3 {
-    margin: 0 0 6px; font-size: 14px; color: #1f2937;
-    padding-bottom: 4px; border-bottom: 1px solid #eef0f3;
-  }
+  .side-panel-body h3 { margin: 0 0 6px; font-size: 14px; color: #1f2937;
+    padding-bottom: 4px; border-bottom: 1px solid #eef0f3; }
   .side-panel-body h4 { margin: 12px 0 4px; font-size: 13px; color: #1f2937; }
   .side-panel-body ul { margin: 4px 0 8px; padding-left: 20px; }
   .side-panel-body li { font-size: 13px; line-height: 1.5; }
   .side-panel-body p { font-size: 13px; line-height: 1.5; }
-  .side-panel-body code {
-    background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
-  }
-  .panel-backdrop {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.25);
-    z-index: 99;
-  }
+  .side-panel-body code { background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+  .panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.25); z-index: 99; }
   #myProjectsList { list-style: none; padding: 0; margin: 8px 0 0; }
   #myProjectsList li { margin-bottom: 6px; }
   #myProjectsList button { width: 100%; text-align: left; }
   #myProjectsSection hr { margin: 16px 0; border: 0; border-top: 1px solid #d9dde3; }
   #memberList { list-style: none; padding: 0; margin: 8px 0 0; }
-  .modal {
-    position: fixed; inset: 0;
-    background: rgba(0,0,0,0.4);
-    z-index: 200;
-    display: flex; align-items: center; justify-content: center;
-  }
+  .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200;
+    display: flex; align-items: center; justify-content: center; }
   .modal.hidden { display: none; }
-  .modal-content {
-    background: #fff; border-radius: 8px;
-    padding: 20px 24px; min-width: 420px; max-width: 92vw;
-    max-height: 90vh; overflow-y: auto;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
-  }
+  .modal-content { background: #fff; border-radius: 8px; padding: 20px 24px;
+    min-width: 420px; max-width: 92vw; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
   .modal-content h3 { margin: 0 0 16px; font-size: 16px; }
   .modal-content h4 { margin: 16px 0 6px; font-size: 14px; color: #1f2937;
-                      padding-bottom: 4px; border-bottom: 1px solid #eef0f3; }
+    padding-bottom: 4px; border-bottom: 1px solid #eef0f3; }
   .modal-content h4:first-of-type { margin-top: 0; }
   .modal-content label { display: block; margin-bottom: 6px; font-size: 13px; }
-  .modal-content label input {
-    width: 100%; padding: 6px; margin-top: 4px;
-    font: inherit; font-size: 13px; box-sizing: border-box;
-  }
-  .modal-content code {
-    background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px;
-  }
+  .modal-content label input { width: 100%; padding: 6px; margin-top: 4px;
+    font: inherit; font-size: 13px; box-sizing: border-box; }
+  .modal-content code { background: #eef0f3; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
   .field-hint { margin: 0 0 14px; font-size: 12px; color: #6b7280; line-height: 1.4; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-wrap: wrap; }
   .modal-actions button { flex: 0 0 auto; }
-  .diff-item { margin-bottom: 12px; padding: 8px 10px; background: #f9fafb;
-               border: 1px solid #e5e7eb; border-radius: 6px; }
+  .diff-item { margin-bottom: 12px; padding: 8px 10px; background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 6px; }
   .diff-item h5 { margin: 0 0 6px; font-size: 13px; color: #1f2937;
-                  display: flex; justify-content: space-between; align-items: baseline; }
+    display: flex; justify-content: space-between; align-items: baseline; }
   .diff-item h5 .ts { font-size: 11px; color: #6b7280; font-weight: normal; }
   .diff-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 4px; }
   .diff-table th, .diff-table td { border: 1px solid #e5e7eb; padding: 3px 6px;
-                                    vertical-align: top; text-align: left; }
+    vertical-align: top; text-align: left; }
   .diff-table th { background: #eef0f3; font-weight: 600; width: auto; }
-  .diff-table td.old { color: #7f1d1d; background: #fef2f2; white-space: pre-wrap;
-                       word-break: break-word; }
-  .diff-table td.new { color: #14532d; background: #f0fdf4; white-space: pre-wrap;
-                       word-break: break-word; }
+  .diff-table td.old { color: #7f1d1d; background: #fef2f2; white-space: pre-wrap; word-break: break-word; }
+  .diff-table td.new { color: #14532d; background: #f0fdf4; white-space: pre-wrap; word-break: break-word; }
   .diff-table td.fld { font-weight: 600; width: 20%; color: #1f2937; background: #fff; }
   @media (max-width: 500px) {
     .side-panel { width: 100vw; max-width: 100vw; }
@@ -309,8 +226,7 @@
     <p data-i18n="loginIntro">Log ind for at se og redigere jeres krav.</p>
     <button id="btnGoogle" class="primary" data-i18n="loginGoogle">Log ind med Google</button>
     <button id="btnGithubLogin" data-i18n="loginGithub">Log ind med GitHub</button>
-    <p class="small" data-i18n="loginHint">Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte
-       den anden metode (knappen øverst til højre), så begge virker.</p>
+    <p class="small" data-i18n="loginHint">Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte den anden metode (knappen øverst til højre), så begge virker.</p>
   </div>
 
   <div id="screenChooser" class="card hidden">
@@ -321,7 +237,6 @@
       <p id="myProjectsEmpty" class="small hidden" data-i18n="noProjects">Du er ikke medlem af nogen projekter endnu. Har du fået et invite-link? Klik på det for at deltage.</p>
       <hr>
     </section>
-
     <h2 data-i18n="createProjectTitle">Opret nyt projekt</h2>
     <input type="text" id="newProjectName" data-i18n-placeholder="newProjectPlaceholder" placeholder="Projektnavn, fx Reolmarked">
     <button id="btnCreate" class="primary" data-i18n="createProjectBtn">Opret projekt</button>
@@ -337,6 +252,7 @@
           <option value="original" data-i18n="sortOriginal">Som de dukker op (oprettet)</option>
           <option value="category" data-i18n="sortCategory">FURPS+ kategori</option>
           <option value="status" data-i18n="sortStatus">Status</option>
+          <option value="age" data-i18n="sortAge">Alder (ældste først)</option>
         </select>
       </label>
       <label><span data-i18n="filterLabel">Vis:</span>
@@ -385,6 +301,11 @@
               title="Åbn Scrum board i ny fane">Scrum board ↗</button>
       <button id="btnInfo" data-i18n-title="infoBtnTitle"
               title="Forklaring, PYT, import-info og medlemmer">ℹ️ Info</button>
+    </div>
+
+    <div id="projectHealth" class="project-health hidden">
+      <div id="projectHealthBar" class="project-health-bar"></div>
+      <span id="projectHealthText" class="project-health-text"></span>
     </div>
 
     <div class="table-wrap">
@@ -450,18 +371,13 @@
       </ul>
 
       <h3 data-i18n="panelPytTitle">PYT — Park Your Treasures</h3>
-      <p data-i18n-html="pytIntro">Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget
-         i denne omgang — eller kun hvis der bliver tid. Sæt status til
-         <strong>Parkeret (PYT)</strong>, så forsvinder de ikke, men fylder heller
-         ikke i den aktive liste.</p>
+      <p data-i18n-html="pytIntro">Idéer der dukker op undervejs, men som sandsynligvis ikke bliver til noget i denne omgang — eller kun hvis der bliver tid. Sæt status til <strong>Parkeret (PYT)</strong>, så forsvinder de ikke, men fylder heller ikke i den aktive liste.</p>
       <ul>
         <li data-i18n-html="pytLi1">PYT-krav tæller <em>ikke</em> med i alders-advarsler. De er bevidst parkeret.</li>
         <li data-i18n-html="pytLi2">Brug <strong>PYT</strong>-knappen i værktøjslinjen for at se dem isoleret.</li>
-        <li data-i18n-html="pytLi3">Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret
-            — eller om de skal opgraderes til et rigtigt krav.</li>
+        <li data-i18n-html="pytLi3">Tag dem frem ved sprint-review, og beslut om de stadig skal være parkeret — eller om de skal opgraderes til et rigtigt krav.</li>
       </ul>
-      <p class="small" data-i18n="pytNote">Forskellen fra "Droppet": Droppet betyder "vi har besluttet ikke at gøre det".
-         Parkeret betyder "vi beslutter det ikke nu".</p>
+      <p class="small" data-i18n="pytNote">Forskellen fra "Droppet": Droppet betyder "vi har besluttet ikke at gøre det". Parkeret betyder "vi beslutter det ikke nu".</p>
 
       <h3 data-i18n="panelAgeTitle">Alder</h3>
       <ul>
@@ -469,27 +385,65 @@
         <li data-i18n-html="ageLi2">Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres med gul og rød, når de nærmer sig de grænser, gruppen har sat under ⚙️ Indstillinger.</li>
         <li data-i18n="ageLi3">Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).</li>
         <li data-i18n="ageLi4">Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.</li>
+        <li data-i18n="ageLi5">Sortér efter alder for at se de ældste krav øverst.</li>
       </ul>
-      <p class="small" data-i18n="ageNote">Færdige, parkerede og droppede rækker vises dæmpet, så de ikke
-         konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.</p>
+      <p class="small" data-i18n="ageNote">Færdige, parkerede og droppede rækker vises dæmpet, så de ikke konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.</p>
+
+      <h3 data-i18n="panelDeadlineTitle">Projekt-deadline</h3>
+      <p data-i18n="deadlineIntro">Ejeren kan sætte en samlet deadline for projektet under ⚙️ Indstillinger. Når den er sat, vises en statuslinje under værktøjslinjen med:</p>
+      <ul>
+        <li data-i18n="deadlineLi1">Hvor mange krav der er opfyldt ud af det samlede antal aktive krav.</li>
+        <li data-i18n="deadlineLi2">Hvor mange dage der er tilbage — eller hvor mange dage deadlinen er overskredet med.</li>
+        <li data-i18n-html="deadlineLi3">En visuel bar der viser fordelingen: <strong>grøn</strong> = færdige krav, <strong>rød</strong> = Must-krav tilbage, <strong>orange</strong> = Should-krav tilbage, <strong>blå</strong> = Could-krav tilbage. Hold musen over baren for at se de præcise tal.</li>
+      </ul>
+      <p class="small" data-i18n="deadlineNote">Krav med status Parkeret, Droppet eller Won't tælles ikke med — de er ikke aktive mål. Deadlinen er valgfri; uden den viser linjen kun hvor mange krav der er opfyldt.</p>
 
       <h3 data-i18n="panelStorageTitle">Lagring</h3>
       <ul>
         <li data-i18n="storageLi1">Ændringer gemmes automatisk — der er ingen gem-knap.</li>
-        <li data-i18n="storageLi2">Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast.
-            Forlader du feltet, gemmes med det samme.</li>
+        <li data-i18n="storageLi2">Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast. Forlader du feltet, gemmes med det samme.</li>
         <li data-i18n="storageLi3">Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.</li>
-        <li data-i18n="storageLi4">Et grønt blink på feltet og en lille "Gemt"-kvittering øverst bekræfter
-            at ændringen er nået frem.</li>
+        <li data-i18n="storageLi4">Et grønt blink på feltet og en lille "Gemt"-kvittering øverst bekræfter at ændringen er nået frem.</li>
       </ul>
-      <p class="small" data-i18n="storageNote">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +.
-         Vælg én konvention, og brug den konsekvent.</p>
+      <p class="small" data-i18n="storageNote">Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +. Vælg én konvention, og brug den konsekvent.</p>
+    </section>
+
+    <section>
+      <h3 data-i18n="panelSmartTitle">Gode mål — SMART</h3>
+      <p data-i18n="smartIntro">Et godt krav er lettere at arbejde med, når det er klart formuleret. Brug SMART som tjekliste, når du skriver krav. Hvert bogstav stiller et spørgsmål, du bør kunne svare på:</p>
+      <h4 data-i18n="smartSTitle">S — Specifikt</h4>
+      <p data-i18n="smartSDesc">Hvad præcist skal ske? Undgå vage vendinger som "forbedre", "optimere" eller "understøtte". Beskriv den konkrete adfærd eller det konkrete resultat.</p>
+      <p class="small" data-i18n-html="smartSBad"><strong>Dårligt:</strong> "Brugeren skal kunne søge."</p>
+      <p class="small" data-i18n-html="smartSGood"><strong>Godt:</strong> "Brugeren skal kunne søge i kravlisten efter REQ-nummer og fritekst i beskrivelsen."</p>
+      <h4 data-i18n="smartMTitle">M — Målbart</h4>
+      <p data-i18n="smartMDesc">Hvordan ved vi, at det virker? Beskriv et signal, der kan observeres eller måles — en tælling, en tid, en andel, en test.</p>
+      <p class="small" data-i18n-html="smartMBad"><strong>Dårligt:</strong> "Det skal være hurtigt."</p>
+      <p class="small" data-i18n-html="smartMGood"><strong>Godt:</strong> "Svaret skal komme inden for 500 ms ved 100 krav, målt i Chrome DevTools."</p>
+      <h4 data-i18n="smartATitle">A — Acceptabelt (opnåeligt)</h4>
+      <p data-i18n="smartADesc">Kan vi bygge det med de folk, den tid og de ressourcer vi har? Hvis ikke, skal kravet måske deles op, eller sættes til PYT indtil videre.</p>
+      <p class="small" data-i18n-html="smartABad"><strong>Dårligt:</strong> "Vi skal have AI-anbefalinger i næste sprint." (hvis ingen i gruppen kan AI)</p>
+      <p class="small" data-i18n-html="smartAGood"><strong>Godt:</strong> "Vi starter med en simpel regelbaseret anbefaling i sprint 3, og overvejer AI i sprint 5 hvis tiden tillader."</p>
+      <h4 data-i18n="smartRTitle">R — Relevant</h4>
+      <p data-i18n="smartRDesc">Hvorfor er det vigtigt nu? Hvilket problem løser det for brugeren eller forretningen? Hvis svaret er "det er nice to have", hører det måske under Could eller PYT.</p>
+      <p class="small" data-i18n-html="smartRBad"><strong>Dårligt:</strong> "Det kunne være sjovt at have mørk tilstand."</p>
+      <p class="small" data-i18n-html="smartRGood"><strong>Godt:</strong> "Mørk tilstand reducerer øjenbelastning for brugere der arbejder sent — efterspurgt af 3 af 5 testbrugere."</p>
+      <h4 data-i18n="smartTTitle">T — Tidsafgrænset</h4>
+      <p data-i18n="smartTDesc">Hvornår skal det være færdigt? Undgå "snarest" og "i god tid". Knyt det til en sprint, en dato eller en milepæl.</p>
+      <p class="small" data-i18n-html="smartTBad"><strong>Dårligt:</strong> "Vi skal have det gjort på et tidspunkt."</p>
+      <p class="small" data-i18n-html="smartTGood"><strong>Godt:</strong> "Færdig inden udgangen af sprint 4 (fredag d. 15. november)."</p>
+      <p class="small" data-i18n-html="smartSummary">Kan et krav ikke besvares med disse fem spørgsmål, er det måske stadig en god idé — men overvej at sætte status til <strong>Parkeret (PYT)</strong> indtil det er modnet.</p>
+    </section>
+
+    <section>
+      <h3 data-i18n="panelKpiTitle">KPI — Key Performance Indicator</h3>
+      <p data-i18n="kpiIntro">En KPI er et konkret, målbart signal der viser om et krav virker i praksis. Hvor SMART hjælper dig med at <em>formulere</em> kravet, hjælper KPI'en med at <em>følge op</em> på det bagefter.</p>
+      <p class="small" data-i18n-html="kpiExample"><strong>Eksempel:</strong> For kravet "Brugeren skal kunne logge ind med Google" kunne KPI'en være: <em>"Andel nye brugere der fuldfører login på under 10 sekunder — mål: over 90%."</em> Skriv KPI'en i Noter på kravet.</p>
+      <p class="small" data-i18n="kpiNote">KPI'er er ofte midlertidige og specifikke for det enkelte krav. Brug dem især på Must- og Should-krav, hvor I vil kunne sige "det virker" med data i hånden.</p>
     </section>
 
     <section>
       <h3 data-i18n="panelRefsTitle">Referencer (GitHub)</h3>
-      <p data-i18n-html="refsIntro">Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i
-         Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.</p>
+      <p data-i18n-html="refsIntro">Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.</p>
       <ul>
         <li data-i18n-html="refsLi1"><code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ Indstillinger. Ellers vises det som tekst.</li>
         <li data-i18n-html="refsLi2"><code>ejer/repo#123</code> → linker til det angivne repo. Virker uden at sætte noget.</li>
@@ -501,12 +455,9 @@
 
     <section>
       <h3 data-i18n="panelShareTitle">Del et krav via link 🔗</h3>
-      <p data-i18n-html="shareIntro1">Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til
-         det pågældende krav, fx:</p>
+      <p data-i18n-html="shareIntro1">Hver række har en <strong>🔗</strong>-knap. Den kopierer et link direkte til det pågældende krav, fx:</p>
       <p><code>https://…/#reolmarked-abc123&amp;req=xyz789</code></p>
-      <p data-i18n="shareIntro2">Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når
-         nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver
-         rækken et kort gult blink.</p>
+      <p data-i18n="shareIntro2">Sæt linket ind i en GitHub-issue-kommentar (eller hvor som helst), og når nogen klikker på det, åbner kravmatrixen, scroller til kravet og giver rækken et kort gult blink.</p>
       <p class="small" data-i18n="shareNote">Invite-links udløber efter den tid, ejeren har sat i ⚙️ Indstillinger. Når først en person er medlem, har de permanent adgang. Del derfor kun invite-links med gruppen.</p>
     </section>
 
@@ -522,17 +473,14 @@
     <section>
       <h3 data-i18n="panelImportTitle">Import: filformater</h3>
       <ul>
-        <li data-i18n-html="importLi1"><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten
-            (danske eller engelske). Semikolon, komma og tab virker.</li>
+        <li data-i18n-html="importLi1"><strong>.csv</strong>: første række er overskrifter, de samme som i CSV-eksporten (danske eller engelske). Semikolon, komma og tab virker.</li>
         <li data-i18n-html="importLi2"><strong>.json</strong>: en liste af objekter, som i JSON-eksporten.</li>
-        <li data-i18n-html="importLi3"><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps
-            egen Markdown-eksport og med håndskrevne tabeller.</li>
+        <li data-i18n-html="importLi3"><strong>.md</strong>: en Markdown-fil med tabeller. Virker både med denne apps egen Markdown-eksport og med håndskrevne tabeller.</li>
         <li data-i18n-html="importLi4"><strong>.txt</strong>: ét krav pr. linje. Alle får F / Should / Foreslået, som du kan rette bagefter.</li>
       </ul>
       <p class="small" data-i18n="importNote">Import tilføjer nye krav og overskriver aldrig eksisterende.</p>
       <p class="small" data-i18n="importDuplicateNote">Dubletter springes over: først på stabilt ID (usynligt) eller Krav-ID (REQ-NNN), ellers på beskrivelsen alene (normaliseret for store/små bogstaver og ekstra mellemrum).</p>
-      <p class="small" data-i18n-html="importOutdatedNote">Hvis filen indeholder krav, hvor online-versionen er
-         ændret, viser appen forskellene og lader dig vælge mellem at opdatere, tilføje som nye eller oprette et nyt projekt.</p>
+      <p class="small" data-i18n-html="importOutdatedNote">Hvis filen indeholder krav, hvor online-versionen er ændret, viser appen forskellene og lader dig vælge mellem at opdatere, tilføje som nye eller oprette et nyt projekt.</p>
       <p class="small" data-i18n="importSeqNote">Et slettet kravs REQ-NNN pensioneres: ingen andre krav kan overtage nummeret. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.</p>
       <p class="small" data-i18n="importMdStableNote">Markdown-eksporten indeholder en skjult metadata-blok nederst med de stabile ID'er. Den er usynlig i renderet markdown, men gør at importen kan genkende kravet selv hvis beskrivelsen er ændret.</p>
     </section>
@@ -551,32 +499,27 @@
     <h3 data-i18n="settingsDialogTitle">Projektindstillinger</h3>
 
     <h4 data-i18n="settingsGithubSection">GitHub-integration</h4>
-
     <label>
       <span data-i18n="ghBoardLabel">Scrum board URL (valgfrit)</span>
       <input type="text" id="githubBoardUrlInput"
              placeholder="https://github.com/users/DGARosendal/projects/1">
     </label>
     <p class="field-hint" data-i18n="ghBoardHint">Vises som en knap i værktøjslinjen. Kan stå tom.</p>
-
     <label>
       <span data-i18n="ghRepoLabel">Standard repository</span>
       <input type="text" id="defaultRepoInput"
              placeholder="DGARosendal/reolmarked">
     </label>
     <p class="field-hint" data-i18n-html="ghRepoHint">Bruges til at gøre <code>#123</code> til klikbare links. Uden den virker kun <code>ejer/repo#123</code>.</p>
-
     <p class="small" data-i18n="ghPrivateNote">Er repo'et privat, virker linkene kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.</p>
 
     <h4 data-i18n="settingsAgeSection">Aldersgrænser</h4>
     <p class="field-hint" data-i18n="settingsAgeHint">Krav der ikke er Færdige, Parkerede eller Droppede markeres med farve, når de ikke er blevet rettet i et stykke tid. Grænserne gælder for alle i gruppen.</p>
-
     <label>
       <span data-i18n="settingsWarnLabel">Gul efter (dage)</span>
       <input type="number" id="staleWarnInput" min="1" max="999" step="1" inputmode="numeric">
     </label>
     <p class="field-hint" data-i18n="settingsAgeWarnHint">Skal være mindst 1.</p>
-
     <label>
       <span data-i18n="settingsUrgentLabel">Rød efter (dage)</span>
       <input type="number" id="staleUrgentInput" min="2" max="999" step="1" inputmode="numeric">
@@ -589,6 +532,13 @@
       <input type="number" id="inviteHoursInput" min="1" max="168" step="1" inputmode="numeric">
     </label>
     <p class="field-hint" data-i18n="inviteHoursHint">1–168 timer. Når et invite-link er udløbet, kan det ikke bruges til at deltage — men eksisterende medlemmer har stadig adgang.</p>
+
+    <h4 data-i18n="settingsDeadlineSection">Projekt-deadline</h4>
+    <label>
+      <span data-i18n="settingsDeadlineLabel">Deadline for hele projektet (valgfrit)</span>
+      <input type="date" id="deadlineInput">
+    </label>
+    <p class="field-hint" data-i18n="settingsDeadlineHint">Vises som en statuslinje på projektsiden med hvor mange krav der er opfyldt, og hvor lang tid der er tilbage. Krav med status Parkeret, Droppet eller Won't tælles ikke med. Kan stå tom.</p>
 
     <div class="modal-actions">
       <button id="btnGithubCancel" data-i18n="cancelBtn">Annullér</button>
@@ -625,7 +575,7 @@ import { getAuth, onAuthStateChanged, signInWithPopup, linkWithPopup, signOut,
 import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection,
          getDocs, onSnapshot, runTransaction, serverTimestamp, Timestamp }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
- import { initializeAppCheck, ReCaptchaEnterpriseProvider }
+import { initializeAppCheck, ReCaptchaEnterpriseProvider }
   from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js";
 
 const firebaseConfig = {
@@ -634,10 +584,8 @@ authDomain: "reqmatrix-fc50a.firebaseapp.com",
 projectId: "reqmatrix-fc50a",
 appId: "1:480693503390:web:d8c32525e3370b301a428f"
 };
-  
-const app = initializeApp(firebaseConfig);
 
-// --- App Check ---
+const app = initializeApp(firebaseConfig);
 if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
   self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
 }
@@ -645,7 +593,6 @@ initializeAppCheck(app, {
   provider: new ReCaptchaEnterpriseProvider('6Lf_VPgtAAAAALNa6xtqJxw0eWsN4oCx7qcLA5no'),
   isTokenAutoRefreshEnabled: true
 });
-// --- /App Check ---
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -665,32 +612,29 @@ const AUTOSAVE_DELAY_MS = 800;
 const COLUMNS = ["id", "description", "furps", "moscow", "source",
                  "status", "notes", "refs", "updatedBy", "age"];
 
-// ---------- i18n ----------
 const I18N = {
   da: {
     appTitle: "Kravmatrix · FURPS+ × MoSCoW",
     langButton: "EN",
     langTitle: "Skift til engelsk",
     logout: "Log ud",
-
     loginTitle: "Log ind",
     loginIntro: "Log ind for at se og redigere jeres krav.",
     loginGoogle: "Log ind med Google",
     loginGithub: "Log ind med GitHub",
-    loginHint: "Log ind med den metode, du brugte første gang. Bagefter du kan tilknytte den anden metode (knappen øverst til højre), så begge virker.",
-
+    loginHint: "Log ind med den metode, du brugte første gang. Bagefter kan du tilknytte den anden metode (knappen øverst til højre), så begge virker.",
     yourProjects: "Dine projekter",
     yourProjectsHint: "Projekter du allerede er medlem af. Klik for at åbne.",
     noProjects: "Du er ikke medlem af nogen projekter endnu. Har du fået et invite-link? Klik på det for at deltage.",
     createProjectTitle: "Opret nyt projekt",
     newProjectPlaceholder: "Projektnavn, fx Reolmarked",
     createProjectBtn: "Opret projekt",
-
     sortLabel: "Sortér:",
     sortPriority: "Prioritet M > S > C > W",
     sortOriginal: "Som de dukker op (oprettet)",
     sortCategory: "FURPS+ kategori",
     sortStatus: "Status",
+    sortAge: "Alder (ældste først)",
     filterLabel: "Vis:",
     filterAll: "Alle prioriteter",
     pytTitle: "Vis kun parkerede (PYT) krav — idéer der venter på review",
@@ -723,7 +667,6 @@ const I18N = {
     infoBtnTitle: "Forklaring, PYT, import-info og medlemmer",
     backToProjectsTitle: "Tilbage til projektlisten",
     settingsBtnTitle: "Projektindstillinger: GitHub, aldersgrænser m.m.",
-
     thId: "Krav-ID",
     thDescription: "Kravbeskrivelse",
     thFurps: "FURPS+",
@@ -736,7 +679,6 @@ const I18N = {
     thUpdatedBy: "Sidst rettet af",
     thAge: "Alder",
     thAgeTitle: "Dage siden kravet sidst blev rettet. Krav der ikke er Færdige eller Droppede fremhæves efter de grænser, gruppen har sat under ⚙️ Indstillinger.",
-
     panelTitle: "Information",
     panelCloseTitle: "Luk",
     panelFurpsTitle: "FURPS+ (kravtype)",
@@ -768,13 +710,47 @@ const I18N = {
     ageLi2: "Krav der <em>ikke</em> er Færdige, Parkerede eller Droppede markeres med gul og rød, når de nærmer sig de grænser, gruppen har sat under ⚙️ Indstillinger.",
     ageLi3: "Parkerede og afsluttede krav vises i neutral farve (parkeret i kursiv).",
     ageLi4: "Formålet er at gøre det synligt, når et Should/Could-krav er ved at blive glemt.",
+    ageLi5: "Sortér efter alder for at se de ældste krav øverst.",
     ageNote: "Færdige, parkerede og droppede rækker vises dæmpet, så de ikke konkurrerer med de aktive krav. Hold musen over for at se dem i fuld styrke.",
+    panelDeadlineTitle: "Projekt-deadline",
+    deadlineIntro: "Ejeren kan sætte en samlet deadline for projektet under ⚙️ Indstillinger. Når den er sat, vises en statuslinje under værktøjslinjen med:",
+    deadlineLi1: "Hvor mange krav der er opfyldt ud af det samlede antal aktive krav.",
+    deadlineLi2: "Hvor mange dage der er tilbage — eller hvor mange dage deadlinen er overskredet med.",
+    deadlineLi3: "En visuel bar der viser fordelingen: <strong>grøn</strong> = færdige krav, <strong>rød</strong> = Must-krav tilbage, <strong>orange</strong> = Should-krav tilbage, <strong>blå</strong> = Could-krav tilbage. Hold musen over baren for at se de præcise tal.",
+    deadlineNote: "Krav med status Parkeret, Droppet eller Won't tælles ikke med — de er ikke aktive mål. Deadlinen er valgfri; uden den viser linjen kun hvor mange krav der er opfyldt.",
     panelStorageTitle: "Lagring",
     storageLi1: "Ændringer gemmes automatisk — der er ingen gem-knap.",
     storageLi2: "Når du skriver i et felt, gemmes det ca. 1 sekund efter sidste tast. Forlader du feltet, gemmes med det samme.",
     storageLi3: "Dropdowns (FURPS+, MoSCoW, Status) gemmes straks ved valg.",
     storageLi4: "Et grønt blink på feltet og en lille \"Gemt\"-kvittering øverst bekræfter at ændringen er nået frem.",
     storageNote: "Sikkerhed og andre tværgående hensyn kan klassificeres under F eller +. Vælg én konvention, og brug den konsekvent.",
+    panelSmartTitle: "Gode mål — SMART",
+    smartIntro: "Et godt krav er lettere at arbejde med, når det er klart formuleret. Brug SMART som tjekliste, når du skriver krav. Hvert bogstav stiller et spørgsmål, du bør kunne svare på:",
+    smartSTitle: "S — Specifikt",
+    smartSDesc: "Hvad præcist skal ske? Undgå vage vendinger som \"forbedre\", \"optimere\" eller \"understøtte\". Beskriv den konkrete adfærd eller det konkrete resultat.",
+    smartSBad: "<strong>Dårligt:</strong> \"Brugeren skal kunne søge.\"",
+    smartSGood: "<strong>Godt:</strong> \"Brugeren skal kunne søge i kravlisten efter REQ-nummer og fritekst i beskrivelsen.\"",
+    smartMTitle: "M — Målbart",
+    smartMDesc: "Hvordan ved vi, at det virker? Beskriv et signal, der kan observeres eller måles — en tælling, en tid, en andel, en test.",
+    smartMBad: "<strong>Dårligt:</strong> \"Det skal være hurtigt.\"",
+    smartMGood: "<strong>Godt:</strong> \"Svaret skal komme inden for 500 ms ved 100 krav, målt i Chrome DevTools.\"",
+    smartATitle: "A — Acceptabelt (opnåeligt)",
+    smartADesc: "Kan vi bygge det med de folk, den tid og de ressourcer vi har? Hvis ikke, skal kravet måske deles op, eller sættes til PYT indtil videre.",
+    smartABad: "<strong>Dårligt:</strong> \"Vi skal have AI-anbefalinger i næste sprint.\" (hvis ingen i gruppen kan AI)",
+    smartAGood: "<strong>Godt:</strong> \"Vi starter med en simpel regelbaseret anbefaling i sprint 3, og overvejer AI i sprint 5 hvis tiden tillader.\"",
+    smartRTitle: "R — Relevant",
+    smartRDesc: "Hvorfor er det vigtigt nu? Hvilket problem løser det for brugeren eller forretningen? Hvis svaret er \"det er nice to have\", hører det måske under Could eller PYT.",
+    smartRBad: "<strong>Dårligt:</strong> \"Det kunne være sjovt at have mørk tilstand.\"",
+    smartRGood: "<strong>Godt:</strong> \"Mørk tilstand reducerer øjenbelastning for brugere der arbejder sent — efterspurgt af 3 af 5 testbrugere.\"",
+    smartTTitle: "T — Tidsafgrænset",
+    smartTDesc: "Hvornår skal det være færdigt? Undgå \"snarest\" og \"i god tid\". Knyt det til en sprint, en dato eller en milepæl.",
+    smartTBad: "<strong>Dårligt:</strong> \"Vi skal have det gjort på et tidspunkt.\"",
+    smartTGood: "<strong>Godt:</strong> \"Færdig inden udgangen af sprint 4 (fredag d. 15. november).\"",
+    smartSummary: "Kan et krav ikke besvares med disse fem spørgsmål, er det måske stadig en god idé — men overvej at sætte status til <strong>Parkeret (PYT)</strong> indtil det er modnet.",
+    panelKpiTitle: "KPI — Key Performance Indicator",
+    kpiIntro: "En KPI er et konkret, målbart signal der viser om et krav virker i praksis. Hvor SMART hjælper dig med at <em>formulere</em> kravet, hjælper KPI'en med at <em>følge op</em> på det bagefter.",
+    kpiExample: "<strong>Eksempel:</strong> For kravet \"Brugeren skal kunne logge ind med Google\" kunne KPI'en være: <em>\"Andel nye brugere der fuldfører login på under 10 sekunder — mål: over 90%.\"</em> Skriv KPI'en i Noter på kravet.",
+    kpiNote: "KPI'er er ofte midlertidige og specifikke for det enkelte krav. Brug dem især på Must- og Should-krav, hvor I vil kunne sige \"det virker\" med data i hånden.",
     panelRefsTitle: "Referencer (GitHub)",
     refsIntro: "Kolonnen <strong>Referencer</strong> finder automatisk GitHub-issues nævnt i Kravbeskrivelse, Kilde eller Noter og viser dem som klikbare links.",
     refsLi1: "<code>#123</code> → linker til standard-repo'et, hvis det er sat under ⚙️ Indstillinger. Ellers vises det som tekst.",
@@ -802,7 +778,6 @@ const I18N = {
     importMdStableNote: "Markdown-eksporten indeholder en skjult metadata-blok nederst med de stabile ID'er. Den er usynlig i renderet markdown, men gør at importen kan genkende kravet selv hvis beskrivelsen er ændret.",
     panelMembersTitle: "Medlemmer",
     membersNote: "Invite-links giver adgang til projektet. Når først en person er medlem, har de permanent adgang, indtil de selv forlader projektet. Del derfor kun invite-links med gruppen.",
-
     memberYou: "(dig)",
     memberOwnerSuffix: "· ejer",
     makeOwnerBtn: "Gør til ejer",
@@ -811,7 +786,6 @@ const I18N = {
     transferDone: "Ejerskabet er overdraget til {name}.",
     transferFailed: "Kunne ikke overdrage ejerskab: {code}",
     mustTransferFirst: "Du er ejer og der er stadig andre medlemmer ({names}). Overdrag ejerskabet til en af dem via ℹ️ Info → Medlemmer, før du kan forlade projektet.",
-
     settingsDialogTitle: "Projektindstillinger",
     settingsGithubSection: "GitHub-integration",
     settingsAgeSection: "Aldersgrænser",
@@ -827,7 +801,10 @@ const I18N = {
     inviteHoursLabel: "Standard levetid for invite-links (timer)",
     inviteHoursHint: "1–168 timer. Når et invite-link er udløbet, kan det ikke bruges til at deltage — men eksisterende medlemmer har stadig adgang.",
     settingsAgeBadInviteHours: "Levetiden skal være et helt tal mellem 1 og 168 timer.",
-
+    settingsDeadlineSection: "Projekt-deadline",
+    settingsDeadlineLabel: "Deadline for hele projektet (valgfrit)",
+    settingsDeadlineHint: "Vises som en statuslinje på projektsiden med hvor mange krav der er opfyldt, og hvor lang tid der er tilbage. Krav med status Parkeret, Droppet eller Won't tælles ikke med. Kan stå tom.",
+    settingsDeadlineBad: "Deadlinen skal være en gyldig dato (YYYY-MM-DD).",
     ghBoardLabel: "Scrum board URL (valgfrit)",
     ghBoardHint: "Vises som en knap i værktøjslinjen. Kan stå tom.",
     ghRepoLabel: "Standard repository",
@@ -835,10 +812,8 @@ const I18N = {
     ghPrivateNote: "Er repo'et privat, virker linkene kun for dem, der har adgang til repo'et på GitHub. Der skal ikke bruges noget token.",
     ghRepoFormat: "Standard repository skal være på formen \"ejer/repo\".",
     ghBadBoardUrl: "Scrum board URL skal starte med https://github.com/",
-
     cancelBtn: "Annullér",
     saveBtn: "Gem",
-
     importDiffTitle: "Ældre fil opdaget",
     importDiffIntro: "Filen indeholder krav, hvor online-versionen er blevet ændret. Vælg om de eksisterende krav skal opdateres, eller om filens rækker skal tilføjes som nye krav.",
     importDiffDuplicates: "{n} rækker springes over som dubletter (samme Krav-ID eller samme beskrivelse).",
@@ -857,13 +832,11 @@ const I18N = {
     importUpdateProgress: "Opdaterer… {done} af {total}",
     importUpdateDone: "Opdaterede {updated}, gendannede {restored} og tilføjede {inserted} nye krav.",
     importRestoreProgress: "Gendanner… {done} af {total}",
-
     statusProposed: "Foreslået",
     statusAgreed: "Aftalt",
     statusDone: "Færdig",
     statusParked: "Parkeret (PYT)",
     statusDropped: "Droppet",
-
     savedAt: "✓ Gemt {time}",
     errRealtime: "Fejl ved realtidsopdatering: {code}",
     errRealtimeAccess: "Adgangen til projektet blev afvist. Du er sandsynligvis ikke længere medlem.",
@@ -876,22 +849,18 @@ const I18N = {
     errDeleteReq: "Kunne ikke slette: {code}",
     errRemoveProject: "Kunne ikke fjerne projektet: {code}",
     errGithubSettings: "Kunne ikke gemme indstillinger: {code}",
-
     delReqConfirm: "Slet dette krav?\n\nKravets REQ-NNN pensioneres og kan ikke længere tildeles andre krav. Kun hvis præcis samme krav (samme usynlige ID) importeres igen, genoptages nummeret.",
     refUnlinkedTitle: "Standard repository er ikke sat — #123 vises som tekst. Sæt det under ⚙️ Indstillinger, hvis du vil have automatiske links, eller skriv ejer/repo#123.",
     copyLinkTitle: "Kopiér et link til dette krav — klar til at sætte i GitHub",
     deleteReqTitle: "Slet krav",
     linkCopiedMsg: "Link til kravet kopieret — klar til at sætte ind i GitHub.",
     copyLinkPrompt: "Kopiér linket:",
-
     emptyPyt: "Ingen parkerede (PYT) krav endnu. Sæt status til \"Parkeret (PYT)\" på et krav for at se det her.",
     emptyAll: "Ingen krav at vise.",
-
     ageTitleDone: "Afsluttet – tæller ikke",
     ageTitleNoTs: "Ingen tidsstempel",
     ageTitleParked: "Parkeret (PYT) i {days} dage — venter på review",
     ageTitleUpdated: "Sidst rettet: {date}",
-
     addReqNameRequired: "Skriv et projektnavn.",
     projectNotExist: "Projektet findes ikke. Tjek koden.",
     loginInterrupted: "Login blev afbrudt.",
@@ -905,7 +874,6 @@ const I18N = {
     linkInterrupted: "Tilknytningen blev afbrudt.",
     linkFailed: "Kunne ikke tilknytte login: {code}",
     linkSuccess: "Login tilknyttet. Nu kan du logge ind med begge metoder.",
-
     shareLinkCopied: "Link kopieret. Del det kun med gruppen.",
     shareLinkPrompt: "Kopiér linket:",
     shareInviteCopied: "Invite-link kopieret. Gyldigt i {hours} timer.",
@@ -916,7 +884,6 @@ const I18N = {
     errJoinInvite: "Kunne ikke deltage via invite: {code}",
     errInviteCreate: "Kunne ikke oprette invite-link: {code}",
     needInviteLink: "Du er ikke medlem af dette projekt. Bed om et invite-link fra en i gruppen.",
-
     importUnknownType: "Ukendt filtype. Brug .json, .csv, .txt eller .md.",
     importReadError: "Kunne ikke læse filen: {msg}",
     importOpenError: "Kunne ikke åbne filen.",
@@ -937,13 +904,11 @@ const I18N = {
     importErrCsvNoRows: "CSV-filen har ingen datarækker.",
     importErrCsvNoDesc: "Ingen kolonne med kravbeskrivelse fundet.",
     importErrJsonNotList: "JSON-filen skal være en liste af krav.",
-
     leaveConfirm: "Forlad projektet?\n\nDu mister adgangen til at se og redigere krav. Projektet og alle krav bliver liggende — de andre deltagere kan stadig se det.",
     deleteProjectTypeName: "Slet projektet \"{name}\" og alle krav permanent?\n\nDette kan ikke fortrydes. Eventuelle andre medlemmer mister også adgang.\n\nSkriv projektets navn for at bekræfte:",
     deleteProjectNameMismatch: "Navnet stemmer ikke. Sletningen blev annulleret.",
     projectRemoved: "Du er ikke længere medlem af projektet.",
     projectDeleted: "Projektet og alle krav er slettet.",
-
     mdTitleSuffix: "Kravmatrix",
     mdExported: "Eksporteret: {date}",
     mdIntro: "FURPS+ angiver kravets type, MoSCoW angiver prioriteten. Aktive krav er grupperet efter prioritet. Parkerede (PYT), \"Won't\" og droppede vises i særskilte afsnit, fordi de ikke længere er aktive.",
@@ -964,7 +929,11 @@ const I18N = {
     mdWontIntro: "Krav der er bevidst valgt fra i denne version. Begrundelsen står under \"Noter\".",
     mdDroppedHeading: "Droppede ({n})",
     mdDroppedIntro: "Krav der ikke længere er relevante. Begrundelsen står under \"Noter\".",
-
+    healthProgress: "{done} / {total} krav opfyldt",
+    healthDeadlineFuture: "Deadline om {days} dage",
+    healthDeadlineToday: "Deadline i dag",
+    healthDeadlinePast: "Deadline overskredet med {days} dage",
+    healthTooltip: "Færdige: {done} · Must tilbage: {must} · Should tilbage: {should} · Could tilbage: {could}",
     csvId: "Krav-ID",
     csvDescription: "Kravbeskrivelse",
     csvFurps: "FURPS+",
@@ -976,31 +945,28 @@ const I18N = {
     csvUpdatedBy: "Sidst rettet af",
     csvImportedId: "Stabilt ID"
   },
-
   en: {
     appTitle: "Requirements matrix · FURPS+ × MoSCoW",
     langButton: "DA",
     langTitle: "Switch to Danish",
     logout: "Log out",
-
     loginTitle: "Sign in",
     loginIntro: "Sign in to view and edit your requirements.",
     loginGoogle: "Sign in with Google",
     loginGithub: "Sign in with GitHub",
     loginHint: "Sign in with the method you used the first time. Afterwards you can link the other method (button in the top right) so both work.",
-
     yourProjects: "Your projects",
     yourProjectsHint: "Projects you are already a member of. Click to open.",
     noProjects: "You are not a member of any projects yet. Have you received an invite link? Click it to join.",
     createProjectTitle: "Create a new project",
     newProjectPlaceholder: "Project name, e.g. Reolmarket",
     createProjectBtn: "Create project",
-
     sortLabel: "Sort:",
     sortPriority: "Priority M > S > C > W",
     sortOriginal: "As they appear (created)",
     sortCategory: "FURPS+ category",
     sortStatus: "Status",
+    sortAge: "Age (oldest first)",
     filterLabel: "Show:",
     filterAll: "All priorities",
     pytTitle: "Show only parked (PYT) requirements — ideas waiting for review",
@@ -1033,7 +999,6 @@ const I18N = {
     infoBtnTitle: "Explanation, PYT, import info and members",
     backToProjectsTitle: "Back to project list",
     settingsBtnTitle: "Project settings: GitHub, age thresholds, etc.",
-
     thId: "Req ID",
     thDescription: "Requirement",
     thFurps: "FURPS+",
@@ -1046,7 +1011,6 @@ const I18N = {
     thUpdatedBy: "Last edited by",
     thAge: "Age",
     thAgeTitle: "Days since the requirement was last edited. Requirements that are not Done or Dropped are highlighted according to the thresholds the group has set under ⚙️ Settings.",
-
     panelTitle: "Information",
     panelCloseTitle: "Close",
     panelFurpsTitle: "FURPS+ (requirement type)",
@@ -1078,13 +1042,47 @@ const I18N = {
     ageLi2: "Requirements that are <em>not</em> Done, Parked or Dropped are highlighted with yellow and red as they approach the thresholds the group has set under ⚙️ Settings.",
     ageLi3: "Parked and finished requirements are shown in a neutral colour (parked in italics).",
     ageLi4: "The purpose is to make it visible when a Should/Could requirement is about to be forgotten.",
+    ageLi5: "Sort by age to see the oldest requirements at the top.",
     ageNote: "Done, parked and dropped rows are dimmed so they do not compete with the active requirements. Hover to see them at full strength.",
+    panelDeadlineTitle: "Project deadline",
+    deadlineIntro: "The owner can set an overall deadline for the project under ⚙️ Settings. Once set, a status line appears below the toolbar showing:",
+    deadlineLi1: "How many requirements are met out of the total number of active requirements.",
+    deadlineLi2: "How many days remain — or how many days the deadline has been exceeded by.",
+    deadlineLi3: "A visual bar showing the distribution: <strong>green</strong> = done requirements, <strong>red</strong> = Must requirements left, <strong>orange</strong> = Should requirements left, <strong>blue</strong> = Could requirements left. Hover over the bar to see the exact numbers.",
+    deadlineNote: "Requirements with status Parked, Dropped or Won't are not counted — they are not active goals. The deadline is optional; without it, the line only shows how many requirements are met.",
     panelStorageTitle: "Saving",
     storageLi1: "Changes are saved automatically — there is no save button.",
     storageLi2: "When you type in a field it is saved about 1 second after the last keystroke. If you leave the field, it is saved immediately.",
     storageLi3: "Dropdowns (FURPS+, MoSCoW, Status) are saved instantly on selection.",
     storageLi4: "A green flash on the field and a small \"Saved\" confirmation at the top confirm that the change arrived.",
     storageNote: "Security and other cross-cutting concerns can be classified under F or +. Pick one convention and use it consistently.",
+    panelSmartTitle: "Good goals — SMART",
+    smartIntro: "A good requirement is easier to work with when it is clearly formulated. Use SMART as a checklist when writing requirements. Each letter asks a question you should be able to answer:",
+    smartSTitle: "S — Specific",
+    smartSDesc: "What exactly should happen? Avoid vague wording like \"improve\", \"optimise\" or \"support\". Describe the concrete behaviour or result.",
+    smartSBad: "<strong>Bad:</strong> \"The user should be able to search.\"",
+    smartSGood: "<strong>Good:</strong> \"The user should be able to search the requirement list by REQ number and free text in the description.\"",
+    smartMTitle: "M — Measurable",
+    smartMDesc: "How do we know it works? Describe a signal that can be observed or measured — a count, a time, a share, a test.",
+    smartMBad: "<strong>Bad:</strong> \"It should be fast.\"",
+    smartMGood: "<strong>Good:</strong> \"The response must arrive within 500 ms with 100 requirements, measured in Chrome DevTools.\"",
+    smartATitle: "A — Achievable",
+    smartADesc: "Can we build it with the people, time and resources we have? If not, the requirement may need to be split, or set to PYT for now.",
+    smartABad: "<strong>Bad:</strong> \"We must have AI recommendations next sprint.\" (if no one in the group knows AI)",
+    smartAGood: "<strong>Good:</strong> \"We start with a simple rule-based recommendation in sprint 3, and consider AI in sprint 5 if time allows.\"",
+    smartRTitle: "R — Relevant",
+    smartRDesc: "Why does it matter now? What problem does it solve for the user or the business? If the answer is \"nice to have\", it may belong under Could or PYT.",
+    smartRBad: "<strong>Bad:</strong> \"It would be fun to have dark mode.\"",
+    smartRGood: "<strong>Good:</strong> \"Dark mode reduces eye strain for users working late — requested by 3 of 5 test users.\"",
+    smartTTitle: "T — Time-bound",
+    smartTDesc: "When must it be done? Avoid \"as soon as possible\" and \"in good time\". Tie it to a sprint, a date or a milestone.",
+    smartTBad: "<strong>Bad:</strong> \"We should get it done at some point.\"",
+    smartTGood: "<strong>Good:</strong> \"Done by the end of sprint 4 (Friday, 15 November).\"",
+    smartSummary: "If a requirement cannot be answered with these five questions, it may still be a good idea — but consider setting the status to <strong>Parked (PYT)</strong> until it has matured.",
+    panelKpiTitle: "KPI — Key Performance Indicator",
+    kpiIntro: "A KPI is a concrete, measurable signal that shows whether a requirement works in practice. Where SMART helps you <em>formulate</em> the requirement, the KPI helps you <em>follow up</em> on it afterwards.",
+    kpiExample: "<strong>Example:</strong> For the requirement \"The user should be able to sign in with Google\", the KPI could be: <em>\"Share of new users who complete sign-in in under 10 seconds — target: over 90%.\"</em> Write the KPI in Notes on the requirement.",
+    kpiNote: "KPIs are often temporary and specific to the individual requirement. Use them especially on Must and Should requirements, where you want to be able to say \"it works\" with data in hand.",
     panelRefsTitle: "References (GitHub)",
     refsIntro: "The <strong>References</strong> column automatically finds GitHub issues mentioned in Requirement, Source or Notes and shows them as clickable links.",
     refsLi1: "<code>#123</code> → links to the default repo, if one is set under ⚙️ Settings. Otherwise it is shown as text.",
@@ -1112,7 +1110,6 @@ const I18N = {
     importMdStableNote: "The Markdown export includes a hidden metadata block at the bottom with the stable IDs. It is invisible in rendered markdown, but lets the import recognise the requirement even if the description has changed.",
     panelMembersTitle: "Members",
     membersNote: "Invite links give access to the project. Once someone is a member, they have permanent access until they leave the project themselves. So share invite links only with the group.",
-
     memberYou: "(you)",
     memberOwnerSuffix: "· owner",
     makeOwnerBtn: "Make owner",
@@ -1121,7 +1118,6 @@ const I18N = {
     transferDone: "Ownership has been transferred to {name}.",
     transferFailed: "Could not transfer ownership: {code}",
     mustTransferFirst: "You are the owner and there are still other members ({names}). Transfer ownership to one of them via ℹ️ Info → Members before you can leave the project.",
-
     settingsDialogTitle: "Project settings",
     settingsGithubSection: "GitHub integration",
     settingsAgeSection: "Age thresholds",
@@ -1137,7 +1133,10 @@ const I18N = {
     inviteHoursLabel: "Default lifetime for invite links (hours)",
     inviteHoursHint: "1–168 hours. Once an invite link has expired, it cannot be used to join — but existing members still have access.",
     settingsAgeBadInviteHours: "The lifetime must be a whole number between 1 and 168 hours.",
-
+    settingsDeadlineSection: "Project deadline",
+    settingsDeadlineLabel: "Deadline for the whole project (optional)",
+    settingsDeadlineHint: "Shown as a status line on the project page with how many requirements are met and how much time is left. Requirements with status Parked, Dropped or Won't are not counted. May be left empty.",
+    settingsDeadlineBad: "The deadline must be a valid date (YYYY-MM-DD).",
     ghBoardLabel: "Scrum board URL (optional)",
     ghBoardHint: "Shown as a button in the toolbar. May be left empty.",
     ghRepoLabel: "Default repository",
@@ -1145,10 +1144,8 @@ const I18N = {
     ghPrivateNote: "If the repo is private, the links only work for people who have access to the repo on GitHub. No token is needed.",
     ghRepoFormat: "The default repository must be in the form \"owner/repo\".",
     ghBadBoardUrl: "The Scrum board URL must start with https://github.com/",
-
     cancelBtn: "Cancel",
     saveBtn: "Save",
-
     importDiffTitle: "Outdated file detected",
     importDiffIntro: "The file contains requirements where the online version has changed. Choose whether to update the existing requirements, or to add the file's rows as new requirements.",
     importDiffDuplicates: "{n} rows are skipped as duplicates (same Req ID or same description).",
@@ -1167,13 +1164,11 @@ const I18N = {
     importUpdateProgress: "Updating… {done} of {total}",
     importUpdateDone: "Updated {updated}, restored {restored} and added {inserted} new requirements.",
     importRestoreProgress: "Restoring… {done} of {total}",
-
     statusProposed: "Proposed",
     statusAgreed: "Agreed",
     statusDone: "Done",
     statusParked: "Parked (PYT)",
     statusDropped: "Dropped",
-
     savedAt: "✓ Saved {time}",
     errRealtime: "Realtime update error: {code}",
     errRealtimeAccess: "Access to the project was denied. You are probably no longer a member.",
@@ -1186,22 +1181,18 @@ const I18N = {
     errDeleteReq: "Could not delete: {code}",
     errRemoveProject: "Could not remove the project: {code}",
     errGithubSettings: "Could not save settings: {code}",
-
     delReqConfirm: "Delete this requirement?\n\nThe requirement's REQ-NNN is retired and can no longer be assigned to other requirements. Only if the exact same requirement (same invisible ID) is imported again is the number resumed.",
     refUnlinkedTitle: "No default repository is set — #123 is shown as text. Set one under ⚙️ Settings if you want automatic links, or write owner/repo#123.",
     copyLinkTitle: "Copy a link to this requirement — ready to paste into GitHub",
     deleteReqTitle: "Delete requirement",
     linkCopiedMsg: "Link to the requirement copied — ready to paste into GitHub.",
     copyLinkPrompt: "Copy the link:",
-
     emptyPyt: "No parked (PYT) requirements yet. Set the status to \"Parked (PYT)\" on a requirement to see it here.",
     emptyAll: "No requirements to show.",
-
     ageTitleDone: "Finished – not counted",
     ageTitleNoTs: "No timestamp",
     ageTitleParked: "Parked (PYT) for {days} days — waiting for review",
     ageTitleUpdated: "Last edited: {date}",
-
     addReqNameRequired: "Enter a project name.",
     projectNotExist: "The project does not exist. Check the code.",
     loginInterrupted: "Sign-in was interrupted.",
@@ -1215,7 +1206,6 @@ const I18N = {
     linkInterrupted: "Linking was interrupted.",
     linkFailed: "Could not link sign-in: {code}",
     linkSuccess: "Sign-in linked. You can now sign in with both methods.",
-
     shareLinkCopied: "Link copied. Share it only with the group.",
     shareLinkPrompt: "Copy the link:",
     shareInviteCopied: "Invite link copied. Valid for {hours} hours.",
@@ -1226,7 +1216,6 @@ const I18N = {
     errJoinInvite: "Could not join via invite: {code}",
     errInviteCreate: "Could not create invite link: {code}",
     needInviteLink: "You are not a member of this project. Ask someone in the group for an invite link.",
-
     importUnknownType: "Unknown file type. Use .json, .csv, .txt or .md.",
     importReadError: "Could not read the file: {msg}",
     importOpenError: "Could not open the file.",
@@ -1247,13 +1236,11 @@ const I18N = {
     importErrCsvNoRows: "The CSV file has no data rows.",
     importErrCsvNoDesc: "No description column found.",
     importErrJsonNotList: "The JSON file must be a list of requirements.",
-
     leaveConfirm: "Leave the project?\n\nYou lose access to view and edit the requirements. The project and all requirements remain — the other members can still see them.",
     deleteProjectTypeName: "Delete project \"{name}\" and all requirements permanently?\n\nThis cannot be undone. Any other members also lose access.\n\nType the project name to confirm:",
     deleteProjectNameMismatch: "The name does not match. Deletion was cancelled.",
     projectRemoved: "You are no longer a member of the project.",
     projectDeleted: "The project and all requirements have been deleted.",
-
     mdTitleSuffix: "Requirements matrix",
     mdExported: "Exported: {date}",
     mdIntro: "FURPS+ states the type of the requirement, MoSCoW states the priority. Active requirements are grouped by priority. Parked (PYT), \"Won't\" and dropped ones are shown in separate sections because they are no longer active.",
@@ -1274,7 +1261,11 @@ const I18N = {
     mdWontIntro: "Requirements deliberately left out of this release. The reason is under \"Notes\".",
     mdDroppedHeading: "Dropped ({n})",
     mdDroppedIntro: "Requirements that are no longer relevant. The reason is under \"Notes\".",
-
+    healthProgress: "{done} / {total} requirements met",
+    healthDeadlineFuture: "Deadline in {days} days",
+    healthDeadlineToday: "Deadline is today",
+    healthDeadlinePast: "Deadline exceeded by {days} days",
+    healthTooltip: "Done: {done} · Must left: {must} · Should left: {should} · Could left: {could}",
     csvId: "Req ID",
     csvDescription: "Requirement",
     csvFurps: "FURPS+",
@@ -1325,12 +1316,9 @@ let unsubTombstones = null;
 let visibleColumns = loadColumns();
 
 let lastSavedDate = null;
-
 let openToken = 0;
-
 let projectData = {};
 let pendingScrollToReq = null;
-
 let pendingImportUpdates = null;
 let pendingImportRestores = null;
 let pendingImportNewRecords = null;
@@ -1345,6 +1333,18 @@ function $(id) { return document.getElementById(id); }
 function localDateString(d) {
   const pad = function (n) { return String(n).padStart(2, "0"); };
   return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+}
+
+function parseDateLocal(s) {
+  const m = String(s || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) { return null; }
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+function todayLocal() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 }
 
 function formatTime(d) {
@@ -1370,23 +1370,14 @@ function showMessage(text, isGood) {
 
 function applyLanguage() {
   document.documentElement.lang = lang;
-
   const plain = document.querySelectorAll("[data-i18n]");
-  for (let i = 0; i < plain.length; i++) {
-    plain[i].textContent = t(plain[i].dataset.i18n);
-  }
+  for (let i = 0; i < plain.length; i++) { plain[i].textContent = t(plain[i].dataset.i18n); }
   const html = document.querySelectorAll("[data-i18n-html]");
-  for (let i = 0; i < html.length; i++) {
-    html[i].innerHTML = t(html[i].dataset.i18nHtml);
-  }
+  for (let i = 0; i < html.length; i++) { html[i].innerHTML = t(html[i].dataset.i18nHtml); }
   const phs = document.querySelectorAll("[data-i18n-placeholder]");
-  for (let i = 0; i < phs.length; i++) {
-    phs[i].placeholder = t(phs[i].dataset.i18nPlaceholder);
-  }
+  for (let i = 0; i < phs.length; i++) { phs[i].placeholder = t(phs[i].dataset.i18nPlaceholder); }
   const titles = document.querySelectorAll("[data-i18n-title]");
-  for (let i = 0; i < titles.length; i++) {
-    titles[i].title = t(titles[i].dataset.i18nTitle);
-  }
+  for (let i = 0; i < titles.length; i++) { titles[i].title = t(titles[i].dataset.i18nTitle); }
 
   updateLinkButton();
   updateGithubUi();
@@ -1394,6 +1385,7 @@ function applyLanguage() {
   updateProjectButtons();
   renderMembers();
   renderTable();
+  renderProjectHealth();
 
   if (lastSavedDate) {
     $("lastSaved").textContent = t("savedAt", { time: formatTime(lastSavedDate) });
@@ -1461,7 +1453,6 @@ function staleness(req) {
 function parseHash() {
   const raw = location.hash.slice(1);
   if (!raw) { return { pid: "", reqid: "", invite: "" }; }
-
   if (raw.indexOf("invite=") === 0) {
     let token = raw.slice(7);
     const amp = token.indexOf("&");
@@ -1469,7 +1460,6 @@ function parseHash() {
     try { token = decodeURIComponent(token); } catch (e) { /* keep raw */ }
     return { pid: "", reqid: "", invite: token };
   }
-
   const parts = raw.split("&");
   const pid = parts[0] || "";
   let reqid = "";
@@ -1627,9 +1617,7 @@ function flushSave(key) {
   clearTimeout(pending.timer);
   saveTimers.delete(key);
   const parts = key.split("|");
-  const id = parts[0];
-  const field = parts[1];
-  saveCellValue(pending.value, field, id, pending.el);
+  saveCellValue(pending.value, parts[1], parts[0], pending.el);
 }
 
 function flushAllPendingSaves() {
@@ -1701,7 +1689,6 @@ function onCellFocusOut(event) {
   if (renderPending) { setTimeout(safeRender, 0); }
 }
 
-// ---------- GitHub + indstillinger ----------
 function updateGithubUi() {
   const url = String(projectData.githubBoardUrl || "").trim();
   const btn = $("btnOpenBoard");
@@ -1713,6 +1700,75 @@ function updateGithubUi() {
   }
 }
 
+function renderProjectHealth() {
+  const wrap = $("projectHealth");
+  if (!wrap) { return; }
+
+  const active = allReqs.filter(function (r) {
+    return r.status !== "Parked" && r.status !== "Dropped" && r.moscow !== "Won't";
+  });
+  const total = active.length;
+  if (total === 0) {
+    wrap.classList.add("hidden");
+    return;
+  }
+
+  const done = active.filter(function (r) { return r.status === "Done"; }).length;
+  const mustLeft = active.filter(function (r) {
+    return r.moscow === "Must" && r.status !== "Done";
+  }).length;
+  const shouldLeft = active.filter(function (r) {
+    return r.moscow === "Should" && r.status !== "Done";
+  }).length;
+  const couldLeft = active.filter(function (r) {
+    return r.moscow === "Could" && r.status !== "Done";
+  }).length;
+
+  const bar = $("projectHealthBar");
+  bar.innerHTML = "";
+  bar.title = t("healthTooltip", {
+    done: done, must: mustLeft, should: shouldLeft, could: couldLeft
+  });
+
+  const segments = [
+    { count: done,       cls: "seg-done" },
+    { count: mustLeft,   cls: "seg-must" },
+    { count: shouldLeft, cls: "seg-should" },
+    { count: couldLeft,  cls: "seg-could" }
+  ];
+  for (let i = 0; i < segments.length; i++) {
+    if (segments[i].count === 0) { continue; }
+    const seg = document.createElement("div");
+    seg.className = "project-health-seg " + segments[i].cls;
+    seg.style.width = ((segments[i].count / total) * 100) + "%";
+    bar.appendChild(seg);
+  }
+
+  let line = t("healthProgress", { done: done, total: total });
+  let overdue = false;
+
+  const deadline = String(projectData.deadline || "").trim();
+  if (deadline) {
+    const deadlineDate = parseDateLocal(deadline);
+    if (deadlineDate) {
+      const daysLeft = Math.round((deadlineDate - todayLocal()) / 86400000);
+      if (daysLeft > 0) {
+        line += " · " + t("healthDeadlineFuture", { days: daysLeft });
+      } else if (daysLeft === 0) {
+        line += " · " + t("healthDeadlineToday");
+      } else {
+        line += " · " + t("healthDeadlinePast", { days: Math.abs(daysLeft) });
+        overdue = true;
+      }
+    }
+  }
+
+  const text = $("projectHealthText");
+  text.classList.toggle("overdue", overdue);
+  text.textContent = line;
+  wrap.classList.remove("hidden");
+}
+
 function openGithubDialog() {
   if (!isOwner) { return; }
   $("githubBoardUrlInput").value = projectData.githubBoardUrl || "";
@@ -1720,6 +1776,7 @@ function openGithubDialog() {
   $("staleWarnInput").value = staleWarnDays();
   $("staleUrgentInput").value = staleUrgentDays();
   $("inviteHoursInput").value = Number(projectData.defaultInviteHours) || DEFAULT_INVITE_HOURS;
+  $("deadlineInput").value = projectData.deadline || "";
   $("githubDialog").classList.remove("hidden");
   setTimeout(function () { $("githubBoardUrlInput").focus(); }, 0);
 }
@@ -1740,31 +1797,17 @@ async function saveGithubSettings() {
   if (!isOwner) { return; }
   const url = $("githubBoardUrlInput").value.trim();
   const repo = normalizeRepo($("defaultRepoInput").value);
-
   const warn = parseInt($("staleWarnInput").value, 10);
   const urgent = parseInt($("staleUrgentInput").value, 10);
   const inviteHours = parseInt($("inviteHoursInput").value, 10);
+  const deadline = $("deadlineInput").value.trim();
 
-  if (url !== "" && !isSafeBoardUrl(url)) {
-    showMessage(t("ghBadBoardUrl"));
-    return;
-  }
-  if (repo !== "" && repo.indexOf("/") < 0) {
-    showMessage(t("ghRepoFormat"));
-    return;
-  }
-  if (!Number.isInteger(warn) || warn < 1 || warn > 999) {
-    showMessage(t("settingsAgeBadWarn"));
-    return;
-  }
-  if (!Number.isInteger(urgent) || urgent <= warn || urgent > 999) {
-    showMessage(t("settingsAgeBadUrgent"));
-    return;
-  }
-  if (!Number.isInteger(inviteHours) || inviteHours < 1 || inviteHours > 168) {
-    showMessage(t("settingsAgeBadInviteHours"));
-    return;
-  }
+  if (url !== "" && !isSafeBoardUrl(url)) { showMessage(t("ghBadBoardUrl")); return; }
+  if (repo !== "" && repo.indexOf("/") < 0) { showMessage(t("ghRepoFormat")); return; }
+  if (!Number.isInteger(warn) || warn < 1 || warn > 999) { showMessage(t("settingsAgeBadWarn")); return; }
+  if (!Number.isInteger(urgent) || urgent <= warn || urgent > 999) { showMessage(t("settingsAgeBadUrgent")); return; }
+  if (!Number.isInteger(inviteHours) || inviteHours < 1 || inviteHours > 168) { showMessage(t("settingsAgeBadInviteHours")); return; }
+  if (deadline !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(deadline)) { showMessage(t("settingsDeadlineBad")); return; }
 
   try {
     await updateDoc(doc(db, "projects", currentPid), {
@@ -1772,15 +1815,18 @@ async function saveGithubSettings() {
       defaultRepo: repo,
       staleWarnDays: warn,
       staleUrgentDays: urgent,
-      defaultInviteHours: inviteHours
+      defaultInviteHours: inviteHours,
+      deadline: deadline
     });
     projectData.githubBoardUrl = url;
     projectData.defaultRepo = repo;
     projectData.staleWarnDays = warn;
     projectData.staleUrgentDays = urgent;
     projectData.defaultInviteHours = inviteHours;
+    projectData.deadline = deadline;
     updateGithubUi();
     renderTable();
+    renderProjectHealth();
   } catch (err) {
     showMessage(t("errGithubSettings", { code: err.code || err.message }));
     return;
@@ -1793,14 +1839,10 @@ async function saveGithubSettings() {
 function openBoard() {
   const url = String(projectData.githubBoardUrl || "").trim();
   if (!url) { return; }
-  if (!isSafeBoardUrl(url)) {
-    showMessage(t("ghBadBoardUrl"));
-    return;
-  }
+  if (!isSafeBoardUrl(url)) { showMessage(t("ghBadBoardUrl")); return; }
   window.open(url, "_blank", "noopener");
 }
 
-// ---------- GitHub refs ----------
 function linkifyGitHubRefs(text, defaultRepo) {
   if (!text) { return ""; }
   const pattern = /(?:([A-Za-z0-9][A-Za-z0-9-]*)\/([A-Za-z0-9._-]+))?#(\d+)\b/g;
@@ -1900,28 +1942,19 @@ async function copyReqLink(rid) {
   }
 }
 
-// ---------- Projects list ----------
 async function loadMyProjects() {
   const list = $("myProjectsList");
   const empty = $("myProjectsEmpty");
   list.innerHTML = "";
-  if (!currentUser) {
-    empty.classList.remove("hidden");
-    return;
-  }
+  if (!currentUser) { empty.classList.remove("hidden"); return; }
   empty.classList.add("hidden");
   try {
     const snap = await getDocs(collection(db, "users", currentUser.uid, "projects"));
-    if (snap.empty) {
-      empty.classList.remove("hidden");
-      return;
-    }
-
+    if (snap.empty) { empty.classList.remove("hidden"); return; }
     const entries = [];
     snap.forEach(function (d) {
       entries.push({ pid: d.id, name: d.data().name || d.id, ref: d.ref });
     });
-
     const checks = entries.map(async function (e) {
       try {
         const projSnap = await getDoc(doc(db, "projects", e.pid));
@@ -1933,6 +1966,7 @@ async function loadMyProjects() {
           pid: e.pid,
           name: e.name,
           createdAt: projSnap.data().createdAt || null,
+          deadline: projSnap.data().deadline || "",
           ref: e.ref
         };
       } catch (err) {
@@ -1940,16 +1974,10 @@ async function loadMyProjects() {
         return e;
       }
     });
-
     const results = await Promise.all(checks);
     const items = results.filter(function (x) { return x !== null; });
     items.sort(function (a, b) { return a.name.localeCompare(b.name, lang); });
-
-    if (items.length === 0) {
-      empty.classList.remove("hidden");
-      return;
-    }
-
+    if (items.length === 0) { empty.classList.remove("hidden"); return; }
     for (let i = 0; i < items.length; i++) {
       const li = document.createElement("li");
       const btn = document.createElement("button");
@@ -1958,9 +1986,10 @@ async function loadMyProjects() {
         const d = (typeof items[i].createdAt.toDate === "function")
           ? items[i].createdAt.toDate()
           : new Date(items[i].createdAt);
-        if (!isNaN(d.getTime())) {
-          btn.textContent += "  ·  " + localDateString(d);
-        }
+        if (!isNaN(d.getTime())) { btn.textContent += "  ·  " + localDateString(d); }
+      }
+      if (items[i].deadline) {
+        btn.textContent += "  ·  " + items[i].deadline;
       }
       btn.dataset.pid = items[i].pid;
       li.appendChild(btn);
@@ -1979,7 +2008,6 @@ function onMyProjectsClick(event) {
   openProject(pid);
 }
 
-// ---------- Auth ----------
 async function loginWith(providerName) {
   let provider;
   switch (providerName) {
@@ -1993,14 +2021,11 @@ async function loginWith(providerName) {
   } catch (err) {
     switch (err.code) {
       case "auth/account-exists-with-different-credential":
-        showMessage(providerName === "github" ? t("emailUsedGoogle") : t("emailUsedGithub"));
-        break;
+        showMessage(providerName === "github" ? t("emailUsedGoogle") : t("emailUsedGithub")); break;
       case "auth/popup-closed-by-user":
-        showMessage(t("loginInterrupted"));
-        break;
+        showMessage(t("loginInterrupted")); break;
       default:
-        showMessage(t("loginFailed", { code: err.code }));
-        break;
+        showMessage(t("loginFailed", { code: err.code })); break;
     }
   }
 }
@@ -2043,19 +2068,10 @@ async function linkLogin() {
     showMessage(t("linkSuccess"), true);
   } catch (err) {
     switch (err.code) {
-      case "auth/credential-already-in-use":
-        showMessage(t("linkInUse"));
-        break;
-      case "auth/provider-already-linked":
-        showMessage(t("linkAlready"));
-        updateLinkButton();
-        break;
-      case "auth/popup-closed-by-user":
-        showMessage(t("linkInterrupted"));
-        break;
-      default:
-        showMessage(t("linkFailed", { code: err.code }));
-        break;
+      case "auth/credential-already-in-use": showMessage(t("linkInUse")); break;
+      case "auth/provider-already-linked": showMessage(t("linkAlready")); updateLinkButton(); break;
+      case "auth/popup-closed-by-user": showMessage(t("linkInterrupted")); break;
+      default: showMessage(t("linkFailed", { code: err.code })); break;
     }
   }
 }
@@ -2080,10 +2096,7 @@ function onAuthChanged(user) {
   updateLinkButton();
 
   const parsed = parseHash();
-  if (parsed.invite) {
-    openProjectByInvite(parsed.invite, parsed.reqid);
-    return;
-  }
+  if (parsed.invite) { openProjectByInvite(parsed.invite, parsed.reqid); return; }
   let pid = parsed.pid;
   if (!pid) {
     try { pid = localStorage.getItem("lastProject") || ""; }
@@ -2093,7 +2106,6 @@ function onAuthChanged(user) {
   if (pid) { openProject(pid); } else { showScreen("chooser"); }
 }
 
-// ---------- Project ids ----------
 function makeProjectId(name) {
   let slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
   if (slug === "") { slug = "projekt"; }
@@ -2101,9 +2113,7 @@ function makeProjectId(name) {
   const bytes = new Uint8Array(8);
   crypto.getRandomValues(bytes);
   let suffix = "";
-  for (let i = 0; i < bytes.length; i++) {
-    suffix += bytes[i].toString(16).padStart(2, "0");
-  }
+  for (let i = 0; i < bytes.length; i++) { suffix += bytes[i].toString(16).padStart(2, "0"); }
   return slug + "-" + suffix;
 }
 
@@ -2140,6 +2150,7 @@ async function createProject() {
       staleWarnDays: DEFAULT_STALE_WARN_DAYS,
       staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
       defaultInviteHours: DEFAULT_INVITE_HOURS,
+      deadline: "",
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -2152,7 +2163,6 @@ async function createProject() {
 
 async function openProject(pid) {
   const myToken = ++openToken;
-
   flushAllPendingSaves();
   stopListeners();
   isOwner = false;
@@ -2164,20 +2174,13 @@ async function openProject(pid) {
   } catch (err) {
     if (myToken !== openToken) { return; }
     console.error("openProject: getDoc failed for", pid, err);
-    if (err.code === "permission-denied") {
-      showMessage(t("needInviteLink"));
-    } else {
-      showMessage(t("errProjectRead", { code: err.code || err.message }));
-    }
+    if (err.code === "permission-denied") { showMessage(t("needInviteLink")); }
+    else { showMessage(t("errProjectRead", { code: err.code || err.message })); }
     showScreen("chooser");
     return;
   }
   if (myToken !== openToken) { return; }
-  if (!snap.exists()) {
-    showMessage(t("projectNotExist"));
-    showScreen("chooser");
-    return;
-  }
+  if (!snap.exists()) { showMessage(t("projectNotExist")); showScreen("chooser"); return; }
 
   try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid),
@@ -2196,16 +2199,12 @@ async function openProject(pid) {
     await setDoc(doc(db, "users", currentUser.uid, "projects", pid),
                  { pid: pid, name: snap.data().name || pid, joinedAt: serverTimestamp() },
                  { merge: true });
-  } catch (err) {
-    console.warn("openProject: setDoc user project list failed:", err);
-  }
+  } catch (err) { console.warn("openProject: setDoc user project list failed:", err); }
   if (myToken !== openToken) { return; }
 
   currentPid = pid;
   try { localStorage.setItem("lastProject", pid); } catch (err) { /* ignore */ }
-  if (location.hash.slice(1).split("&")[0] !== pid) {
-    location.hash = pid;
-  }
+  if (location.hash.slice(1).split("&")[0] !== pid) { location.hash = pid; }
 
   unsubProject = onSnapshot(doc(db, "projects", pid), onProjectSnapshot, onListenError);
   unsubReqs = onSnapshot(collection(db, "projects", pid, "requirements"), onReqsSnapshot, onListenError);
@@ -2223,58 +2222,38 @@ async function openProjectByInvite(token, reqid) {
   if (reqid) { pendingScrollToReq = reqid; }
 
   let inviteSnap;
-  try {
-    inviteSnap = await getDoc(doc(db, "invites", token));
-  } catch (err) {
+  try { inviteSnap = await getDoc(doc(db, "invites", token)); }
+  catch (err) {
     if (myToken !== openToken) { return; }
     showMessage(t("errInviteRead", { code: err.code || err.message }));
     showScreen("chooser");
     return;
   }
   if (myToken !== openToken) { return; }
-  if (!inviteSnap.exists()) {
-    showMessage(t("inviteNotFound"));
-    showScreen("chooser");
-    return;
-  }
+  if (!inviteSnap.exists()) { showMessage(t("inviteNotFound")); showScreen("chooser"); return; }
 
   const invite = inviteSnap.data();
   const pid = invite.pid;
-  if (!pid) {
-    showMessage(t("inviteInvalid"));
-    showScreen("chooser");
-    return;
-  }
+  if (!pid) { showMessage(t("inviteInvalid")); showScreen("chooser"); return; }
 
   let memberSnap = null;
-  try {
-    memberSnap = await getDoc(doc(db, "projects", pid, "members", currentUser.uid));
-  } catch (err) { memberSnap = null; }
+  try { memberSnap = await getDoc(doc(db, "projects", pid, "members", currentUser.uid)); }
+  catch (err) { memberSnap = null; }
   if (myToken !== openToken) { return; }
-
-  if (memberSnap && memberSnap.exists()) {
-    await openProject(pid);
-    return;
-  }
+  if (memberSnap && memberSnap.exists()) { await openProject(pid); return; }
 
   const expiresMs = (typeof invite.expiresAt === "number")
     ? invite.expiresAt
     : (invite.expiresAt && typeof invite.expiresAt.toMillis === "function")
-      ? invite.expiresAt.toMillis()
-      : 0;
+      ? invite.expiresAt.toMillis() : 0;
   if (!expiresMs || expiresMs <= Date.now()) {
-    showMessage(t("inviteExpired"));
-    showScreen("chooser");
-    return;
+    showMessage(t("inviteExpired")); showScreen("chooser"); return;
   }
 
   try {
     await setDoc(doc(db, "projects", pid, "members", currentUser.uid), {
-      name: userLabel(),
-      uid: currentUser.uid,
-      joinedVia: token,
-      joinedAt: serverTimestamp(),
-      lastSeenAt: serverTimestamp()
+      name: userLabel(), uid: currentUser.uid, joinedVia: token,
+      joinedAt: serverTimestamp(), lastSeenAt: serverTimestamp()
     });
   } catch (err) {
     if (myToken !== openToken) { return; }
@@ -2283,7 +2262,6 @@ async function openProjectByInvite(token, reqid) {
     return;
   }
   if (myToken !== openToken) { return; }
-
   await openProject(pid);
 }
 
@@ -2302,7 +2280,6 @@ function leaveProject() {
 function updateProjectButtons() {
   const btn = $("btnRemoveProject");
   if (!btn) { return; }
-  // Ejer alene → "Slet projekt". Alle andre tilfælde → "Forlad projekt".
   if (isOwner && allMembers.length <= 1) {
     btn.textContent = t("deleteProjectBtn");
     btn.title = t("deleteProjectTitle");
@@ -2310,19 +2287,12 @@ function updateProjectButtons() {
     btn.textContent = t("leaveProjectBtn");
     btn.title = t("leaveProjectTitle");
   }
-
   const settingsBtn = $("btnGithubSettings");
-  if (settingsBtn) {
-    settingsBtn.classList.toggle("hidden", !isOwner);
-  }
+  if (settingsBtn) { settingsBtn.classList.toggle("hidden", !isOwner); }
 }
 
 function onProjectSnapshot(snap) {
-  if (!snap.exists()) {
-    showMessage(t("projectNotExist"));
-    leaveProject();
-    return;
-  }
+  if (!snap.exists()) { showMessage(t("projectNotExist")); leaveProject(); return; }
   projectData = snap.data() || {};
   $("projectName").textContent = projectData.name || "";
   isOwner = (projectData.ownerUid === currentUser.uid);
@@ -2360,31 +2330,26 @@ function renderMembers() {
     li.style.alignItems = "center";
     li.style.gap = "8px";
     li.style.marginBottom = "4px";
-
     const nameSpan = document.createElement("span");
     const isSelf = m.uid === currentUser.uid;
     const isCurrentOwner = projectData.ownerUid === m.uid;
     nameSpan.textContent = m.name
       + (isSelf ? " " + t("memberYou") : "")
       + (isCurrentOwner ? " " + t("memberOwnerSuffix") : "");
-    if (isCurrentOwner) {
-      nameSpan.style.fontWeight = "600";
-    }
+    if (isCurrentOwner) { nameSpan.style.fontWeight = "600"; }
     li.appendChild(nameSpan);
-
     if (isOwner && !isSelf) {
-      const makeOwnerBtn = document.createElement("button");
-      makeOwnerBtn.textContent = t("makeOwnerBtn");
-      makeOwnerBtn.title = t("makeOwnerBtnTitle");
-      makeOwnerBtn.style.padding = "2px 6px";
-      makeOwnerBtn.style.fontSize = "11px";
-      makeOwnerBtn.style.marginLeft = "auto";
-      makeOwnerBtn.dataset.action = "make-owner";
-      makeOwnerBtn.dataset.uid = m.uid;
-      makeOwnerBtn.dataset.name = m.name;
-      li.appendChild(makeOwnerBtn);
+      const btn = document.createElement("button");
+      btn.textContent = t("makeOwnerBtn");
+      btn.title = t("makeOwnerBtnTitle");
+      btn.style.padding = "2px 6px";
+      btn.style.fontSize = "11px";
+      btn.style.marginLeft = "auto";
+      btn.dataset.action = "make-owner";
+      btn.dataset.uid = m.uid;
+      btn.dataset.name = m.name;
+      li.appendChild(btn);
     }
-
     list.appendChild(li);
   }
 }
@@ -2393,11 +2358,8 @@ async function transferOwnership(targetUid, targetName) {
   if (!isOwner) { return; }
   if (targetUid === currentUser.uid) { return; }
   if (!confirm(t("transferConfirm", { name: targetName }))) { return; }
-
   try {
-    await updateDoc(doc(db, "projects", currentPid), {
-      ownerUid: targetUid
-    });
+    await updateDoc(doc(db, "projects", currentPid), { ownerUid: targetUid });
     showMessage(t("transferDone", { name: targetName }), true);
   } catch (err) {
     showMessage(t("transferFailed", { code: err.code || err.message }));
@@ -2407,9 +2369,7 @@ async function transferOwnership(targetUid, targetName) {
 function onMemberListClick(event) {
   const btn = event.target;
   if (!btn.dataset || btn.dataset.action !== "make-owner") { return; }
-  const uid = btn.dataset.uid;
-  const name = btn.dataset.name || uid;
-  transferOwnership(uid, name);
+  transferOwnership(btn.dataset.uid, btn.dataset.name || btn.dataset.uid);
 }
 
 async function removeProjectFromMyList() {
@@ -2418,62 +2378,36 @@ async function removeProjectFromMyList() {
   const wasOwner = isOwner;
 
   if (wasOwner) {
-    // Hent friske medlemsdata — allMembers kan være et øjeblik bagud.
     let memSnap;
-    try {
-      memSnap = await getDocs(collection(db, "projects", pid, "members"));
-    } catch (err) {
-      showMessage(t("errRemoveProject", { code: err.code || err.message }));
-      return;
-    }
-    const otherMembers = memSnap.docs.filter(function (d) {
-      return d.id !== currentUser.uid;
-    });
-
+    try { memSnap = await getDocs(collection(db, "projects", pid, "members")); }
+    catch (err) { showMessage(t("errRemoveProject", { code: err.code || err.message })); return; }
+    const otherMembers = memSnap.docs.filter(function (d) { return d.id !== currentUser.uid; });
     if (otherMembers.length > 0) {
-      // Ejer med andre → forklar at ejerskabet skal overdrages først.
-      const names = otherMembers
-        .map(function (d) { return d.data().name || d.id; })
-        .join(", ");
+      const names = otherMembers.map(function (d) { return d.data().name || d.id; }).join(", ");
       showMessage(t("mustTransferFirst", { names: names }));
       return;
     }
-
-    // Ejer alene — bekræft med projektnavn.
     const projectName = String(projectData.name || "").trim();
     const answer = prompt(t("deleteProjectTypeName", { name: projectName }));
     if (answer === null) { return; }
-    if (answer.trim() !== projectName) {
-      showMessage(t("deleteProjectNameMismatch"));
-      return;
-    }
+    if (answer.trim() !== projectName) { showMessage(t("deleteProjectNameMismatch")); return; }
   } else {
     if (!confirm(t("leaveConfirm"))) { return; }
   }
 
   cancelPendingSaves();
   stopListeners();
-
   try {
     if (wasOwner) {
-      // 1. Slet krav (kræver isMember).
       const reqSnap = await getDocs(collection(db, "projects", pid, "requirements"));
       await Promise.all(reqSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
-
-      // 2. Slet tombstones (kræver isMember).
       const tbSnap = await getDocs(collection(db, "projects", pid, "tombstones"));
       await Promise.all(tbSnap.docs.map(function (d) { return deleteDoc(d.ref); }));
-
-      // 3. Slet projektet (kræver isOwner).
       await deleteDoc(doc(db, "projects", pid));
-
-      // 4. NU er isOwner(pid) = false (projektet findes ikke).
-      //    Så kan ejeren rydde sit eget member-doc op.
       await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
     } else {
       await deleteDoc(doc(db, "projects", pid, "members", currentUser.uid));
     }
-
     await deleteDoc(doc(db, "users", currentUser.uid, "projects", pid));
   } catch (err) {
     console.error("removeProjectFromMyList failed:", err);
@@ -2481,13 +2415,12 @@ async function removeProjectFromMyList() {
     showMessage(t("errRemoveProject", { code: err.code || err.message }));
     return;
   }
-
   leaveProject();
   showMessage(wasOwner ? t("projectDeleted") : t("projectRemoved"), true);
 }
 
 function emptyRecord() {
-  return { description: "", furps: "F", moscow: "Should", source: "", status: "Proposed", notes: "" };
+  return { description: "", furps: "F", moscow: "Must", source: "", status: "Proposed", notes: "" };
 }
 
 async function writeRequirements(records, usedSeqs) {
@@ -2495,19 +2428,15 @@ async function writeRequirements(records, usedSeqs) {
     const assigned = [];
     const projRef = doc(db, "projects", currentPid);
     const projSnap = await tx.get(projRef);
-
     if (!projSnap.exists()) {
       const e = new Error("project-missing");
       e.code = "project-missing";
       throw e;
     }
-
     const storedCounter = projSnap.data().counter || 0;
     let counter = storedCounter;
-
     const taken = usedSeqs ? new Set(usedSeqs) : new Set();
     const rows = [];
-
     for (let i = 0; i < records.length; i++) {
       const r = records[i];
       let seq = null;
@@ -2518,22 +2447,15 @@ async function writeRequirements(records, usedSeqs) {
       taken.add(seq);
       rows.push({ rec: r, seq: seq });
     }
-
     tx.update(projRef, { counter: counter });
-
     for (let i = 0; i < rows.length; i++) {
       const r = rows[i].rec;
       const newRef = doc(collection(db, "projects", currentPid, "requirements"));
       const data = {
         seq: rows[i].seq,
-        description: r.description,
-        furps: r.furps,
-        moscow: r.moscow,
-        source: r.source,
-        status: r.status,
-        notes: r.notes,
-        updatedBy: userLabel(),
-        updatedAt: serverTimestamp()
+        description: r.description, furps: r.furps, moscow: r.moscow,
+        source: r.source, status: r.status, notes: r.notes,
+        updatedBy: userLabel(), updatedAt: serverTimestamp()
       };
       const iid = r.__importedId || makeImportedId();
       data.importedId = iid;
@@ -2560,8 +2482,7 @@ async function deleteRequirement(reqId) {
     const iid = data.importedId || ("REQ-" + String(data.seq || 0).padStart(3, "0"));
     const tbRef = doc(collection(db, "projects", currentPid, "tombstones"));
     tx.set(tbRef, {
-      seq: data.seq || 0,
-      importedId: iid,
+      seq: data.seq || 0, importedId: iid,
       description: String(data.description || "").slice(0, 200),
       deletedAt: Date.now()
     });
@@ -2571,18 +2492,13 @@ async function deleteRequirement(reqId) {
 
 async function onTableClick(event) {
   const el = event.target;
-  if (el.dataset.action === "copy-link") {
-    await copyReqLink(el.dataset.id);
-    return;
-  }
+  if (el.dataset.action === "copy-link") { await copyReqLink(el.dataset.id); return; }
   if (el.dataset.action !== "delete") { return; }
   if (!confirm(t("delReqConfirm"))) { return; }
   try {
     await deleteRequirement(el.dataset.id);
     if (document.activeElement === el) { el.blur(); }
-  } catch (err) {
-    showMessage(t("errDeleteReq", { code: err.code }));
-  }
+  } catch (err) { showMessage(t("errDeleteReq", { code: err.code })); }
 }
 
 function onReqsSnapshot(snapshot) {
@@ -2605,6 +2521,7 @@ function safeRender() {
     renderPending = false;
     renderTable();
   }
+  renderProjectHealth();
 }
 
 function compareReqs(a, b) {
@@ -2613,6 +2530,14 @@ function compareReqs(a, b) {
     case "priority": result = rankOf(a.moscow) - rankOf(b.moscow); break;
     case "category": result = FURPS.indexOf(a.furps) - FURPS.indexOf(b.furps); break;
     case "status": result = STATUS.indexOf(a.status) - STATUS.indexOf(b.status); break;
+    case "age": {
+      const aDays = daysSince(a.updatedAt);
+      const bDays = daysSince(b.updatedAt);
+      const aVal = aDays === null ? 999999 : aDays;
+      const bVal = bDays === null ? 999999 : bDays;
+      result = bVal - aVal;
+      break;
+    }
     default: result = 0; break;
   }
   if (result !== 0) { return result; }
@@ -2625,6 +2550,7 @@ function activeSortColumn() {
     case "category": return "furps";
     case "status":   return "status";
     case "original": return "id";
+    case "age":      return "age";
     default:         return "moscow";
   }
 }
@@ -2654,9 +2580,7 @@ function renderTable() {
   for (let i = 0; i < allReqs.length; i++) {
     const r = allReqs[i];
     if (onlyPyt && r.status !== "Parked") { continue; }
-    if (filterMoscow === "all" || r.moscow === filterMoscow) {
-      visible.push(r);
-    }
+    if (filterMoscow === "all" || r.moscow === filterMoscow) { visible.push(r); }
   }
   visible.sort(compareReqs);
 
@@ -2694,7 +2618,6 @@ function renderTable() {
     sections.classList.add("hidden");
     renderGroupedTable(visible, tbody);
   }
-
   tryScrollToPendingReq();
 }
 
@@ -2704,14 +2627,10 @@ function renderPrioritySections(visible, container) {
   for (let g = 0; g < groups.length; g++) {
     const key = groups[g];
     const rows = [];
-    for (let i = 0; i < visible.length; i++) {
-      if (visible[i].moscow === key) { rows.push(visible[i]); }
-    }
+    for (let i = 0; i < visible.length; i++) { if (visible[i].moscow === key) { rows.push(visible[i]); } }
     if (rows.length === 0) { continue; }
-
     const section = document.createElement("div");
     section.className = "matrix-section";
-
     const banner = document.createElement("div");
     banner.className = "matrix-banner group-" + rankOf(key);
     const bannerText = document.createElement("span");
@@ -2719,16 +2638,12 @@ function renderPrioritySections(visible, container) {
     bannerText.textContent = key.toUpperCase() + " (" + rows.length + ")";
     banner.appendChild(bannerText);
     section.appendChild(banner);
-
     const body = document.createElement("div");
     body.className = "matrix-section-body";
-
     const table = document.createElement("table");
     table.appendChild(srcThead.cloneNode(true));
     const tbody = document.createElement("tbody");
-    for (let i = 0; i < rows.length; i++) {
-      tbody.appendChild(buildRow(rows[i], "moscow"));
-    }
+    for (let i = 0; i < rows.length; i++) { tbody.appendChild(buildRow(rows[i], "moscow")); }
     table.appendChild(tbody);
     body.appendChild(table);
     section.appendChild(body);
@@ -2743,7 +2658,6 @@ function renderGroupedTable(visible, tbody) {
     if (key === null) { continue; }
     groupCounts[key] = (groupCounts[key] || 0) + 1;
   }
-
   const activeCol = activeSortColumn();
   let lastGroup = null;
   for (let i = 0; i < visible.length; i++) {
@@ -2792,49 +2706,34 @@ function buildRow(r, activeCol) {
   if (r.status === "Done" || r.status === "Parked" || r.status === "Dropped") {
     tr.classList.add("row-resolved");
   }
-
   const idCell = document.createElement("td");
   idCell.textContent = reqLabel(r.seq);
   maybeHidden(idCell, "id");
   tr.appendChild(idCell);
-
   tr.appendChild(maybeHidden(wrapCell(makeTextarea("description", r)), "description"));
   tr.appendChild(maybeHidden(wrapCell(makeSelect("furps", FURPS, r, plainLabel)), "furps"));
   tr.appendChild(maybeHidden(wrapCell(makeSelect("moscow", MOSCOW, r, plainLabel)), "moscow"));
   tr.appendChild(maybeHidden(wrapCell(makeTextarea("source", r)), "source"));
-
   const statusSelect = makeSelect("status", STATUS, r, statusLabel);
   statusSelect.className = "status-" + r.status.toLowerCase();
   tr.appendChild(maybeHidden(wrapCell(statusSelect), "status"));
-
   tr.appendChild(maybeHidden(wrapCell(makeTextarea("notes", r)), "notes"));
-
   tr.appendChild(maybeHidden(buildRefsCell(r), "refs"));
-
   const whoCell = document.createElement("td");
   whoCell.className = "small";
   whoCell.textContent = r.updatedBy || "";
   maybeHidden(whoCell, "updatedBy");
   tr.appendChild(whoCell);
-
   const ageCell = document.createElement("td");
   ageCell.className = "age";
   const level = staleness(r);
   const days = daysSince(r.updatedAt);
-  if (level === -1) {
-    ageCell.textContent = "–";
-    ageCell.classList.add("age-none");
-    ageCell.title = t("ageTitleDone");
-  } else if (days === null) {
-    ageCell.textContent = "?";
-    ageCell.classList.add("age-none");
-    ageCell.title = t("ageTitleNoTs");
-  } else {
+  if (level === -1) { ageCell.textContent = "–"; ageCell.classList.add("age-none"); ageCell.title = t("ageTitleDone"); }
+  else if (days === null) { ageCell.textContent = "?"; ageCell.classList.add("age-none"); ageCell.title = t("ageTitleNoTs"); }
+  else {
     ageCell.textContent = days + "d";
-    if (level === 3) {
-      ageCell.classList.add("age-parked");
-      ageCell.title = t("ageTitleParked", { days: days });
-    } else if (level === 2) { ageCell.classList.add("age-urgent"); }
+    if (level === 3) { ageCell.classList.add("age-parked"); ageCell.title = t("ageTitleParked", { days: days }); }
+    else if (level === 2) { ageCell.classList.add("age-urgent"); }
     else if (level === 1) { ageCell.classList.add("age-warn"); }
     else { ageCell.classList.add("age-fresh"); }
     if (level !== 3) {
@@ -2844,31 +2743,25 @@ function buildRow(r, activeCol) {
   }
   maybeHidden(ageCell, "age");
   tr.appendChild(ageCell);
-
   const actionsCell = document.createElement("td");
   actionsCell.className = "actions";
-
   const linkBtn = document.createElement("button");
   linkBtn.textContent = "🔗";
   linkBtn.title = t("copyLinkTitle");
   linkBtn.dataset.action = "copy-link";
   linkBtn.dataset.id = r.id;
   actionsCell.appendChild(linkBtn);
-
   const delBtn = document.createElement("button");
   delBtn.textContent = "✕";
   delBtn.title = t("deleteReqTitle");
   delBtn.dataset.action = "delete";
   delBtn.dataset.id = r.id;
   actionsCell.appendChild(delBtn);
-
   tr.appendChild(actionsCell);
-
   if (activeCol) {
     const cell = tr.querySelector("td.col-" + activeCol);
     if (cell) { cell.classList.add("sort-active"); }
   }
-
   return tr;
 }
 
@@ -2902,14 +2795,8 @@ function makeSelect(field, options, r, labelFor) {
 
 function onSortChange() { sortMode = $("sortSelect").value; renderTable(); }
 function onFilterChange() { filterMoscow = $("filterSelect").value; renderTable(); }
+function onPytToggle() { onlyPyt = !onlyPyt; $("btnPyt").classList.toggle("primary", onlyPyt); renderTable(); }
 
-function onPytToggle() {
-  onlyPyt = !onlyPyt;
-  $("btnPyt").classList.toggle("primary", onlyPyt);
-  renderTable();
-}
-
-// ---------- Export ----------
 function timestampSuffix() {
   const d = new Date();
   const pad = function (n) { return String(n).padStart(2, "0"); };
@@ -2956,15 +2843,9 @@ function exportCsv() {
     const refs = extractGithubRefs(r, defaultRepo);
     const refsText = refs.map(function (x) { return x.raw; }).join(" ");
     const cells = [
-      csvCell(reqLabel(r.seq)),
-      csvCell(r.description),
-      csvCell(r.furps),
-      csvCell(r.moscow),
-      csvCell(r.source),
-      csvCell(statusLabel(r.status)),
-      csvCell(r.notes),
-      csvCell(refsText),
-      csvCell(r.updatedBy),
+      csvCell(reqLabel(r.seq)), csvCell(r.description), csvCell(r.furps),
+      csvCell(r.moscow), csvCell(r.source), csvCell(statusLabel(r.status)),
+      csvCell(r.notes), csvCell(refsText), csvCell(r.updatedBy),
       csvCell(r.importedId || "")
     ];
     csv += cells.join(";") + "\r\n";
@@ -2978,9 +2859,7 @@ function exportJson() {
   const defaultRepo = String(projectData.defaultRepo || "").trim();
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    const refs = extractGithubRefs(r, defaultRepo).map(function (x) {
-      return { raw: x.raw, url: x.url };
-    });
+    const refs = extractGithubRefs(r, defaultRepo).map(function (x) { return { raw: x.raw, url: x.url }; });
     const obj = {
       id: reqLabel(r.seq), description: r.description, furps: r.furps,
       moscow: r.moscow, source: r.source, status: r.status,
@@ -2989,8 +2868,7 @@ function exportJson() {
     if (r.importedId) { obj.importedId = r.importedId; }
     output.push(obj);
   }
-  downloadFile("krav-" + timestampSuffix() + ".json",
-               JSON.stringify(output, null, 2), "application/json");
+  downloadFile("krav-" + timestampSuffix() + ".json", JSON.stringify(output, null, 2), "application/json");
 }
 
 function mdCell(value) {
@@ -3013,14 +2891,9 @@ function exportMarkdown() {
   let md = "# " + projName + " — " + t("mdTitleSuffix") + "\n\n";
   md += t("mdExported", { date: today }) + "\n\n";
   md += t("mdIntro") + "\n\n";
-
   const boardUrl = String(projectData.githubBoardUrl || "").trim();
-  if (boardUrl) {
-    md += t("mdScrumBoard", { url: boardUrl }) + "\n\n";
-  }
-  if (defaultRepo) {
-    md += t("mdRefsNote", { repo: defaultRepo }) + "\n\n";
-  }
+  if (boardUrl) { md += t("mdScrumBoard", { url: boardUrl }) + "\n\n"; }
+  if (defaultRepo) { md += t("mdRefsNote", { repo: defaultRepo }) + "\n\n"; }
 
   const moscowOrder = ["Must", "Should", "Could", "Won't"];
   const totals = { done: 0, agreed: 0, proposed: 0, parked: 0, dropped: 0 };
@@ -3070,24 +2943,16 @@ function exportMarkdown() {
     }
     return parts.join("<br>");
   }
-
   function fullRow(r) {
     return "| " + mdCell(reqLabel(r.seq)) +
-           " | " + mdCell(r.description) +
-           " | " + mdCell(r.furps) +
-           " | " + mdCell(r.moscow) +
-           " | " + mdCell(r.source) +
-           " | " + mdCell(statusLabel(r.status)) +
-           " | " + mdCell(r.notes) +
-           " | " + refsCellFor(r) +
-           " | " + mdCell(r.updatedBy) + " |";
+           " | " + mdCell(r.description) + " | " + mdCell(r.furps) +
+           " | " + mdCell(r.moscow) + " | " + mdCell(r.source) +
+           " | " + mdCell(statusLabel(r.status)) + " | " + mdCell(r.notes) +
+           " | " + refsCellFor(r) + " | " + mdCell(r.updatedBy) + " |";
   }
-
   function fullTable(group) {
     let out = FULL_HEADER + "\n" + FULL_SEP + "\n";
-    for (let i = 0; i < group.length; i++) {
-      out += fullRow(group[i]) + "\n";
-    }
+    for (let i = 0; i < group.length; i++) { out += fullRow(group[i]) + "\n"; }
     return out;
   }
 
@@ -3102,57 +2967,44 @@ function exportMarkdown() {
     }
     if (group.length === 0) { continue; }
     md += "## " + activePriorities[p] + " (" + group.length + ")\n\n";
-    md += fullTable(group);
-    md += "\n";
+    md += fullTable(group) + "\n";
   }
 
   const parked = [];
-  for (let i = 0; i < rows.length; i++) {
-    if (rows[i].status === "Parked") { parked.push(rows[i]); }
-  }
+  for (let i = 0; i < rows.length; i++) { if (rows[i].status === "Parked") { parked.push(rows[i]); } }
   if (parked.length > 0) {
     md += "## " + t("mdParkedHeading", { n: parked.length }) + "\n\n";
     md += t("mdParkedIntro") + "\n\n";
-    md += fullTable(parked);
-    md += "\n";
+    md += fullTable(parked) + "\n";
   }
 
   const wonts = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    if (r.moscow === "Won't" && r.status !== "Parked" && r.status !== "Dropped") {
-      wonts.push(r);
-    }
+    if (r.moscow === "Won't" && r.status !== "Parked" && r.status !== "Dropped") { wonts.push(r); }
   }
   if (wonts.length > 0) {
     md += "## " + t("mdWontHeading", { n: wonts.length }) + "\n\n";
     md += t("mdWontIntro") + "\n\n";
-    md += fullTable(wonts);
-    md += "\n";
+    md += fullTable(wonts) + "\n";
   }
 
   const dropped = [];
-  for (let i = 0; i < rows.length; i++) {
-    if (rows[i].status === "Dropped") { dropped.push(rows[i]); }
-  }
+  for (let i = 0; i < rows.length; i++) { if (rows[i].status === "Dropped") { dropped.push(rows[i]); } }
   if (dropped.length > 0) {
     md += "## " + t("mdDroppedHeading", { n: dropped.length }) + "\n\n";
     md += t("mdDroppedIntro") + "\n\n";
-    md += fullTable(dropped);
-    md += "\n";
+    md += fullTable(dropped) + "\n";
   }
 
   const idLines = [];
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
-    if (r.importedId) {
-      idLines.push(reqLabel(r.seq) + "=" + r.importedId);
-    }
+    if (r.importedId) { idLines.push(reqLabel(r.seq) + "=" + r.importedId); }
   }
   if (idLines.length > 0) {
     md += "\n<!-- kravmatrix-stable-ids\n";
-    md += idLines.join("\n") + "\n";
-    md += "-->\n";
+    md += idLines.join("\n") + "\n-->\n";
   }
 
   downloadFile("krav-" + timestampSuffix() + ".md", md, "text/markdown;charset=utf-8");
@@ -3160,25 +3012,18 @@ function exportMarkdown() {
 
 async function copyShareLink() {
   if (!currentPid) { return; }
-
   const token = makeInviteToken();
   const hours = Math.max(1, Math.min(168, Number(projectData.defaultInviteHours) || DEFAULT_INVITE_HOURS));
   const expiresAt = Timestamp.fromMillis(Date.now() + hours * 3600 * 1000);
-
   try {
     await setDoc(doc(db, "invites", token), {
-      pid: currentPid,
-      projectName: projectData.name || "",
-      token: token,
-      expiresAt: expiresAt,
-      createdBy: currentUser.uid,
-      createdAt: serverTimestamp()
+      pid: currentPid, projectName: projectData.name || "", token: token,
+      expiresAt: expiresAt, createdBy: currentUser.uid, createdAt: serverTimestamp()
     });
   } catch (err) {
     showMessage(t("errInviteCreate", { code: err.code || err.message }));
     return;
   }
-
   const link = location.origin + location.pathname + "#invite=" + token;
   try {
     await navigator.clipboard.writeText(link);
@@ -3188,7 +3033,6 @@ async function copyShareLink() {
   }
 }
 
-// ---------- Import: parse helpers ----------
 function normalizeKey(text) {
   return String(text).toLowerCase().replace(/[^a-z0-9æøå]/g, "");
 }
@@ -3196,55 +3040,16 @@ function normalizeKey(text) {
 function fieldFromHeader(header) {
   const key = normalizeKey(header);
   switch (key) {
-    case "requirementid":
-    case "reqid":
-    case "kravid":
-    case "id":
-    case "fileid":
-      return "fileId";
-    case "importedid":
-    case "importid":
-    case "importeretid":
-    case "stabiltid":
-    case "stableid":
-      return "importedId";
-    case "requirementdescription":
-    case "description":
-    case "requirement":
-    case "krav":
-    case "kravbeskrivelse":
-      return "description";
-    case "furps":
-    case "furpscategory":
-    case "category":
-    case "kategori":
-      return "furps";
-    case "moscow":
-    case "moscowpriority":
-    case "priority":
-    case "prioritet":
-    case "oprindeligprioritet":
-      return "moscow";
-    case "sourcelocation":
-    case "kildeplacering":
-      return "sourceLocation";
-    case "acceptancecriteria":
-    case "acceptance":
-    case "acceptkriterier":
-      return "acceptance";
-    case "status":
-      return "status";
-    case "additionalnotes":
-    case "notes":
-    case "note":
-    case "noter":
-    case "evt":
-    case "begrundelse":
-    case "reason":
-      return "notes";
-    case "referencer":
-    case "references":
-      return "references";
+    case "requirementid": case "reqid": case "kravid": case "id": case "fileid": return "fileId";
+    case "importedid": case "importid": case "importeretid": case "stabiltid": case "stableid": return "importedId";
+    case "requirementdescription": case "description": case "requirement": case "krav": case "kravbeskrivelse": return "description";
+    case "furps": case "furpscategory": case "category": case "kategori": return "furps";
+    case "moscow": case "moscowpriority": case "priority": case "prioritet": case "oprindeligprioritet": return "moscow";
+    case "sourcelocation": case "kildeplacering": return "sourceLocation";
+    case "acceptancecriteria": case "acceptance": case "acceptkriterier": return "acceptance";
+    case "status": return "status";
+    case "additionalnotes": case "notes": case "note": case "noter": case "evt": case "begrundelse": case "reason": return "notes";
+    case "referencer": case "references": return "references";
     default:
       if (key.indexOf("source") === 0 || key.indexOf("kilde") === 0) { return "source"; }
       return "";
@@ -3253,9 +3058,7 @@ function fieldFromHeader(header) {
 
 function countChar(text, ch) {
   let n = 0;
-  for (let i = 0; i < text.length; i++) {
-    if (text[i] === ch) { n++; }
-  }
+  for (let i = 0; i < text.length; i++) { if (text[i] === ch) { n++; } }
   return n;
 }
 
@@ -3272,10 +3075,7 @@ function detectDelimiter(text) {
 
 function parseCsv(text, delimiter) {
   const table = [];
-  let row = [];
-  let cell = "";
-  let inQuotes = false;
-
+  let row = []; let cell = ""; let inQuotes = false;
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
     if (inQuotes) {
@@ -3302,9 +3102,7 @@ function csvToObjects(text) {
   if (table.length < 2) { throw new Error(t("importErrCsvNoRows")); }
   const fields = [];
   for (let c = 0; c < table[0].length; c++) { fields.push(fieldFromHeader(table[0][c])); }
-  if (fields.indexOf("description") < 0) {
-    throw new Error(t("importErrCsvNoDesc"));
-  }
+  if (fields.indexOf("description") < 0) { throw new Error(t("importErrCsvNoDesc")); }
   const objects = [];
   for (let r = 1; r < table.length; r++) {
     const obj = {};
@@ -3398,15 +3196,12 @@ function isMarkdownSeparatorRow(cells) {
 function markdownToObjects(text) {
   const stableIds = parseMarkdownStableIds(text);
   text = text.replace(/<!--\s*kravmatrix-stable-ids[\s\S]*?-->\s*$/i, "");
-
   const lines = text.split(/\r?\n/);
   const objects = [];
   let currentSection = null;
   let headerCols = null;
-
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
-
     const headingMatch = line.match(/^##\s+(.+?)\s*$/);
     if (headingMatch) {
       const name = headingMatch[1].trim();
@@ -3421,21 +3216,17 @@ function markdownToObjects(text) {
       headerCols = null;
       continue;
     }
-
     if (currentSection === null || currentSection === "Oversigt") { continue; }
     if (line.length < 2 || line[0] !== "|") { continue; }
     const inner = line.slice(1, line.length - 1);
     const cells = splitMarkdownRow(inner);
     for (let c = 0; c < cells.length; c++) { cells[c] = cells[c].trim(); }
-
     if (isMarkdownSeparatorRow(cells)) { continue; }
-
     if (headerCols === null) {
       headerCols = [];
       for (let c = 0; c < cells.length; c++) { headerCols.push(fieldFromHeader(cells[c])); }
       continue;
     }
-
     if (cells.length < 2) { continue; }
     const obj = {};
     for (let c = 0; c < headerCols.length && c < cells.length; c++) {
@@ -3454,7 +3245,6 @@ function markdownToObjects(text) {
       if (currentSection === "PYT") { obj.status = "Parked"; }
       else if (currentSection === "Droppede") { obj.status = "Dropped"; }
     }
-
     if (obj.fileId) {
       const seqMatch = String(obj.fileId).match(/(\d+)/);
       if (seqMatch) {
@@ -3462,20 +3252,14 @@ function markdownToObjects(text) {
         if (stableIds[seqKey]) { obj.importedId = stableIds[seqKey]; }
       }
     }
-
     const hasDescription = obj.description && String(obj.description).trim() !== "";
     const hasFileId = obj.fileId && String(obj.fileId).trim() !== "";
     const hasImportedId = obj.importedId && String(obj.importedId).trim() !== "";
     if (!hasDescription && !hasFileId && !hasImportedId) { continue; }
-
     objects.push(obj);
   }
-
   const hasMarkdownStructure = /^\s*\|/m.test(text) || /^#{1,6}\s/m.test(text);
-  if (objects.length === 0 && !hasMarkdownStructure) {
-    return textToObjects(text);
-  }
-
+  if (objects.length === 0 && !hasMarkdownStructure) { return textToObjects(text); }
   console.log("[import] markdownToObjects: parsed", objects.length, "rows from markdown");
   return objects;
 }
@@ -3519,9 +3303,7 @@ function stripFormulaProtection(value) {
   if (typeof value !== "string") { return value; }
   if (value.length >= 2 && value[0] === "'") {
     const rest = value.slice(1);
-    if (/^[=+@\t\r]/.test(rest) || (/^-/.test(rest) && !/^-\d/.test(rest))) {
-      return rest;
-    }
+    if (/^[=+@\t\r]/.test(rest) || (/^-/.test(rest) && !/^-\d/.test(rest))) { return rest; }
   }
   return value;
 }
@@ -3530,78 +3312,50 @@ function buildImportRecords(objects) {
   const records = [];
   let skipped = 0;
   let unrecognised = 0;
-
   for (let i = 0; i < objects.length; i++) {
     const o = objects[i];
     const description = stripFormulaProtection((o.description || "").trim());
     const fileId = (o.fileId || "").trim();
     const extId = (o.importedId || "").trim();
-
-    if (description === "" && fileId === "" && extId === "") {
-      skipped++; continue;
-    }
-
+    if (description === "" && fileId === "" && extId === "") { skipped++; continue; }
     const rec = emptyRecord();
     rec.description = description;
-
     const fileIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(fileId);
     const extIdIsOwnFormat = /^REQ-?\s*0*\d+$/i.test(extId);
-
-    if (extId !== "" && !extIdIsOwnFormat) {
-      rec.__importedId = extId;
-    } else if (fileId !== "" && !fileIdIsOwnFormat) {
-      rec.__importedId = fileId;
-    } else {
-      rec.__importedId = "";
-    }
-
+    if (extId !== "" && !extIdIsOwnFormat) { rec.__importedId = extId; }
+    else if (fileId !== "" && !fileIdIsOwnFormat) { rec.__importedId = fileId; }
+    else { rec.__importedId = ""; }
     rec.__desiredSeq = parseImportedSeq(fileId);
     if (rec.__desiredSeq === null) { rec.__desiredSeq = parseImportedSeq(extId); }
-
     const furpsRaw = o.furps || "";
     const furps = cleanFurps(furpsRaw);
     if (furps !== "") { rec.furps = furps; }
     else if (furpsRaw.trim() !== "") { unrecognised++; }
-
     const moscowRaw = o.moscow || "";
     const moscow = cleanMoscow(moscowRaw);
     if (moscow !== "") { rec.moscow = moscow; }
     else if (moscowRaw.trim() !== "") { unrecognised++; }
-
     const statusRaw = o.status || "";
     const status = cleanStatus(statusRaw);
     if (status !== "") { rec.status = status; }
     else if (statusRaw.trim() !== "") { unrecognised++; }
-
     let source = stripFormulaProtection((o.source || "").trim());
     const location = (o.sourceLocation || "").trim();
-    if (location !== "") {
-      source = (source !== "") ? (source + " (" + location + ")") : location;
-    }
+    if (location !== "") { source = (source !== "") ? (source + " (" + location + ")") : location; }
     rec.source = source;
-
     let notes = stripFormulaProtection((o.notes || "").trim());
-
     const acceptance = (o.acceptance || "").trim();
     if (acceptance !== "") {
       const marker = "[Acceptance: " + acceptance + "]";
-      if (notes.indexOf(marker) < 0) {
-        notes = (notes + " " + marker).trim();
-      }
+      if (notes.indexOf(marker) < 0) { notes = (notes + " " + marker).trim(); }
     }
-
     notes = stripImportedIdMarker(notes);
-
     rec.notes = notes;
-
     records.push(rec);
   }
-  console.log("[import] buildImportRecords:", records.length,
-              "records,", skipped, "skipped,", unrecognised, "unrecognised values");
   return { records: records, skipped: skipped, unrecognised: unrecognised };
 }
 
-// ---------- Import diff + dublet-detektion ----------
 function parseImportedSeq(importedId) {
   if (!importedId) { return null; }
   const m = String(importedId).match(/REQ-?\s*0*(\d+)/i);
@@ -3616,10 +3370,7 @@ function extractImportedIdFromNotes(notes) {
 
 function stripImportedIdMarker(notes) {
   if (!notes) { return ""; }
-  return String(notes)
-    .replace(/\[Imported ID:\s*[^\]]+\]\s*/g, "")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  return String(notes).replace(/\[Imported ID:\s*[^\]]+\]\s*/g, "").replace(/\s{2,}/g, " ").trim();
 }
 
 function liveImportedId(r) {
@@ -3628,10 +3379,7 @@ function liveImportedId(r) {
 }
 
 function normalizeDescriptionForMatch(text) {
-  return String(text || "")
-    .toLowerCase()
-    .replace(/\s+/g, " ")
-    .trim();
+  return String(text || "").toLowerCase().replace(/\s+/g, " ").trim();
 }
 
 function formatTs(ts) {
@@ -3657,7 +3405,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
     if (tb.importedId) { tbByImportedId[tb.importedId] = tb; }
     if (typeof tb.seq === "number") { tbBySeq[tb.seq] = tb; }
   }
-
   const fields = ["description", "furps", "moscow", "source", "status", "notes"];
   const identicalSeqs = new Set();
   const duplicateIndices = new Set();
@@ -3681,7 +3428,6 @@ function classifyImportRows(records, liveReqs, tombstones) {
     if (typeof tb.seq === "number" && usedTombstoneKeys.has("seq:" + tb.seq)) { return true; }
     return false;
   }
-
   function compareFields(rec, live) {
     const changes = [];
     for (let f = 0; f < fields.length; f++) {
@@ -3691,14 +3437,10 @@ function classifyImportRows(records, liveReqs, tombstones) {
       if (fld === "notes") {
         const fileClean = stripImportedIdMarker(fileVal);
         const liveClean = stripImportedIdMarker(liveVal);
-        if (fileClean !== liveClean) {
-          changes.push({ field: fld, fileVal: fileClean, liveVal: liveClean });
-        }
+        if (fileClean !== liveClean) { changes.push({ field: fld, fileVal: fileClean, liveVal: liveClean }); }
         continue;
       }
-      if (fileVal !== liveVal) {
-        changes.push({ field: fld, fileVal: fileVal, liveVal: liveVal });
-      }
+      if (fileVal !== liveVal) { changes.push({ field: fld, fileVal: fileVal, liveVal: liveVal }); }
     }
     return changes;
   }
@@ -3706,24 +3448,16 @@ function classifyImportRows(records, liveReqs, tombstones) {
   for (let i = 0; i < records.length; i++) {
     const rec = records[i];
     const iid = rec.__importedId || "";
-
-    let live = null;
-    let tomb = null;
-
+    let live = null; let tomb = null;
     if (iid !== "" && !seenFileImportedIds.has(iid)) {
-      if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) {
-        live = liveByImportedId[iid];
-      } else if (tbByImportedId[iid] && !isTombstoneUsed(tbByImportedId[iid])) {
-        tomb = tbByImportedId[iid];
-      }
+      if (liveByImportedId[iid] && !matchedLiveIds.has(liveByImportedId[iid].id)) { live = liveByImportedId[iid]; }
+      else if (tbByImportedId[iid] && !isTombstoneUsed(tbByImportedId[iid])) { tomb = tbByImportedId[iid]; }
     }
     if (iid !== "") { seenFileImportedIds.add(iid); }
-
     if (!live && !tomb) {
       const seq = rec.__desiredSeq;
       if (seq !== null) {
         const recNorm = normalizeDescriptionForMatch(rec.description);
-
         if (recNorm !== "") {
           const liveCand = liveBySeq[seq];
           if (liveCand && !matchedLiveIds.has(liveCand.id)) {
@@ -3731,67 +3465,34 @@ function classifyImportRows(records, liveReqs, tombstones) {
             if (recNorm === liveNorm) { live = liveCand; }
           }
         }
-
         if (!live) {
           const tbCand = tbBySeq[seq];
-          if (tbCand && !isTombstoneUsed(tbCand)) {
-            const tbNorm = normalizeDescriptionForMatch(tbCand.description);
-            const tbDescExists = tbNorm !== "";
-            const descMatch = tbDescExists &&
-              (recNorm === tbNorm || (recNorm !== "" && recNorm.indexOf(tbNorm) === 0));
-
-            if (!tbDescExists || descMatch) {
-              tomb = tbCand;
-            } else {
-              console.warn(
-                "[import] Tombstone seq=" + seq +
-                " matcher ikke filens beskrivelse. Gendanner alligevel.\n" +
-                "  Fil:       \"" + rec.description.slice(0, 100) + "\"\n" +
-                "  Tombstone: \"" + String(tbCand.description).slice(0, 100) + "\""
-              );
-              tomb = tbCand;
-            }
-          }
+          if (tbCand && !isTombstoneUsed(tbCand)) { tomb = tbCand; }
         }
       }
     }
-
     if (!live && !tomb) {
       const key = normalizeDescriptionForMatch(rec.description);
       if (key !== "") {
         for (let k = 0; k < liveReqs.length; k++) {
           const cand = liveReqs[k];
           if (matchedLiveIds.has(cand.id)) { continue; }
-          if (normalizeDescriptionForMatch(cand.description) === key) {
-            live = cand;
-            break;
-          }
+          if (normalizeDescriptionForMatch(cand.description) === key) { live = cand; break; }
         }
         if (!live) {
           let seenBefore = false;
           for (let j = 0; j < i; j++) {
-            if (normalizeDescriptionForMatch(records[j].description) === key) {
-              seenBefore = true; break;
-            }
+            if (normalizeDescriptionForMatch(records[j].description) === key) { seenBefore = true; break; }
           }
           if (seenBefore) { duplicateIndices.add(i); continue; }
         }
       }
     }
-
     if (live) {
       matchedLiveIds.add(live.id);
       const changes = compareFields(rec, live);
-      if (changes.length === 0) {
-        identicalSeqs.add(live.seq);
-      } else {
-        updates.push({
-          liveId: live.id,
-          liveSeq: live.seq,
-          changes: changes,
-          rec: rec
-        });
-      }
+      if (changes.length === 0) { identicalSeqs.add(live.seq); }
+      else { updates.push({ liveId: live.id, liveSeq: live.seq, changes: changes, rec: rec }); }
     } else if (tomb) {
       markTombstoneUsed(tomb);
       restores.push({ tombstone: tomb, rec: rec });
@@ -3799,19 +3500,9 @@ function classifyImportRows(records, liveReqs, tombstones) {
       newRecords.push(rec);
     }
   }
-
-  console.log("[import] classifyImportRows:",
-              "updates=" + updates.length,
-              "restores=" + restores.length,
-              "new=" + newRecords.length,
-              "identical=" + identicalSeqs.size,
-              "dupes=" + duplicateIndices.size);
   return {
-    identicalSeqs: identicalSeqs,
-    duplicateIndices: duplicateIndices,
-    updates: updates,
-    restores: restores,
-    newRecords: newRecords
+    identicalSeqs: identicalSeqs, duplicateIndices: duplicateIndices,
+    updates: updates, restores: restores, newRecords: newRecords
   };
 }
 
@@ -3824,36 +3515,20 @@ function updateImportDiffDialogText() {
   $("btnImportCancel").textContent = t("importDiffCancel");
   const list = $("importDiffList");
   if (list.dataset.diffCount) {
-    $("importDiffSummary").textContent =
-      t("importDiffSummary", { n: list.dataset.diffCount });
+    $("importDiffSummary").textContent = t("importDiffSummary", { n: list.dataset.diffCount });
   }
   const dupEl = $("importDiffDuplicates");
   const n = parseInt(list.dataset.dupeCount || "0", 10);
-  if (n > 0) {
-    dupEl.textContent = t("importDiffDuplicates", { n: n });
-    dupEl.style.display = "";
-  } else {
-    dupEl.textContent = "";
-    dupEl.style.display = "none";
-  }
+  if (n > 0) { dupEl.textContent = t("importDiffDuplicates", { n: n }); dupEl.style.display = ""; }
+  else { dupEl.textContent = ""; dupEl.style.display = "none"; }
   const resEl = $("importDiffRestores");
   const r = parseInt(list.dataset.restoreCount || "0", 10);
-  if (r > 0) {
-    resEl.textContent = t("importDiffRestores", { n: r });
-    resEl.style.display = "";
-  } else {
-    resEl.textContent = "";
-    resEl.style.display = "none";
-  }
+  if (r > 0) { resEl.textContent = t("importDiffRestores", { n: r }); resEl.style.display = ""; }
+  else { resEl.textContent = ""; resEl.style.display = "none"; }
   const idEl = $("importDiffIdentical");
   const ident = parseInt(list.dataset.identicalCount || "0", 10);
-  if (ident > 0) {
-    idEl.textContent = t("importDiffIdentical", { n: ident });
-    idEl.style.display = "";
-  } else {
-    idEl.textContent = "";
-    idEl.style.display = "none";
-  }
+  if (ident > 0) { idEl.textContent = t("importDiffIdentical", { n: ident }); idEl.style.display = ""; }
+  else { idEl.textContent = ""; idEl.style.display = "none"; }
 }
 
 function openImportDiffDialog(updates, restores, duplicateCount, identicalCount) {
@@ -3866,72 +3541,45 @@ function openImportDiffDialog(updates, restores, duplicateCount, identicalCount)
   list.dataset.dupeCount = String(duplicateCount || 0);
   list.dataset.identicalCount = String(identicalCount || 0);
   const fieldLabels = {
-    description: "colDescription",
-    furps: "colFurps",
-    moscow: "colMoscow",
-    source: "colSource",
-    status: "colStatus",
-    notes: "colNotes"
+    description: "colDescription", furps: "colFurps", moscow: "colMoscow",
+    source: "colSource", status: "colStatus", notes: "colNotes"
   };
   for (let i = 0; i < updates.length; i++) {
     const u = updates[i];
     const wrap = document.createElement("div");
     wrap.className = "diff-item";
-
     const h = document.createElement("h5");
     const left = document.createElement("span");
     left.textContent = reqLabel(u.liveSeq);
     const right = document.createElement("span");
     right.className = "ts";
     let liveReq = null;
-    for (let k = 0; k < allReqs.length; k++) {
-      if (allReqs[k].id === u.liveId) { liveReq = allReqs[k]; break; }
-    }
+    for (let k = 0; k < allReqs.length; k++) { if (allReqs[k].id === u.liveId) { liveReq = allReqs[k]; break; } }
     right.textContent = (liveReq && liveReq.updatedAt)
-      ? t("importDiffLastEdited", { date: formatTs(liveReq.updatedAt) })
-      : "";
-    h.appendChild(left);
-    h.appendChild(right);
+      ? t("importDiffLastEdited", { date: formatTs(liveReq.updatedAt) }) : "";
+    h.appendChild(left); h.appendChild(right);
     wrap.appendChild(h);
-
     const table = document.createElement("table");
     table.className = "diff-table";
     const thead = document.createElement("thead");
     const headRow = document.createElement("tr");
-    const thF = document.createElement("th");
-    thF.textContent = t("importDiffFld");
-    const thOld = document.createElement("th");
-    thOld.textContent = t("importDiffFile");
-    const thNew = document.createElement("th");
-    thNew.textContent = t("importDiffOnline");
-    headRow.appendChild(thF);
-    headRow.appendChild(thOld);
-    headRow.appendChild(thNew);
-    thead.appendChild(headRow);
-    table.appendChild(thead);
-
+    const thF = document.createElement("th"); thF.textContent = t("importDiffFld");
+    const thOld = document.createElement("th"); thOld.textContent = t("importDiffFile");
+    const thNew = document.createElement("th"); thNew.textContent = t("importDiffOnline");
+    headRow.appendChild(thF); headRow.appendChild(thOld); headRow.appendChild(thNew);
+    thead.appendChild(headRow); table.appendChild(thead);
     const tbody = document.createElement("tbody");
     for (let c = 0; c < u.changes.length; c++) {
       const ch = u.changes[c];
       const tr = document.createElement("tr");
-      const tdF = document.createElement("td");
-      tdF.className = "fld";
-      const labelKey = fieldLabels[ch.field] || ch.field;
-      tdF.textContent = t(labelKey);
-      const tdOld = document.createElement("td");
-      tdOld.className = "old";
-      tdOld.textContent = ch.fileVal || "–";
-      const tdNew = document.createElement("td");
-      tdNew.className = "new";
-      tdNew.textContent = ch.liveVal || "–";
-      tr.appendChild(tdF);
-      tr.appendChild(tdOld);
-      tr.appendChild(tdNew);
+      const tdF = document.createElement("td"); tdF.className = "fld";
+      tdF.textContent = t(fieldLabels[ch.field] || ch.field);
+      const tdOld = document.createElement("td"); tdOld.className = "old"; tdOld.textContent = ch.fileVal || "–";
+      const tdNew = document.createElement("td"); tdNew.className = "new"; tdNew.textContent = ch.liveVal || "–";
+      tr.appendChild(tdF); tr.appendChild(tdOld); tr.appendChild(tdNew);
       tbody.appendChild(tr);
     }
-    table.appendChild(tbody);
-    wrap.appendChild(table);
-
+    table.appendChild(tbody); wrap.appendChild(table);
     list.appendChild(wrap);
   }
   updateImportDiffDialogText();
@@ -3953,10 +3601,7 @@ async function regenerateCollidingImportedIds(records) {
   try {
     const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
     snap.forEach(function (d) { liveReqs.push(Object.assign({ id: d.id }, d.data())); });
-  } catch (err) {
-    console.warn("Could not fetch live reqs:", err);
-    return;
-  }
+  } catch (err) { console.warn("Could not fetch live reqs:", err); return; }
   const liveIds = new Set();
   for (let i = 0; i < liveReqs.length; i++) {
     const iid = liveImportedId(liveReqs[i]);
@@ -4011,14 +3656,12 @@ async function createProjectAndImport(name, records) {
   const pid = makeProjectId(name);
   try {
     await setDoc(doc(db, "projects", pid), {
-      name: name,
-      ownerUid: currentUser.uid,
-      counter: 0,
-      githubBoardUrl: "",
-      defaultRepo: "",
+      name: name, ownerUid: currentUser.uid, counter: 0,
+      githubBoardUrl: "", defaultRepo: "",
       staleWarnDays: DEFAULT_STALE_WARN_DAYS,
       staleUrgentDays: DEFAULT_STALE_URGENT_DAYS,
       defaultInviteHours: DEFAULT_INVITE_HOURS,
+      deadline: "",
       createdAt: serverTimestamp()
     });
   } catch (err) {
@@ -4030,7 +3673,6 @@ async function createProjectAndImport(name, records) {
   await importRecords(records, 0, new Set());
 }
 
-// ---------- Import flow ----------
 function onImportClick() { $("importFile").click(); }
 
 async function onImportFileChosen(event) {
@@ -4038,15 +3680,12 @@ async function onImportFileChosen(event) {
   event.target.value = "";
   if (!file) { return; }
   showMessage("");
-
   let text;
   try { text = await file.text(); }
   catch (err) { showMessage(t("importOpenError")); return; }
   text = text.replace(/^\uFEFF/, "");
-
   const dotPos = file.name.lastIndexOf(".");
   const ext = dotPos >= 0 ? file.name.slice(dotPos + 1).toLowerCase() : "";
-
   let objects = [];
   try {
     switch (ext) {
@@ -4054,68 +3693,40 @@ async function onImportFileChosen(event) {
       case "csv": objects = csvToObjects(text); break;
       case "txt": objects = textToObjects(text); break;
       case "md": case "markdown": objects = markdownToObjects(text); break;
-      default:
-        showMessage(t("importUnknownType"));
-        return;
+      default: showMessage(t("importUnknownType")); return;
     }
-  } catch (err) {
-    showMessage(t("importReadError", { msg: err.message }));
-    return;
-  }
-  console.log("[import] file parsed:", objects.length, "objects (raw)");
+  } catch (err) { showMessage(t("importReadError", { msg: err.message })); return; }
 
   const built = buildImportRecords(objects);
-  if (built.records.length === 0) {
-    showMessage(t("importEmpty"));
-    return;
-  }
+  if (built.records.length === 0) { showMessage(t("importEmpty")); return; }
   if (built.records.length > MAX_IMPORT_ROWS) {
-    showMessage(t("importTooMany", { n: built.records.length, max: MAX_IMPORT_ROWS }));
-    return;
+    showMessage(t("importTooMany", { n: built.records.length, max: MAX_IMPORT_ROWS })); return;
   }
 
   let liveReqs = [];
   try {
     const snap = await getDocs(collection(db, "projects", currentPid, "requirements"));
     snap.forEach(function (d) { liveReqs.push(Object.assign({ id: d.id }, d.data())); });
-  } catch (err) {
-    console.warn("Could not fetch live requirements for diff:", err);
-  }
+  } catch (err) { console.warn("Could not fetch live requirements for diff:", err); }
 
   let tombstones = [];
   try {
     const snap = await getDocs(collection(db, "projects", currentPid, "tombstones"));
     snap.forEach(function (d) { tombstones.push(Object.assign({ id: d.id }, d.data())); });
-  } catch (err) {
-    console.warn("Could not fetch tombstones for diff:", err);
-  }
+  } catch (err) { console.warn("Could not fetch tombstones for diff:", err); }
 
   const usedSeqs = new Set();
-  for (let i = 0; i < liveReqs.length; i++) {
-    if (typeof liveReqs[i].seq === "number") { usedSeqs.add(liveReqs[i].seq); }
-  }
-  for (let i = 0; i < tombstones.length; i++) {
-    if (typeof tombstones[i].seq === "number") { usedSeqs.add(tombstones[i].seq); }
-  }
+  for (let i = 0; i < liveReqs.length; i++) { if (typeof liveReqs[i].seq === "number") { usedSeqs.add(liveReqs[i].seq); } }
+  for (let i = 0; i < tombstones.length; i++) { if (typeof tombstones[i].seq === "number") { usedSeqs.add(tombstones[i].seq); } }
 
   const classified = classifyImportRows(built.records, liveReqs, tombstones);
-
   const allNonDupes = [];
-  for (let i = 0; i < classified.updates.length; i++) {
-    allNonDupes.push(classified.updates[i].rec);
-  }
-  for (let i = 0; i < classified.restores.length; i++) {
-    allNonDupes.push(classified.restores[i].rec);
-  }
-  for (let i = 0; i < classified.newRecords.length; i++) {
-    allNonDupes.push(classified.newRecords[i]);
-  }
+  for (let i = 0; i < classified.updates.length; i++) { allNonDupes.push(classified.updates[i].rec); }
+  for (let i = 0; i < classified.restores.length; i++) { allNonDupes.push(classified.restores[i].rec); }
+  for (let i = 0; i < classified.newRecords.length; i++) { allNonDupes.push(classified.newRecords[i]); }
   const skippedDuplicates = built.records.length - allNonDupes.length;
 
-  if (allNonDupes.length === 0) {
-    showMessage(t("importAllDuplicates", { n: skippedDuplicates }), true);
-    return;
-  }
+  if (allNonDupes.length === 0) { showMessage(t("importAllDuplicates", { n: skippedDuplicates }), true); return; }
 
   pendingImportAllRecords = allNonDupes;
   pendingImportNewRecords = classified.newRecords;
@@ -4123,37 +3734,19 @@ async function onImportFileChosen(event) {
   pendingImportSkippedDupes = skippedDuplicates;
   pendingImportUsedSeqs = usedSeqs;
 
-  if (classified.updates.length > 0
-      || classified.restores.length > 0
-      || classified.identicalSeqs.size > 0) {
-    openImportDiffDialog(
-      classified.updates,
-      classified.restores,
-      skippedDuplicates,
-      classified.identicalSeqs.size
-    );
+  if (classified.updates.length > 0 || classified.restores.length > 0 || classified.identicalSeqs.size > 0) {
+    openImportDiffDialog(classified.updates, classified.restores, skippedDuplicates, classified.identicalSeqs.size);
     return;
   }
 
   let question = t("importConfirmHead", { n: classified.newRecords.length });
-  if (built.skipped > 0) {
-    question += t("importConfirmSkipped", { n: built.skipped });
-  }
-  if (skippedDuplicates > 0) {
-    question += t("importConfirmDuplicates", { n: skippedDuplicates });
-  }
-  if (built.unrecognised > 0) {
-    question += t("importConfirmUnrecognised", { n: built.unrecognised });
-  }
-  if (text.indexOf("\uFFFD") >= 0) {
-    question += t("importConfirmEncoding");
-  }
+  if (built.skipped > 0) { question += t("importConfirmSkipped", { n: built.skipped }); }
+  if (skippedDuplicates > 0) { question += t("importConfirmDuplicates", { n: skippedDuplicates }); }
+  if (built.unrecognised > 0) { question += t("importConfirmUnrecognised", { n: built.unrecognised }); }
+  if (text.indexOf("\uFFFD") >= 0) { question += t("importConfirmEncoding"); }
   if (!confirm(question)) {
-    pendingImportAllRecords = null;
-    pendingImportNewRecords = null;
-    pendingImportRestores = null;
-    pendingImportSkippedDupes = 0;
-    pendingImportUsedSeqs = null;
+    pendingImportAllRecords = null; pendingImportNewRecords = null;
+    pendingImportRestores = null; pendingImportSkippedDupes = 0; pendingImportUsedSeqs = null;
     return;
   }
 
@@ -4161,11 +3754,8 @@ async function onImportFileChosen(event) {
   const toInsert = classified.newRecords;
   const skipped = skippedDuplicates;
   const seqs = usedSeqs;
-  pendingImportAllRecords = null;
-  pendingImportNewRecords = null;
-  pendingImportRestores = null;
-  pendingImportSkippedDupes = 0;
-  pendingImportUsedSeqs = null;
+  pendingImportAllRecords = null; pendingImportNewRecords = null;
+  pendingImportRestores = null; pendingImportSkippedDupes = 0; pendingImportUsedSeqs = null;
   await applyImportUpdates([], restores, toInsert, skipped, seqs);
 }
 
@@ -4179,15 +3769,11 @@ async function restoreFromTombstone(tombstone, rec) {
     const newRef = doc(collection(db, "projects", currentPid, "requirements"));
     tx.set(newRef, {
       seq: tombstone.seq,
-      description: rec.description,
-      furps: rec.furps,
-      moscow: rec.moscow,
-      source: rec.source,
-      status: rec.status,
+      description: rec.description, furps: rec.furps, moscow: rec.moscow,
+      source: rec.source, status: rec.status,
       notes: stripImportedIdMarker(rec.notes),
       importedId: rec.__importedId || tombstone.importedId,
-      updatedBy: userLabel(),
-      updatedAt: serverTimestamp()
+      updatedBy: userLabel(), updatedAt: serverTimestamp()
     });
   });
 }
@@ -4204,15 +3790,10 @@ async function importRecords(records, skippedDuplicates, usedSeqs) {
       done += chunk.length;
       showMessage(t("importProgress", { done: done, total: records.length }), true);
     }
-    if (skipped > 0) {
-      showMessage(t("importDoneSkipped", { n: done, skipped: skipped }), true);
-    } else {
-      showMessage(t("importDone", { n: done }), true);
-    }
+    if (skipped > 0) { showMessage(t("importDoneSkipped", { n: done, skipped: skipped }), true); }
+    else { showMessage(t("importDone", { n: done }), true); }
   } catch (err) {
-    showMessage(t("importStopped", {
-      done: done, total: records.length, code: (err.code || err.message)
-    }));
+    showMessage(t("importStopped", { done: done, total: records.length, code: (err.code || err.message) }));
   }
 }
 
@@ -4223,43 +3804,31 @@ async function applyImportUpdates(updates, restores, newRecords, skippedDuplicat
   let inserted = 0;
   const total = updates.length + restores.length + newRecords.length;
   const taken = usedSeqs ? new Set(usedSeqs) : new Set();
-
   try {
     for (let i = 0; i < updates.length; i++) {
       const u = updates[i];
       const changes = {};
-      for (let c = 0; c < u.changes.length; c++) {
-        changes[u.changes[c].field] = u.changes[c].fileVal;
-      }
-      if (typeof changes.notes === "string") {
-        changes.notes = stripImportedIdMarker(changes.notes);
-      }
+      for (let c = 0; c < u.changes.length; c++) { changes[u.changes[c].field] = u.changes[c].fileVal; }
+      if (typeof changes.notes === "string") { changes.notes = stripImportedIdMarker(changes.notes); }
       if (u.rec && u.rec.__importedId) {
         let liveReq = null;
         for (let k = 0; k < allReqs.length; k++) {
           if (allReqs[k].id === u.liveId) { liveReq = allReqs[k]; break; }
         }
-        if (liveReq && !liveReq.importedId) {
-          changes.importedId = u.rec.__importedId;
-        }
+        if (liveReq && !liveReq.importedId) { changes.importedId = u.rec.__importedId; }
       }
       changes.updatedBy = userLabel();
       changes.updatedAt = serverTimestamp();
-      await updateDoc(
-        doc(db, "projects", currentPid, "requirements", u.liveId),
-        changes
-      );
+      await updateDoc(doc(db, "projects", currentPid, "requirements", u.liveId), changes);
       updated++;
       showMessage(t("importUpdateProgress", { done: updated, total: updates.length }), true);
     }
-
     for (let i = 0; i < restores.length; i++) {
       const r = restores[i];
       await restoreFromTombstone(r.tombstone, r.rec);
       restored++;
       showMessage(t("importRestoreProgress", { done: restored, total: restores.length }), true);
     }
-
     if (newRecords.length > 0) {
       for (let start = 0; start < newRecords.length; start += IMPORT_CHUNK_SIZE) {
         const chunk = newRecords.slice(start, start + IMPORT_CHUNK_SIZE);
@@ -4268,22 +3837,16 @@ async function applyImportUpdates(updates, restores, newRecords, skippedDuplicat
         inserted += chunk.length;
       }
     }
-
     if (updated > 0 || restored > 0) {
-      showMessage(t("importUpdateDone", {
-        updated: updated, restored: restored, inserted: inserted
-      }), true);
+      showMessage(t("importUpdateDone", { updated: updated, restored: restored, inserted: inserted }), true);
     } else if (inserted > 0) {
       showMessage(t("importDoneSkipped", { n: inserted, skipped: skipped }), true);
     }
   } catch (err) {
-    showMessage(t("importStopped", {
-      done: updated + restored + inserted, total: total, code: (err.code || err.message)
-    }));
+    showMessage(t("importStopped", { done: updated + restored + inserted, total: total, code: (err.code || err.message) }));
   }
 }
 
-// ---------- Wire up ----------
 $("sortSelect").value = sortMode;
 $("filterSelect").value = filterMoscow;
 
@@ -4291,9 +3854,7 @@ $("btnGoogle").addEventListener("click", function () { loginWith("google"); });
 $("btnGithubLogin").addEventListener("click", function () { loginWith("github"); });
 $("btnLink").addEventListener("click", linkLogin);
 $("btnLogout").addEventListener("click", function () { signOut(auth); });
-$("btnLang").addEventListener("click", function () {
-  setLang(lang === "da" ? "en" : "da");
-});
+$("btnLang").addEventListener("click", function () { setLang(lang === "da" ? "en" : "da"); });
 $("btnCreate").addEventListener("click", createProject);
 $("btnAdd").addEventListener("click", addRequirement);
 $("btnImport").addEventListener("click", onImportClick);
@@ -4332,10 +3893,7 @@ window.addEventListener("hashchange", function () {
   }
   if (!parsed.pid) { return; }
   if (parsed.pid === currentPid) {
-    if (parsed.reqid) {
-      pendingScrollToReq = parsed.reqid;
-      tryScrollToPendingReq();
-    }
+    if (parsed.reqid) { pendingScrollToReq = parsed.reqid; tryScrollToPendingReq(); }
     return;
   }
   if (currentUser) { openProject(parsed.pid); }
@@ -4372,21 +3930,12 @@ $("btnGithubSave").addEventListener("click", saveGithubSettings);
 $("githubDialog").addEventListener("click", function (e) {
   if (e.target === $("githubDialog")) { closeGithubDialog(); }
 });
-$("githubBoardUrlInput").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { saveGithubSettings(); }
-});
-$("defaultRepoInput").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { saveGithubSettings(); }
-});
-$("staleWarnInput").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { saveGithubSettings(); }
-});
-$("staleUrgentInput").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { saveGithubSettings(); }
-});
-$("inviteHoursInput").addEventListener("keydown", function (e) {
-  if (e.key === "Enter") { saveGithubSettings(); }
-});
+$("githubBoardUrlInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { saveGithubSettings(); } });
+$("defaultRepoInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { saveGithubSettings(); } });
+$("staleWarnInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { saveGithubSettings(); } });
+$("staleUrgentInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { saveGithubSettings(); } });
+$("inviteHoursInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { saveGithubSettings(); } });
+$("deadlineInput").addEventListener("keydown", function (e) { if (e.key === "Enter") { saveGithubSettings(); } });
 
 $("btnImportForce").addEventListener("click", onImportForce);
 $("btnImportUpdate").addEventListener("click", onImportUpdate);
